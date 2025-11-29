@@ -2,9 +2,10 @@ use std::fs;
 use std::io::{self, BufRead};
 use std::path::Path;
 
-const OLD_ACCESSS_POINTS: [&str; 8] = 
+const OLD_ACCESSS_POINTS: [&str; 9] = 
 [
     "LakeRidg",
+    "LakeRidge",
     "Baldwin",
     "Thickson",
     "Simcoe",
