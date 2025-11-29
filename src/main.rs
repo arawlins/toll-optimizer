@@ -1,6 +1,7 @@
 use std::fs;
 use std::io::{self, BufRead};
 use std::path::Path;
+use std::collections::HashMap;
 
 const OLD_ACCESSS_POINTS: [&str; 9] = 
 [
@@ -226,6 +227,8 @@ fn main() -> io::Result<()> {
 
     entries.sort();
 
+    let mut trips_by_transponder: HashMap<String, Vec<TripRecord>> = HashMap::new();
+
     let mut first = true;
 
     for path in entries {
@@ -267,7 +270,11 @@ fn main() -> io::Result<()> {
 
                         if let (Some(entry_idx), Some(exit_idx)) = (entry_index, exit_index) {
                             record.direction = Some(if exit_idx > entry_idx { Direction::Eastbound } else { Direction::Westbound });
-                            println!("Entry: {}, Exit: {}, Direction: {:?}", record.entry_point, record.exit_point, record.direction.as_ref().unwrap());
+                            // println!("Entry: {}, Exit: {}, Direction: {:?}", record.entry_point, record.exit_point, record.direction.as_ref().unwrap());
+                            
+                            let plate = record.transponder_plate.clone();
+                            trips_by_transponder.entry(plate).or_default().push(record);
+
                         } else {
                             // If we can't find the points (shouldn't happen due to previous checks, but good for safety)
                             if (entry_index.is_none()) {
@@ -283,5 +290,10 @@ fn main() -> io::Result<()> {
             }
         }
     }
+
+    for (plate, trips) in trips_by_transponder {
+        println!("Transponder: {}, Trips: {}", plate, trips.len());
+    }
+
     Ok(())
 }
