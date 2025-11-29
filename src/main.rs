@@ -240,9 +240,18 @@ fn main() -> io::Result<()> {
             // Skip header (line 5), print the rest
             if lines.len() > 5 {
                 for line in &lines[5..] {
-                    if let Some(record) = TripRecord::from_csv_line(line) {
+                    if let Some(mut record) = TripRecord::from_csv_line(line) {
                         if OLD_ACCESSS_POINTS.contains(&record.entry_point.as_str()) || OLD_ACCESSS_POINTS.contains(&record.exit_point.as_str()) {
                             continue;
+                        }
+
+                        for &(key, val) in &ACCESS_POINT_SYNONYMS {
+                            if record.entry_point == key {
+                                record.entry_point = val.to_string();
+                            }
+                            if record.exit_point == key {
+                                record.exit_point = val.to_string();
+                            }
                         }
 
                         if !ACCESS_POINTS.contains(&record.entry_point.as_str()) {
