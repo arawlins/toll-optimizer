@@ -2,7 +2,7 @@ use std::fs;
 use std::io::{self, BufRead};
 use std::path::Path;
 
-const OLD_ACCESSS_POINTS: [&str] = 
+const OLD_ACCESSS_POINTS: [&str; 8] = 
 [
     "LakeRidg",
     "Baldwin",
@@ -14,7 +14,7 @@ const OLD_ACCESSS_POINTS: [&str] =
     "Hwy418"
 ];
 
-const ACCESS_POINT_SYNONYMS: [(&str, &str)] =
+const ACCESS_POINT_SYNONYMS: [(&str, &str); 3] =
 [
     ("Brock", "Brock(Hwy7)"),
     ("Brock407", "Brock(Hwy7)"),
@@ -156,6 +156,52 @@ const WB_ZONES: [(&str, u8); 41] =
     ("Brock(Hwy7)", 12),
 ];
 
+#[derive(Debug)]
+struct TripRecord {
+    transponder_plate: String,
+    vehicle_class: String,
+    date_of_trip: String,
+    entry_time: String,
+    entry_point: String,
+    exit_point: String,
+    distance_km: String,
+    toll_charge: String,
+    trip_toll_charge: String,
+    camera_charge: String,
+}
+
+impl TripRecord {
+    fn from_csv_line(line: &str) -> Option<Self> {
+        // The format is "Val","Val",...
+        // We split by "," to get the inner values.
+        // We also need to trim the quotes from the start and end of the line if they exist,
+        // but the split method below handles the internal quotes.
+        // A robust CSV parser would be better, but we are sticking to the simple logic for now.
+        
+        let parts: Vec<&str> = line.split("\",\"").collect();
+        if parts.len() < 10 {
+            return None;
+        }
+
+        // Clean up the first and last element which might have leading/trailing quote
+        let first = parts[0].trim_start_matches('"');
+        let last = parts[parts.len() - 1].trim_end_matches('"');
+
+        Some(TripRecord {
+            transponder_plate: first.to_string(),
+            vehicle_class: parts[1].to_string(),
+            date_of_trip: parts[2].to_string(),
+            entry_time: parts[3].to_string(),
+            entry_point: parts[4].to_string(),
+            exit_point: parts[5].to_string(),
+            distance_km: parts[6].to_string(),
+            toll_charge: parts[7].to_string(),
+            trip_toll_charge: parts[8].to_string(),
+            camera_charge: last.to_string(),
+        })
+    }
+}
+
 fn main() -> io::Result<()> {
     let csv_dir = Path::new("csv");
     if !csv_dir.exists() {
@@ -193,28 +239,17 @@ fn main() -> io::Result<()> {
             // Skip header (line 5), print the rest
             if lines.len() > 5 {
                 for line in &lines[5..] {
-                    // println!("{}", line);
-                    
-                    // Parse the line
-                    // The format is "Val","Val",...
-                    // We split by "," to get the inner values.
-                    // Note: This simple splitting assumes no "," inside the values.
-                    // Based on the file content, this seems safe for now.
-                    // Index 4 is Entry Point, Index 5 is Exit Point.
-                    // Index 2 is Date of Trip
-                    
-                    let parts: Vec<&str> = line.split("\",\"").collect();
-                    if parts.len() > 5 {
-                        let entry_point = parts[4];
-                        let exit_point = parts[5];
-                        let date = parts[2];
-                        
-                        if !ACCESS_POINTS.contains(&entry_point) {
-                            println!("{}: {}", date, entry_point);
+                    if let Some(record) = TripRecord::from_csv_line(line) {
+                        if OLD_ACCESSS_POINTS.contains(&record.entry_point.as_str()) || OLD_ACCESSS_POINTS.contains(&record.exit_point.as_str()) {
+                            continue;
+                        }
+
+                        if !ACCESS_POINTS.contains(&record.entry_point.as_str()) {
+                            println!("{}: {}", record.date_of_trip, record.entry_point);
                         }
                         
-                        if !ACCESS_POINTS.contains(&exit_point) {
-                            println!("{}: {}", date, exit_point);
+                        if !ACCESS_POINTS.contains(&record.exit_point.as_str()) {
+                            println!("{}: {}", record.date_of_trip, record.exit_point);
                         }
                     }
                 }
