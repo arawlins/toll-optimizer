@@ -158,6 +158,12 @@ const WB_ZONES: [(&str, u8); 41] =
 ];
 
 #[derive(Debug)]
+enum Direction {
+    Eastbound,
+    Westbound,
+}
+
+#[derive(Debug)]
 struct TripRecord {
     transponder_plate: String,
     vehicle_class: String,
@@ -169,6 +175,7 @@ struct TripRecord {
     toll_charge: String,
     trip_toll_charge: String,
     camera_charge: String,
+    direction: Option<Direction>,
 }
 
 impl TripRecord {
@@ -199,6 +206,7 @@ impl TripRecord {
             toll_charge: parts[7].to_string(),
             trip_toll_charge: parts[8].to_string(),
             camera_charge: last.to_string(),
+            direction: None,
         })
     }
 }
@@ -254,12 +262,21 @@ fn main() -> io::Result<()> {
                             }
                         }
 
-                        if !ACCESS_POINTS.contains(&record.entry_point.as_str()) {
-                            println!("{}: {}", record.date_of_trip, record.entry_point);
-                        }
-                        
-                        if !ACCESS_POINTS.contains(&record.exit_point.as_str()) {
-                            println!("{}: {}", record.date_of_trip, record.exit_point);
+                        let entry_index = ACCESS_POINTS.iter().position(|&r| r == record.entry_point);
+                        let exit_index = ACCESS_POINTS.iter().position(|&r| r == record.exit_point);
+
+                        if let (Some(entry_idx), Some(exit_idx)) = (entry_index, exit_index) {
+                            record.direction = Some(if exit_idx > entry_idx { Direction::Eastbound } else { Direction::Westbound });
+                            println!("Entry: {}, Exit: {}, Direction: {:?}", record.entry_point, record.exit_point, record.direction.as_ref().unwrap());
+                        } else {
+                            // If we can't find the points (shouldn't happen due to previous checks, but good for safety)
+                            if (entry_index.is_none()) {
+                                println!("{}: {}", record.date_of_trip, record.entry_point);
+                            }
+                            
+                            if (exit_index.is_none()) {
+                                println!("{}: {}", record.date_of_trip, record.exit_point);
+                            }
                         }
                     }
                 }
