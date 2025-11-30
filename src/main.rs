@@ -1,10 +1,9 @@
+use std::collections::HashMap;
 use std::fs;
 use std::io::{self, BufRead};
 use std::path::Path;
-use std::collections::HashMap;
 
-const OLD_ACCESSS_POINTS: [&str; 9] = 
-[
+const OLD_ACCESSS_POINTS: [&str; 9] = [
     "LakeRidg",
     "LakeRidge",
     "Baldwin",
@@ -13,18 +12,16 @@ const OLD_ACCESSS_POINTS: [&str; 9] =
     "Hwy412",
     "35/115",
     "Hwy35/115",
-    "Hwy418"
+    "Hwy418",
 ];
 
-const ACCESS_POINT_SYNONYMS: [(&str, &str); 3] =
-[
+const ACCESS_POINT_SYNONYMS: [(&str, &str); 3] = [
     ("Brock", "Brock(Hwy7)"),
     ("Brock407", "Brock(Hwy7)"),
-    ("YorkDur", "York-DurhamLine")
+    ("YorkDur", "York-DurhamLine"),
 ];
 
-const ACCESS_POINTS: [&str; 41] = 
-[
+const ACCESS_POINTS: [&str; 41] = [
     "QEW",
     "Dundas",
     "Appleby",
@@ -65,11 +62,10 @@ const ACCESS_POINTS: [&str; 41] =
     "DonaldCousensPk",
     "York-DurhamLine",
     "Whites",
-    "Brock(Hwy7)"
+    "Brock(Hwy7)",
 ];
 
-const EB_ZONES: [(&str, u8); 41] =
-[
+const EB_ZONES: [(&str, u8); 41] = [
     ("QEW", 1),
     ("Dundas", 2),
     ("Appleby", 2),
@@ -113,8 +109,7 @@ const EB_ZONES: [(&str, u8); 41] =
     ("Brock(Hwy7)", 12),
 ];
 
-const WB_ZONES: [(&str, u8); 41] =
-[
+const WB_ZONES: [(&str, u8); 41] = [
     ("QEW", 1),
     ("Dundas", 1),
     ("Appleby", 2),
@@ -186,7 +181,7 @@ impl TripRecord {
         // We also need to trim the quotes from the start and end of the line if they exist,
         // but the split method below handles the internal quotes.
         // A robust CSV parser would be better, but we are sticking to the simple logic for now.
-        
+
         let parts: Vec<&str> = line.split("\",\"").collect();
         if parts.len() < 10 {
             return None;
@@ -223,13 +218,15 @@ fn main() -> io::Result<()> {
         .filter_map(|res| res.ok())
         .map(|dir_entry| dir_entry.path())
         .filter(|path| path.extension().map_or(false, |ext| ext == "csv"))
+        // .filter(|path| {
+        //     path.file_name().and_then(|s| s.to_str())
+        //         == Some("2025-10-28 - 573522284 Statement.csv")
+        // })
         .collect();
 
     entries.sort();
 
     let mut trips_by_transponder: HashMap<String, Vec<TripRecord>> = HashMap::new();
-
-    let mut first = true;
 
     for path in entries {
         let file = fs::File::open(&path)?;
@@ -241,49 +238,46 @@ fn main() -> io::Result<()> {
             continue;
         }
 
-        if first {
-            // Print header (line 5) and the rest
-            // for line in &lines[4..] {
-            //     println!("{}", line);
-            // }
-            first = false;
-        } else {
-            // Skip header (line 5), print the rest
-            if lines.len() > 5 {
-                for line in &lines[5..] {
-                    if let Some(mut record) = TripRecord::from_csv_line(line) {
-                        if OLD_ACCESSS_POINTS.contains(&record.entry_point.as_str()) || OLD_ACCESSS_POINTS.contains(&record.exit_point.as_str()) {
-                            continue;
+        // Skip header (line 5), print the rest
+        if lines.len() > 5 {
+            for line in &lines[5..] {
+                if let Some(mut record) = TripRecord::from_csv_line(line) {
+                    if OLD_ACCESSS_POINTS.contains(&record.entry_point.as_str())
+                        || OLD_ACCESSS_POINTS.contains(&record.exit_point.as_str())
+                    {
+                        continue;
+                    }
+
+                    for &(key, val) in &ACCESS_POINT_SYNONYMS {
+                        if record.entry_point == key {
+                            record.entry_point = val.to_string();
                         }
-
-                        for &(key, val) in &ACCESS_POINT_SYNONYMS {
-                            if record.entry_point == key {
-                                record.entry_point = val.to_string();
-                            }
-                            if record.exit_point == key {
-                                record.exit_point = val.to_string();
-                            }
+                        if record.exit_point == key {
+                            record.exit_point = val.to_string();
                         }
+                    }
 
-                        let entry_index = ACCESS_POINTS.iter().position(|&r| r == record.entry_point);
-                        let exit_index = ACCESS_POINTS.iter().position(|&r| r == record.exit_point);
+                    let entry_index = ACCESS_POINTS.iter().position(|&r| r == record.entry_point);
+                    let exit_index = ACCESS_POINTS.iter().position(|&r| r == record.exit_point);
 
-                        if let (Some(entry_idx), Some(exit_idx)) = (entry_index, exit_index) {
-                            record.direction = Some(if exit_idx > entry_idx { Direction::Eastbound } else { Direction::Westbound });
-                            // println!("Entry: {}, Exit: {}, Direction: {:?}", record.entry_point, record.exit_point, record.direction.as_ref().unwrap());
-                            
-                            let plate = record.transponder_plate.clone();
-                            trips_by_transponder.entry(plate).or_default().push(record);
-
+                    if let (Some(entry_idx), Some(exit_idx)) = (entry_index, exit_index) {
+                        record.direction = Some(if exit_idx > entry_idx {
+                            Direction::Eastbound
                         } else {
-                            // If we can't find the points (shouldn't happen due to previous checks, but good for safety)
-                            if (entry_index.is_none()) {
-                                println!("{}: {}", record.date_of_trip, record.entry_point);
-                            }
-                            
-                            if (exit_index.is_none()) {
-                                println!("{}: {}", record.date_of_trip, record.exit_point);
-                            }
+                            Direction::Westbound
+                        });
+                        // println!("Entry: {}, Exit: {}, Direction: {:?}", record.entry_point, record.exit_point, record.direction.as_ref().unwrap());
+
+                        let plate = record.transponder_plate.clone();
+                        trips_by_transponder.entry(plate).or_default().push(record);
+                    } else {
+                        // If we can't find the points (shouldn't happen due to previous checks, but good for safety)
+                        if (entry_index.is_none()) {
+                            println!("{}: {}", record.date_of_trip, record.entry_point);
+                        }
+
+                        if (exit_index.is_none()) {
+                            println!("{}: {}", record.date_of_trip, record.exit_point);
                         }
                     }
                 }
