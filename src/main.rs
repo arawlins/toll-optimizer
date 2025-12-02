@@ -153,7 +153,7 @@ const WB_ZONES: [(&str, u8); 41] = [
     ("Brock(Hwy7)", 12),
 ];
 
-#[derive(Debug)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 enum Direction {
     Eastbound,
     Westbound,
@@ -285,8 +285,48 @@ fn main() -> io::Result<()> {
         }
     }
 
-    for (plate, trips) in trips_by_transponder {
-        println!("Transponder: {}, Trips: {}", plate, trips.len());
+    let mut trips_by_transponder_direction: HashMap<(String, Direction), Vec<String>> =
+        HashMap::new();
+
+    for (plate, trips) in &trips_by_transponder {
+        for trip in trips {
+            if let Some(direction) = &trip.direction {
+                trips_by_transponder_direction
+                    .entry((plate.clone(), direction.clone()))
+                    .or_default()
+                    .push(trip.entry_time.clone());
+            }
+        }
+    }
+
+    let mut results: Vec<_> = trips_by_transponder_direction.into_iter().collect();
+    results.sort_by(|a, b| {
+        a.0.0
+            .cmp(&b.0.0)
+            .then_with(|| format!("{:?}", a.0.1).cmp(&format!("{:?}", b.0.1)))
+    });
+
+    for ((plate, direction), times) in results {
+        let mut time_counts: HashMap<String, usize> = HashMap::new();
+        for time in &times {
+            *time_counts.entry(time.clone()).or_default() += 1;
+        }
+
+        let mut sorted_times: Vec<_> = time_counts.into_iter().collect();
+        // Sort by count (descending), then by time (ascending) for stability
+        sorted_times.sort_by(|a, b| b.1.cmp(&a.1).then_with(|| a.0.cmp(&b.0)));
+
+        if let Some((most_common_time, count)) = sorted_times.first() {
+            println!(
+                "Transponder: {}, Direction: {:?}, Most Common Entry Time: {} ({} times)",
+                plate, direction, most_common_time, count
+            );
+        }
+    }
+
+    println!("\nTotal Trips per Transponder:");
+    for (plate, trips) in &trips_by_transponder {
+        println!("Transponder: {}, Total Trips: {}", plate, trips.len());
     }
 
     Ok(())
