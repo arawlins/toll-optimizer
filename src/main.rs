@@ -505,18 +505,52 @@ fn main() -> io::Result<()> {
 
                 for &centroid in best_centroids {
                     println!("    Trips near {}:", format_minutes_to_time(centroid));
+                    let mut cluster_trip_minutes = Vec::new();
+
                     for trip in &trips {
                         if let Some(trip_minutes) = parse_time_to_minutes(&trip.entry_time) {
                             let diff = (trip_minutes as i32 - centroid as i32).abs();
-                            let dist = diff.min(1440 - diff); // Handle wrap-around for time (e.g., 23:00 and 01:00 are 2 hours apart, not 22)
+                            let dist = diff.min(1440 - diff); // Handle wrap-around for time
 
                             if dist <= 30 {
                                 println!(
                                     "      - {} {} ({})",
                                     trip.date_of_trip, trip.entry_time, trip.transponder_plate
                                 );
+
+                                // Normalize trip minutes relative to centroid for averaging
+                                // If trip is e.g. 00:10 (10) and centroid is 23:50 (1430),
+                                // we want to treat 00:10 as 24:10 (1450) if it's "after" the centroid in a circular sense
+                                // simpler: just use the signed difference from centroid
+
+                                let mut signed_diff = trip_minutes as i32 - centroid as i32;
+                                if signed_diff > 720 {
+                                    signed_diff -= 1440;
+                                } else if signed_diff < -720 {
+                                    signed_diff += 1440;
+                                }
+
+                                cluster_trip_minutes.push(centroid as i32 + signed_diff);
                             }
                         }
+                    }
+
+                    if !cluster_trip_minutes.is_empty() {
+                        let sum: i32 = cluster_trip_minutes.iter().sum();
+                        let avg_minutes = sum as f64 / cluster_trip_minutes.len() as f64;
+                        // Normalize back to 0-1439 range
+                        let mut normalized_avg = avg_minutes.round() as i32;
+                        while normalized_avg < 0 {
+                            normalized_avg += 1440;
+                        }
+                        while normalized_avg >= 1440 {
+                            normalized_avg -= 1440;
+                        }
+
+                        println!(
+                            "      Average Entry Time: {}",
+                            format_minutes_to_time(normalized_avg as u32)
+                        );
                     }
                 }
             }
