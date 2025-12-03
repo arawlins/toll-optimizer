@@ -203,18 +203,6 @@ impl TripRecord {
         let exit_point = parts[5].to_string();
         let date_of_trip = parts[2].to_string();
 
-        let direction = if EB_ZONES.iter().any(|&z| z.0 == entry_point)
-            && EB_ZONES.iter().any(|&z| z.0 == exit_point)
-        {
-            Some(Direction::Eastbound)
-        } else if WB_ZONES.iter().any(|&z| z.0 == entry_point)
-            && WB_ZONES.iter().any(|&z| z.0 == exit_point)
-        {
-            Some(Direction::Westbound)
-        } else {
-            None
-        };
-
         let day_type = classify_day(&date_of_trip);
 
         Some(TripRecord {
@@ -228,7 +216,7 @@ impl TripRecord {
             toll_charge: parts[7].to_string(),
             trip_toll_charge: parts[8].to_string(),
             camera_charge: last.to_string(),
-            direction,
+            direction: None,
             day_type,
         })
     }
