@@ -203,7 +203,7 @@ const WB_ZONES: [(&str, u8); 41] = [
     ("Brock(Hwy7)", 12),
 ];
 
-const WEEKDAY_WB_TOLL_PRICES: [[f64; 12]; 8] = [
+const WEEKDAY_WB_TOLL_PRICES_BY_TIMESLOT_AND_ZONE: [[f64; 12]; 8] = [
     [
         79.13, 65.16, 66.61, 61.18, 79.08, 71.55, 76.23, 72.83, 72.83, 56.49, 64.05, 64.05,
     ], // 5 a.m.
@@ -230,7 +230,7 @@ const WEEKDAY_WB_TOLL_PRICES: [[f64; 12]; 8] = [
     ], // 9 p.m.
 ];
 
-const WEEKDAY_EB_TOLL_PRICES: [[f64; 12]; 8] = [
+const WEEKDAY_EB_TOLL_PRICES_BY_TIMESLOT_AND_ZONE: [[f64; 12]; 8] = [
     [
         56.49, 57.32, 62.52, 60.70, 68.25, 81.32, 82.76, 80.83, 82.79, 67.79, 73.08, 77.87,
     ], // 5 a.m.
@@ -257,7 +257,7 @@ const WEEKDAY_EB_TOLL_PRICES: [[f64; 12]; 8] = [
     ], // 9 p.m.
 ];
 
-const WEEKEND_WB_TOLL_PRICES: [[f64; 12]; 4] = [
+const WEEKEND_WB_TOLL_PRICES_BY_TIMESLOT_AND_ZONE: [[f64; 12]; 4] = [
     [
         63.43, 59.31, 50.54, 50.50, 50.57, 50.57, 71.91, 71.91, 55.99, 50.57, 50.57, 71.91,
     ], // 8:30 a.m.
@@ -272,7 +272,7 @@ const WEEKEND_WB_TOLL_PRICES: [[f64; 12]; 4] = [
     ], // 9 p.m.
 ];
 
-const WEEKEND_EB_TOLL_PRICES: [[f64; 12]; 4] = [
+const WEEKEND_EB_TOLL_PRICES_BY_TIMESLOT_AND_ZONE: [[f64; 12]; 4] = [
     [
         49.94, 50.57, 50.57, 50.57, 50.57, 71.91, 71.91, 71.91, 71.91, 56.14, 50.57, 71.90,
     ], // 8:30 a.m.
@@ -384,6 +384,78 @@ impl TripRecord {
             index = i;
         }
         Some(index)
+    }
+    fn calculate_cost(&self) -> Option<f64> {
+        let timeslot_idx = self.get_timeslot_index()?;
+        let direction = self.direction.as_ref()?;
+        let day_type = self.day_type.as_ref()?;
+
+        // Use ACCESS_POINTS as the canonical list for indices
+        let start_idx = ACCESS_POINTS
+            .iter()
+            .position(|&name| name == self.entry_point)?;
+        let end_idx = ACCESS_POINTS
+            .iter()
+            .position(|&name| name == self.exit_point)?;
+
+        let mut total_cost = 0.0;
+
+        match direction {
+            Direction::Eastbound => {
+                if start_idx >= end_idx {
+                    return None;
+                } // Invalid for Eastbound
+                // Segments are from start_idx to end_idx - 1
+                for i in start_idx..end_idx {
+                    let distance = ACCESS_POINT_DISTANCES[i] as f64;
+
+                    // Look up zone using the access point name from ACCESS_POINTS
+                    let ap_name = ACCESS_POINTS[i];
+                    let zone = EB_ZONES.iter().find(|&&(name, _)| name == ap_name)?.1 as usize;
+
+                    // Price lookup
+                    let price_rate = match day_type {
+                        DayType::Weekday => {
+                            WEEKDAY_EB_TOLL_PRICES_BY_TIMESLOT_AND_ZONE[timeslot_idx][zone - 1]
+                        }
+                        DayType::Weekend | DayType::Holiday => {
+                            WEEKEND_EB_TOLL_PRICES_BY_TIMESLOT_AND_ZONE[timeslot_idx][zone - 1]
+                        }
+                    };
+
+                    total_cost += distance * price_rate;
+                }
+            }
+            Direction::Westbound => {
+                if start_idx <= end_idx {
+                    return None;
+                } // Invalid for Westbound
+                // Segments are from end_idx to start_idx - 1 (traversed in reverse)
+                // For WB, if we go from index 10 to 5.
+                // We traverse segments 9, 8, 7, 6, 5.
+                // i goes from end_idx to start_idx - 1.
+                for i in end_idx..start_idx {
+                    let distance = ACCESS_POINT_DISTANCES[i] as f64;
+
+                    // For WB, use the zone of the entry point into the segment (higher index)
+                    let ap_name = ACCESS_POINTS[i + 1];
+                    let zone = WB_ZONES.iter().find(|&&(name, _)| name == ap_name)?.1 as usize;
+
+                    let price_rate = match day_type {
+                        DayType::Weekday => {
+                            WEEKDAY_WB_TOLL_PRICES_BY_TIMESLOT_AND_ZONE[timeslot_idx][zone - 1]
+                        }
+                        DayType::Weekend | DayType::Holiday => {
+                            WEEKEND_WB_TOLL_PRICES_BY_TIMESLOT_AND_ZONE[timeslot_idx][zone - 1]
+                        }
+                    };
+
+                    total_cost += distance * price_rate;
+                }
+            }
+        }
+
+        Some(total_cost / 100.0) // Convert cents to dollars
     }
 }
 
@@ -798,13 +870,19 @@ fn main() -> io::Result<()> {
                                     .get_timeslot_index()
                                     .map(|i| i.to_string())
                                     .unwrap_or("?".to_string());
+                                let calculated_cost = trip
+                                    .calculate_cost()
+                                    .map(|c| format!("{:.2}", c))
+                                    .unwrap_or("?".to_string());
                                 println!(
-                                    "      - {} {} ({}) [{}] [Slot: {}]",
+                                    "      - {} {} ({}) [{}] [Slot: {}] [Calc: ${}] [Actual: ${}]",
                                     trip.date_of_trip,
                                     trip.entry_time,
                                     trip.transponder_plate,
                                     day_type_str,
-                                    timeslot_idx
+                                    timeslot_idx,
+                                    calculated_cost,
+                                    trip.toll_charge
                                 );
 
                                 // Normalize trip minutes relative to centroid for averaging
