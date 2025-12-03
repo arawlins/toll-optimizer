@@ -72,6 +72,49 @@ const ACCESS_POINTS: [&str; 41] = [
     "Brock(Hwy7)",
 ];
 
+const ACCESS_POINT_DISTANCES: [f32; 40] = [
+    6.062, // QEW-Dundas
+    3.847, // Dundas-Appleby
+    4.153, // Appleby-Bronte
+    4.927, // Bronte-Neyagawa
+    3.227, // Neyagawa-Trafalgar
+    2.917, // Trafalgar-Hwy403
+    4.299, // Hwy403-Britannia
+    3.073, // Britannia-Derry
+    2.507, // Derry-Hwy401
+    5.291, // Hwy401-Mississauga
+    3.239, // Mississauga-Mavis
+    2.310, // Mavis-Hurontario
+    2.147, // Hurontario-Hwy410
+    2.223, // Hwy410-Dixie
+    0.0,   // Dixie-Bramalea
+    3.178, // Bramalea-Airport
+    0.0,   // Airport-Goreway
+    3.235, // Goreway-Hwy427
+    0.0,   // Hwy427-Hwy27
+    4.061, // Hwy27-PineValley
+    2.170, // PineValley-Weston
+    0.0,   // Weston-Hwy400
+    0.0,   // Hwy400-Jane
+    2.199, // Jane-Keele
+    3.521, // Keele-Dufferin
+    2.194, // Dufferin-Bathurst
+    2.172, // Bathurst-Yonge
+    1.930, // Yonge-Bayview
+    2.076, // Bayview-Leslie
+    0.0,   // Leslie-Hwy404
+    0.0,   // Hwy404-Woodbine
+    2.078, // Woodbine-Warden
+    1.930, // Warden-Kennedy
+    2.215, // Kennedy-McCowan
+    2.103, // McCowan-Markham
+    2.074, // Markham-NinthLine
+    1.686, // NinthLine-DonaldCousensPk
+    2.976, // DonaldCousensPk-York-DurhamLine
+    3.771, // York-DurhamLine-Whites
+    4.083, // Whites-Brock(Hwy7)
+];
+
 const EB_ZONES: [(&str, u8); 41] = [
     ("QEW", 1),
     ("Dundas", 2),
