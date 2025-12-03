@@ -160,6 +160,13 @@ enum Direction {
     Westbound,
 }
 
+#[derive(Debug, Clone, PartialEq)]
+enum DayType {
+    Weekday,
+    Weekend,
+    Holiday,
+}
+
 #[derive(Debug)]
 struct TripRecord {
     transponder_plate: String,
@@ -173,14 +180,14 @@ struct TripRecord {
     trip_toll_charge: String,
     camera_charge: String,
     direction: Option<Direction>,
+    day_type: Option<DayType>,
 }
 
 impl TripRecord {
     fn from_csv_line(line: &str) -> Option<Self> {
-        // The format is "Val","Val",...
-        // We split by "," to get the inner values.
-        // We also need to trim the quotes from the start and end of the line if they exist,
-        // but the split method below handles the internal quotes.
+        // The CSV format seems to be "value","value","value"...
+        // We can split by "," to separate fields.
+        // Note: This assumes that the values themselves do not contain ",".
         // A robust CSV parser would be better, but we are sticking to the simple logic for now.
 
         let parts: Vec<&str> = line.split("\",\"").collect();
@@ -188,22 +195,41 @@ impl TripRecord {
             return None;
         }
 
-        // Clean up the first and last element which might have leading/trailing quote
+        // The first and last elements will still have a leading/trailing quote
         let first = parts[0].trim_start_matches('"');
         let last = parts[parts.len() - 1].trim_end_matches('"');
+
+        let entry_point = parts[4].to_string();
+        let exit_point = parts[5].to_string();
+        let date_of_trip = parts[2].to_string();
+
+        let direction = if EB_ZONES.iter().any(|&z| z.0 == entry_point)
+            && EB_ZONES.iter().any(|&z| z.0 == exit_point)
+        {
+            Some(Direction::Eastbound)
+        } else if WB_ZONES.iter().any(|&z| z.0 == entry_point)
+            && WB_ZONES.iter().any(|&z| z.0 == exit_point)
+        {
+            Some(Direction::Westbound)
+        } else {
+            None
+        };
+
+        let day_type = classify_day(&date_of_trip);
 
         Some(TripRecord {
             transponder_plate: first.to_string(),
             vehicle_class: parts[1].to_string(),
-            date_of_trip: parts[2].to_string(),
+            date_of_trip,
             entry_time: parts[3].to_string(),
-            entry_point: parts[4].to_string(),
-            exit_point: parts[5].to_string(),
+            entry_point,
+            exit_point,
             distance_km: parts[6].to_string(),
             toll_charge: parts[7].to_string(),
             trip_toll_charge: parts[8].to_string(),
             camera_charge: last.to_string(),
-            direction: None,
+            direction,
+            day_type,
         })
     }
 }
@@ -314,17 +340,17 @@ fn is_holiday(day: u32, month: u32, year: u32) -> bool {
     }
 }
 
-fn classify_day(date: &str) -> String {
+fn classify_day(date: &str) -> Option<DayType> {
     if let Some((day, month, year)) = parse_date(date) {
         if is_holiday(day, month, year) {
-            return "Holiday".to_string();
+            return Some(DayType::Holiday);
         }
         if is_weekend(day, month, year) {
-            return "Weekend".to_string();
+            return Some(DayType::Weekend);
         }
-        return "Weekday".to_string();
+        return Some(DayType::Weekday);
     }
-    "Unknown".to_string()
+    None
 }
 
 fn k_means_1d(data: &[u32], k: usize) -> (Vec<u32>, f64) {
@@ -606,13 +632,18 @@ fn main() -> io::Result<()> {
                             let dist = diff.min(1440 - diff); // Handle wrap-around for time
 
                             if dist <= 30 {
-                                let day_type = classify_day(&trip.date_of_trip);
+                                let day_type_str = match &trip.day_type {
+                                    Some(DayType::Holiday) => "Holiday",
+                                    Some(DayType::Weekend) => "Weekend",
+                                    Some(DayType::Weekday) => "Weekday",
+                                    None => "Unknown",
+                                };
                                 println!(
                                     "      - {} {} ({}) [{}]",
                                     trip.date_of_trip,
                                     trip.entry_time,
                                     trip.transponder_plate,
-                                    day_type
+                                    day_type_str
                                 );
 
                                 // Normalize trip minutes relative to centroid for averaging
