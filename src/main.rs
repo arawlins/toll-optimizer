@@ -16,6 +16,12 @@ const OLD_ACCESSS_POINTS: [&str; 9] = [
     "Hwy418",
 ];
 
+const WEEKDAY_TIMESLOTS: [&str; 8] = [
+    "5:00 AM", "7:00 AM", "9:30 AM", "10:30 AM", "2:30 PM", "3:30 PM", "6:00 PM", "9:00 PM",
+];
+
+const WEEKEND_TIMESLOTS: [&str; 4] = ["8:30 AM", "10:00 AM", "7:00 PM", "9:00 PM"];
+
 const ACCESS_POINT_SYNONYMS: [(&str, &str); 3] = [
     ("Brock", "Brock(Hwy7)"),
     ("Brock407", "Brock(Hwy7)"),
@@ -219,6 +225,38 @@ impl TripRecord {
             direction: None,
             day_type,
         })
+    }
+    fn get_timeslot_index(&self) -> Option<usize> {
+        let entry_minutes = parse_time_to_minutes(&self.entry_time)?;
+
+        let slots = match self.day_type {
+            Some(DayType::Weekday) => &WEEKDAY_TIMESLOTS[..],
+            Some(DayType::Weekend) | Some(DayType::Holiday) => &WEEKEND_TIMESLOTS[..],
+            None => return None,
+        };
+
+        let slot_minutes: Vec<u32> = slots
+            .iter()
+            .filter_map(|&t| parse_time_to_minutes(t))
+            .collect();
+
+        if slot_minutes.is_empty() {
+            return None;
+        }
+
+        // Find the index i such that slots[i] <= entry_minutes
+        // If entry_minutes is before the first slot, it belongs to the last slot (wrap-around)
+        let mut index = slot_minutes.len() - 1;
+        for (i, &slot_time) in slot_minutes.iter().enumerate() {
+            if entry_minutes < slot_time {
+                if i == 0 {
+                    return Some(slot_minutes.len() - 1);
+                }
+                return Some(i - 1);
+            }
+            index = i;
+        }
+        Some(index)
     }
 }
 
@@ -498,6 +536,9 @@ fn main() -> io::Result<()> {
                     {
                         continue;
                     }
+                    if record.vehicle_class != "Light vehicle" {
+                        continue;
+                    }
 
                     for &(key, val) in &ACCESS_POINT_SYNONYMS {
                         if record.entry_point == key {
@@ -626,12 +667,17 @@ fn main() -> io::Result<()> {
                                     Some(DayType::Weekday) => "Weekday",
                                     None => "Unknown",
                                 };
+                                let timeslot_idx = trip
+                                    .get_timeslot_index()
+                                    .map(|i| i.to_string())
+                                    .unwrap_or("?".to_string());
                                 println!(
-                                    "      - {} {} ({}) [{}]",
+                                    "      - {} {} ({}) [{}] [Slot: {}]",
                                     trip.date_of_trip,
                                     trip.entry_time,
                                     trip.transponder_plate,
-                                    day_type_str
+                                    day_type_str,
+                                    timeslot_idx
                                 );
 
                                 // Normalize trip minutes relative to centroid for averaging
