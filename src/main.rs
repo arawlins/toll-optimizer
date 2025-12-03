@@ -87,11 +87,11 @@ const ACCESS_POINT_DISTANCES: [f32; 40] = [
     2.310, // Mavis-Hurontario
     2.147, // Hurontario-Hwy410
     2.223, // Hwy410-Dixie
-    0.0,   // Dixie-Bramalea
+    4.659, // Dixie-Bramalea (calc)
     3.178, // Bramalea-Airport
-    0.0,   // Airport-Goreway
+    4.621, // Airport-Goreway (calc)
     3.235, // Goreway-Hwy427
-    0.0,   // Hwy427-Hwy27
+    1.324, // Hwy427-Hwy27 (calc)
     4.061, // Hwy27-PineValley
     2.170, // PineValley-Weston
     0.0,   // Weston-Hwy400
@@ -102,8 +102,8 @@ const ACCESS_POINT_DISTANCES: [f32; 40] = [
     2.172, // Bathurst-Yonge
     1.930, // Yonge-Bayview
     2.076, // Bayview-Leslie
-    0.0,   // Leslie-Hwy404
-    0.0,   // Hwy404-Woodbine
+    0.997, // Leslie-Hwy404 (calc)
+    1.027, // Hwy404-Woodbine (calc)
     2.078, // Woodbine-Warden
     1.930, // Warden-Kennedy
     2.215, // Kennedy-McCowan
@@ -875,12 +875,12 @@ fn main() -> io::Result<()> {
                                     .map(|c| format!("{:.2}", c))
                                     .unwrap_or("?".to_string());
                                 println!(
-                                    "      - {} {} ({}) [{}] [Slot: {}] [Calc: ${}] [Actual: ${}]",
+                                    "      - {} {} ({} -> {}) [{}] [Calc: ${}] [Actual: ${}]",
                                     trip.date_of_trip,
                                     trip.entry_time,
-                                    trip.transponder_plate,
+                                    trip.entry_point,
+                                    trip.exit_point,
                                     day_type_str,
-                                    timeslot_idx,
                                     calculated_cost,
                                     trip.toll_charge
                                 );
