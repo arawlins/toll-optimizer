@@ -1,3 +1,4 @@
+use simple_datetime_rs::Date;
 use std::collections::HashMap;
 use std::fs;
 use std::io::{self, BufRead};
@@ -240,6 +241,92 @@ fn format_minutes_to_time(minutes: u32) -> String {
     format!("{}:{:02} {}", hour_12, minute, period)
 }
 
+fn parse_date(date: &str) -> Option<(u32, u32, u32)> {
+    let parts: Vec<&str> = date.split_whitespace().collect();
+    if parts.len() != 3 {
+        return None;
+    }
+
+    let day: u32 = parts[0].parse().ok()?;
+    let month_str = parts[1];
+    let year_str = parts[2];
+    let year: u32 = 2000 + year_str.parse::<u32>().ok()?;
+
+    let month = match month_str {
+        "Jan" => 1,
+        "Feb" => 2,
+        "Mar" => 3,
+        "Apr" => 4,
+        "May" => 5,
+        "Jun" => 6,
+        "Jul" => 7,
+        "Aug" => 8,
+        "Sep" => 9,
+        "Oct" => 10,
+        "Nov" => 11,
+        "Dec" => 12,
+        _ => return None,
+    };
+    Some((day, month, year))
+}
+
+fn is_weekend(day: u32, month: u32, year: u32) -> bool {
+    let date = Date::new(year as u64, month as u64, day as u64);
+    date.is_weekend()
+}
+
+fn is_holiday(day: u32, month: u32, year: u32) -> bool {
+    match (year, month, day) {
+        // 2025 Holidays
+        (2025, 1, 1) => true,   // New Year's Day
+        (2025, 2, 17) => true,  // Family Day
+        (2025, 4, 18) => true,  // Good Friday
+        (2025, 5, 19) => true,  // Victoria Day
+        (2025, 7, 1) => true,   // Canada Day
+        (2025, 9, 1) => true,   // Labour Day
+        (2025, 10, 13) => true, // Thanksgiving
+        (2025, 12, 25) => true, // Christmas Day
+        (2025, 12, 26) => true, // Boxing Day
+
+        // 2024 Holidays
+        (2024, 1, 1) => true,   // New Year's Day
+        (2024, 2, 19) => true,  // Family Day
+        (2024, 3, 29) => true,  // Good Friday
+        (2024, 5, 20) => true,  // Victoria Day
+        (2024, 7, 1) => true,   // Canada Day
+        (2024, 9, 2) => true,   // Labour Day
+        (2024, 10, 14) => true, // Thanksgiving
+        (2024, 12, 25) => true, // Christmas Day
+        (2024, 12, 26) => true, // Boxing Day
+
+        // 2026 Holidays
+        (2026, 1, 1) => true,   // New Year's Day
+        (2026, 2, 16) => true,  // Family Day
+        (2026, 4, 3) => true,   // Good Friday
+        (2026, 5, 18) => true,  // Victoria Day
+        (2026, 7, 1) => true,   // Canada Day
+        (2026, 9, 7) => true,   // Labour Day
+        (2026, 10, 12) => true, // Thanksgiving
+        (2026, 12, 25) => true, // Christmas Day
+        (2026, 12, 26) => true, // Boxing Day
+
+        _ => false,
+    }
+}
+
+fn classify_day(date: &str) -> String {
+    if let Some((day, month, year)) = parse_date(date) {
+        if is_holiday(day, month, year) {
+            return "Holiday".to_string();
+        }
+        if is_weekend(day, month, year) {
+            return "Weekend".to_string();
+        }
+        return "Weekday".to_string();
+    }
+    "Unknown".to_string()
+}
+
 fn k_means_1d(data: &[u32], k: usize) -> (Vec<u32>, f64) {
     if data.is_empty() {
         return (Vec::new(), 0.0);
@@ -422,14 +509,14 @@ fn main() -> io::Result<()> {
                         trips_by_transponder.entry(plate).or_default().push(record);
                     } else {
                         // If we can't find the points (shouldn't happen due to previous checks, but good for safety)
-                        if (entry_index.is_none()) {
+                        if entry_index.is_none() {
                             println!(
                                 "UNKNOWN ENTRY POINT {}: {}",
                                 record.date_of_trip, record.entry_point
                             );
                         }
 
-                        if (exit_index.is_none()) {
+                        if exit_index.is_none() {
                             println!(
                                 "UNKNOWN EXIT POINT {}: {}",
                                 record.date_of_trip, record.exit_point
@@ -519,9 +606,13 @@ fn main() -> io::Result<()> {
                             let dist = diff.min(1440 - diff); // Handle wrap-around for time
 
                             if dist <= 30 {
+                                let day_type = classify_day(&trip.date_of_trip);
                                 println!(
-                                    "      - {} {} ({})",
-                                    trip.date_of_trip, trip.entry_time, trip.transponder_plate
+                                    "      - {} {} ({}) [{}]",
+                                    trip.date_of_trip,
+                                    trip.entry_time,
+                                    trip.transponder_plate,
+                                    day_type
                                 );
 
                                 // Normalize trip minutes relative to centroid for averaging
