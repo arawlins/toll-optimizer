@@ -207,6 +207,156 @@ impl TripRecord {
     }
 }
 
+fn parse_time_to_minutes(time: &str) -> Option<u32> {
+    let parts: Vec<&str> = time.split_whitespace().collect();
+    if parts.len() != 2 {
+        return None;
+    }
+    let time_parts: Vec<&str> = parts[0].split(':').collect();
+    if time_parts.len() != 2 {
+        return None;
+    }
+
+    let hour: u32 = time_parts[0].parse().ok()?;
+    let minute: u32 = time_parts[1].parse().ok()?;
+    let period = parts[1];
+
+    let mut total_minutes = (hour % 12) * 60 + minute;
+    if period == "PM" {
+        total_minutes += 12 * 60;
+    }
+    Some(total_minutes)
+}
+
+fn format_minutes_to_time(minutes: u32) -> String {
+    let hour_24 = minutes / 60;
+    let minute = minutes % 60;
+    let period = if hour_24 >= 12 { "PM" } else { "AM" };
+    let hour_12 = if hour_24 == 0 || hour_24 == 12 {
+        12
+    } else {
+        hour_24 % 12
+    };
+    format!("{}:{:02} {}", hour_12, minute, period)
+}
+
+fn k_means_1d(data: &[u32], k: usize) -> (Vec<u32>, f64) {
+    if data.is_empty() {
+        return (Vec::new(), 0.0);
+    }
+    if k == 0 {
+        return (Vec::new(), 0.0);
+    }
+
+    let min = *data.iter().min().unwrap();
+    let max = *data.iter().max().unwrap();
+
+    // Initialize centroids evenly spaced between min and max
+    let mut centroids: Vec<f64> = (0..k)
+        .map(|i| min as f64 + (max - min) as f64 * (i as f64 / (k.max(2) - 1) as f64))
+        .collect();
+
+    if k == 1 {
+        centroids = vec![data.iter().sum::<u32>() as f64 / data.len() as f64];
+    } else if k > 1 && min == max {
+        return (vec![min], 0.0);
+    }
+
+    let mut final_clusters: Vec<Vec<u32>> = vec![vec![]; k];
+
+    for _ in 0..100 {
+        // Max iterations
+        let mut clusters: Vec<Vec<u32>> = vec![vec![]; k];
+
+        // Assign points to clusters
+        for &point in data {
+            let mut best_cluster = 0;
+            let mut min_dist = f64::MAX;
+
+            for (i, &centroid) in centroids.iter().enumerate() {
+                let dist = (point as f64 - centroid).abs();
+                if dist < min_dist {
+                    min_dist = dist;
+                    best_cluster = i;
+                }
+            }
+            clusters[best_cluster].push(point);
+        }
+
+        // Update centroids
+        let mut new_centroids = Vec::new();
+        let mut changed = false;
+
+        for (i, cluster) in clusters.iter().enumerate() {
+            if cluster.is_empty() {
+                // If a cluster is empty, keep the old centroid (or could re-initialize)
+                new_centroids.push(centroids[i]);
+            } else {
+                let mean = cluster.iter().sum::<u32>() as f64 / cluster.len() as f64;
+                if (mean - centroids[i]).abs() > 0.1 {
+                    changed = true;
+                }
+                new_centroids.push(mean);
+            }
+        }
+
+        centroids = new_centroids;
+        final_clusters = clusters;
+        if !changed {
+            break;
+        }
+    }
+
+    let mut result: Vec<u32> = centroids.iter().map(|&c| c.round() as u32).collect();
+    result.sort();
+
+    // Calculate WCSS
+    let mut wcss = 0.0;
+    for (i, cluster) in final_clusters.iter().enumerate() {
+        let centroid = centroids[i];
+        for &point in cluster {
+            wcss += (point as f64 - centroid).powi(2);
+        }
+    }
+
+    (result, wcss)
+}
+
+fn find_best_k(wcss_values: &[f64]) -> usize {
+    if wcss_values.len() < 3 {
+        return wcss_values.len();
+    }
+
+    let n = wcss_values.len();
+    let p1 = (1.0, wcss_values[0]);
+    let p2 = (n as f64, wcss_values[n - 1]);
+
+    let mut max_dist = -1.0;
+    let mut best_k = 1;
+
+    for i in 0..n {
+        let k = (i + 1) as f64;
+        let wcss = wcss_values[i];
+
+        // Perpendicular distance from point (k, wcss) to line p1-p2
+        // Line equation: Ax + By + C = 0
+        // (y2 - y1)x - (x2 - x1)y + x2y1 - y2x1 = 0
+
+        let numerator =
+            ((p2.1 - p1.1) * k - (p2.0 - p1.0) * wcss + p2.0 * p1.1 - p2.1 * p1.0).abs();
+        let denominator = ((p2.1 - p1.1).powi(2) + (p2.0 - p1.0).powi(2)).sqrt();
+
+        let dist = numerator / denominator;
+
+        if dist > max_dist {
+            max_dist = dist;
+            best_k = i + 1;
+        }
+    }
+
+    best_k
+}
+
 fn main() -> io::Result<()> {
     let csv_dir = Path::new("csv");
     if !csv_dir.exists() {
@@ -217,11 +367,11 @@ fn main() -> io::Result<()> {
     let mut entries: Vec<_> = fs::read_dir(csv_dir)?
         .filter_map(|res| res.ok())
         .map(|dir_entry| dir_entry.path())
-        .filter(|path| path.extension().map_or(false, |ext| ext == "csv"))
-        // .filter(|path| {
-        //     path.file_name().and_then(|s| s.to_str())
-        //         == Some("2025-10-28 - 573522284 Statement.csv")
-        // })
+        //.filter(|path| path.extension().map_or(false, |ext| ext == "csv"))
+        .filter(|path| {
+            path.file_name().and_then(|s| s.to_str())
+                == Some("2025-08-28 - 573522284 Statement.csv")
+        })
         .collect();
 
     entries.sort();
@@ -285,7 +435,7 @@ fn main() -> io::Result<()> {
         }
     }
 
-    let mut trips_by_transponder_direction: HashMap<(String, Direction), Vec<String>> =
+    let mut trips_by_transponder_direction: HashMap<(String, Direction), Vec<&TripRecord>> =
         HashMap::new();
 
     for (plate, trips) in &trips_by_transponder {
@@ -294,7 +444,7 @@ fn main() -> io::Result<()> {
                 trips_by_transponder_direction
                     .entry((plate.clone(), direction.clone()))
                     .or_default()
-                    .push(trip.entry_time.clone());
+                    .push(trip);
             }
         }
     }
@@ -306,10 +456,10 @@ fn main() -> io::Result<()> {
             .then_with(|| format!("{:?}", a.0.1).cmp(&format!("{:?}", b.0.1)))
     });
 
-    for ((plate, direction), times) in results {
+    for ((plate, direction), trips) in results {
         let mut time_counts: HashMap<String, usize> = HashMap::new();
-        for time in &times {
-            *time_counts.entry(time.clone()).or_default() += 1;
+        for trip in &trips {
+            *time_counts.entry(trip.entry_time.clone()).or_default() += 1;
         }
 
         let mut sorted_times: Vec<_> = time_counts.into_iter().collect();
@@ -321,6 +471,55 @@ fn main() -> io::Result<()> {
                 "Transponder: {}, Direction: {:?}, Most Common Entry Time: {} ({} times)",
                 plate, direction, most_common_time, count
             );
+        }
+
+        let minutes: Vec<u32> = trips
+            .iter()
+            .filter_map(|t| parse_time_to_minutes(&t.entry_time))
+            .collect();
+
+        if !minutes.is_empty() {
+            let mut wcss_values = Vec::new();
+            let mut clusters_map = HashMap::new();
+
+            // Run for k=1 to 5 (or fewer if not enough points)
+            let max_k = 5.min(minutes.len());
+            for k in 1..=max_k {
+                let (centroids, wcss) = k_means_1d(&minutes, k);
+                wcss_values.push(wcss);
+                clusters_map.insert(k, centroids);
+            }
+
+            let best_k = find_best_k(&wcss_values);
+
+            if let Some(best_centroids) = clusters_map.get(&best_k) {
+                let formatted_centroids: Vec<String> = best_centroids
+                    .iter()
+                    .map(|&c| format_minutes_to_time(c))
+                    .collect();
+                println!(
+                    "  Best k={} (Elbow Method): [{}]",
+                    best_k,
+                    formatted_centroids.join(", ")
+                );
+
+                for &centroid in best_centroids {
+                    println!("    Trips near {}:", format_minutes_to_time(centroid));
+                    for trip in &trips {
+                        if let Some(trip_minutes) = parse_time_to_minutes(&trip.entry_time) {
+                            let diff = (trip_minutes as i32 - centroid as i32).abs();
+                            let dist = diff.min(1440 - diff); // Handle wrap-around for time (e.g., 23:00 and 01:00 are 2 hours apart, not 22)
+
+                            if dist <= 30 {
+                                println!(
+                                    "      - {} {} ({})",
+                                    trip.date_of_trip, trip.entry_time, trip.transponder_plate
+                                );
+                            }
+                        }
+                    }
+                }
+            }
         }
     }
 
