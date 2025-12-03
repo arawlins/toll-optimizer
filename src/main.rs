@@ -423,11 +423,17 @@ fn main() -> io::Result<()> {
                     } else {
                         // If we can't find the points (shouldn't happen due to previous checks, but good for safety)
                         if (entry_index.is_none()) {
-                            println!("{}: {}", record.date_of_trip, record.entry_point);
+                            println!(
+                                "UNKNOWN ENTRY POINT {}: {}",
+                                record.date_of_trip, record.entry_point
+                            );
                         }
 
                         if (exit_index.is_none()) {
-                            println!("{}: {}", record.date_of_trip, record.exit_point);
+                            println!(
+                                "UNKNOWN EXIT POINT {}: {}",
+                                record.date_of_trip, record.exit_point
+                            );
                         }
                     }
                 }
