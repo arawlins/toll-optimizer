@@ -821,10 +821,6 @@ fn main() -> io::Result<()> {
                                     Some(DayType::Weekday) => "Weekday",
                                     None => "Unknown",
                                 };
-                                let timeslot_idx = trip
-                                    .get_timeslot_index()
-                                    .map(|i| i.to_string())
-                                    .unwrap_or("?".to_string());
                                 let calculated_cost = trip
                                     .calculate_cost()
                                     .map(|c| format!("{:.2}", c))
