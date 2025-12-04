@@ -99,15 +99,15 @@ const ACCESS_POINT_DISTANCES: [f32; 40] = [
     2.310, // Mavis-Hurontario
     2.147, // Hurontario-Hwy410
     2.223, // Hwy410-Dixie
-    4.659, // Dixie-Bramalea (calc)
+    1.481, // Dixie-Bramalea (calc)
     3.178, // Bramalea-Airport
-    4.621, // Airport-Goreway (calc)
+    1.386, // Airport-Goreway (calc)
     3.235, // Goreway-Hwy427
     1.324, // Hwy427-Hwy27 (calc)
     4.061, // Hwy27-PineValley
     2.170, // PineValley-Weston
-    0.0,   // Weston-Hwy400
-    0.0,   // Hwy400-Jane
+    0.691, // Weston-Hwy400 (calc)
+    1.183, // Hwy400-Jane (calc)
     2.199, // Jane-Keele
     3.521, // Keele-Dufferin
     2.194, // Dufferin-Bathurst
@@ -115,7 +115,7 @@ const ACCESS_POINT_DISTANCES: [f32; 40] = [
     1.930, // Yonge-Bayview
     2.076, // Bayview-Leslie
     0.997, // Leslie-Hwy404 (calc)
-    1.027, // Hwy404-Woodbine (calc)
+    1.029, // Hwy404-Woodbine (calc)
     2.078, // Woodbine-Warden
     1.930, // Warden-Kennedy
     2.215, // Kennedy-McCowan
@@ -317,7 +317,7 @@ impl TripRecord {
         }
         Some(index)
     }
-    fn calculate_cost(&self) -> Option<f64> {
+    fn calculate_cost(&self) -> Option<(f64, f64)> {
         let timeslot_idx = self.get_timeslot_index()?;
         let direction = self.direction.as_ref()?;
         let day_type = self.day_type.as_ref()?;
@@ -332,6 +332,7 @@ impl TripRecord {
             .position(|&name| name == self.exit_point)?;
 
         let mut total_cost = 0.0;
+        let mut total_distance = 0.0;
 
         match direction {
             Direction::Eastbound => {
@@ -341,6 +342,7 @@ impl TripRecord {
                 // Segments are from start_idx to end_idx - 1
                 for i in start_idx..end_idx {
                     let distance = ACCESS_POINT_DISTANCES[i] as f64;
+                    total_distance += distance;
 
                     // Look up zone using the access point name from ACCESS_POINTS
                     let ap_name = ACCESS_POINTS[i];
@@ -382,6 +384,7 @@ impl TripRecord {
                 // i goes from end_idx to start_idx - 1.
                 for i in end_idx..start_idx {
                     let distance = ACCESS_POINT_DISTANCES[i] as f64;
+                    total_distance += distance;
 
                     // For WB, use the zone of the entry point into the segment (higher index)
                     let ap_name = ACCESS_POINTS[i + 1];
@@ -411,7 +414,7 @@ impl TripRecord {
             }
         }
 
-        Some(total_cost / 100.0) // Convert cents to dollars
+        Some((total_cost / 100.0, total_distance)) // Convert cents to dollars
     }
 }
 
@@ -823,7 +826,7 @@ fn main() -> io::Result<()> {
                                 };
                                 let calculated_cost = trip
                                     .calculate_cost()
-                                    .map(|c| format!("{:.2}", c))
+                                    .map(|(c, _)| format!("{:.2}", c))
                                     .unwrap_or("?".to_string());
                                 println!(
                                     "      - {} {} ({} -> {}) [{}] [Calc: ${}] [Actual: ${}]",
@@ -878,6 +881,37 @@ fn main() -> io::Result<()> {
     println!("\nTotal Trips per Transponder:");
     for (plate, trips) in &trips_by_transponder {
         println!("Transponder: {}, Total Trips: {}", plate, trips.len());
+        for trip in trips {
+            let day_type_str = match &trip.day_type {
+                Some(DayType::Holiday) => "Holiday",
+                Some(DayType::Weekend) => "Weekend",
+                Some(DayType::Weekday) => "Weekday",
+                None => "Unknown",
+            };
+            let calculation_result = trip.calculate_cost();
+            let calculated_cost_str = calculation_result
+                .map(|(c, _)| format!("{:.2}", c))
+                .unwrap_or_else(|| "?".to_string());
+
+            if calculated_cost_str != trip.toll_charge {
+                let calculated_dist_str = calculation_result
+                    .map(|(_, d)| format!("{:.3}", d))
+                    .unwrap_or_else(|| "?".to_string());
+
+                println!(
+                    "  - {} {} ({} -> {}: {}km) [{}] [Calc: ${}] [Actual: ${}] [Calc Dist: {}km]",
+                    trip.date_of_trip,
+                    trip.entry_time,
+                    trip.entry_point,
+                    trip.exit_point,
+                    trip.distance_km,
+                    day_type_str,
+                    calculated_cost_str,
+                    trip.toll_charge,
+                    calculated_dist_str
+                );
+            }
+        }
     }
 
     Ok(())
