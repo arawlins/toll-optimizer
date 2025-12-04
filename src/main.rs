@@ -244,6 +244,24 @@ struct TripRecord {
     day_type: Option<DayType>,
 }
 
+#[derive(Debug)]
+struct CentroidData<'a> {
+    centroid_time: String,
+    trips: Vec<&'a TripRecord>,
+    average_entry_time: String,
+    total_distance: f64,
+    total_toll_charge: f64,
+}
+
+#[derive(Debug)]
+struct TransponderSummary<'a> {
+    transponder_plate: String,
+    direction: Direction,
+    centroids: Vec<CentroidData<'a>>,
+    best_k: usize,
+    formatted_centroids: Vec<String>,
+}
+
 impl TripRecord {
     fn from_csv_line(line: &str) -> Option<Self> {
         // The CSV format seems to be "value","value","value"...
@@ -654,6 +672,115 @@ fn find_best_k(wcss_values: &[f64]) -> usize {
     best_k
 }
 
+fn analyze_trips<'a>(
+    trips_by_transponder_direction: Vec<((String, Direction), Vec<&'a TripRecord>)>,
+) -> Vec<TransponderSummary<'a>> {
+    let mut summaries = Vec::new();
+
+    for ((plate, direction), trips) in trips_by_transponder_direction {
+        let minutes: Vec<u32> = trips
+            .iter()
+            .filter_map(|t| parse_time_to_minutes(&t.entry_time))
+            .collect();
+
+        if !minutes.is_empty() {
+            let mut wcss_values = Vec::new();
+            let mut clusters_map = HashMap::new();
+
+            // Run for k=1 to 5 (or fewer if not enough points)
+            let max_k = 5.min(minutes.len());
+            for k in 1..=max_k {
+                let (centroids, wcss) = k_means_1d(&minutes, k);
+                wcss_values.push(wcss);
+                clusters_map.insert(k, centroids);
+            }
+
+            let best_k = find_best_k(&wcss_values);
+
+            if let Some(best_centroids) = clusters_map.get(&best_k) {
+                let formatted_centroids: Vec<String> = best_centroids
+                    .iter()
+                    .map(|&c| format_minutes_to_time(c))
+                    .collect();
+
+                let mut centroid_data_list = Vec::new();
+
+                for &centroid in best_centroids {
+                    let centroid_time_str = format_minutes_to_time(centroid);
+
+                    let mut cluster_trips = Vec::new();
+                    let mut cluster_trip_minutes = Vec::new();
+                    let mut total_distance = 0.0;
+                    let mut total_toll_charge = 0.0;
+
+                    for trip in &trips {
+                        if let Some(trip_minutes) = parse_time_to_minutes(&trip.entry_time) {
+                            let diff = (trip_minutes as i32 - centroid as i32).abs();
+                            let dist = diff.min(1440 - diff); // Handle wrap-around for time
+
+                            if dist <= 30 {
+                                cluster_trips.push(*trip);
+
+                                // Parse distance and toll charge
+                                if let Ok(d) = trip.distance_km.trim().parse::<f64>() {
+                                    total_distance += d;
+                                }
+                                if let Ok(c) = trip.toll_charge.trim().parse::<f64>() {
+                                    total_toll_charge += c;
+                                }
+
+                                // Normalize trip minutes relative to centroid for averaging
+                                let mut signed_diff = trip_minutes as i32 - centroid as i32;
+                                if signed_diff > 720 {
+                                    signed_diff -= 1440;
+                                } else if signed_diff < -720 {
+                                    signed_diff += 1440;
+                                }
+
+                                cluster_trip_minutes.push(centroid as i32 + signed_diff);
+                            }
+                        }
+                    }
+
+                    let mut average_entry_time = "N/A".to_string();
+                    if !cluster_trip_minutes.is_empty() {
+                        let sum: i32 = cluster_trip_minutes.iter().sum();
+                        let avg_minutes = sum as f64 / cluster_trip_minutes.len() as f64;
+                        // Normalize back to 0-1439 range
+                        let mut normalized_avg = avg_minutes.round() as i32;
+                        while normalized_avg < 0 {
+                            normalized_avg += 1440;
+                        }
+                        while normalized_avg >= 1440 {
+                            normalized_avg -= 1440;
+                        }
+                        average_entry_time = format_minutes_to_time(normalized_avg as u32);
+                    }
+
+                    let centroid_data = CentroidData {
+                        centroid_time: centroid_time_str,
+                        trips: cluster_trips,
+                        average_entry_time,
+                        total_distance,
+                        total_toll_charge,
+                    };
+                    centroid_data_list.push(centroid_data);
+                }
+
+                summaries.push(TransponderSummary {
+                    transponder_plate: plate,
+                    direction,
+                    centroids: centroid_data_list,
+                    best_k,
+                    formatted_centroids,
+                });
+            }
+        }
+    }
+
+    summaries
+}
+
 fn main() -> io::Result<()> {
     let csv_dir = Path::new("csv");
     if !csv_dir.exists() {
@@ -761,119 +888,78 @@ fn main() -> io::Result<()> {
             .then_with(|| format!("{:?}", a.0.1).cmp(&format!("{:?}", b.0.1)))
     });
 
-    for ((plate, direction), trips) in results {
-        let mut time_counts: HashMap<String, usize> = HashMap::new();
-        for trip in &trips {
-            *time_counts.entry(trip.entry_time.clone()).or_default() += 1;
-        }
+    let summaries = analyze_trips(results);
 
-        let mut sorted_times: Vec<_> = time_counts.into_iter().collect();
-        // Sort by count (descending), then by time (ascending) for stability
-        sorted_times.sort_by(|a, b| b.1.cmp(&a.1).then_with(|| a.0.cmp(&b.0)));
+    for summary in summaries {
+        println!(
+            "Transponder: {}, Direction: {:?}",
+            summary.transponder_plate, summary.direction
+        );
+        println!(
+            "  Best k={} (Elbow Method): [{}]",
+            summary.best_k,
+            summary.formatted_centroids.join(", ")
+        );
 
-        if let Some((most_common_time, count)) = sorted_times.first() {
-            println!(
-                "Transponder: {}, Direction: {:?}, Most Common Entry Time: {} ({} times)",
-                plate, direction, most_common_time, count
-            );
-        }
+        for centroid_data in summary.centroids {
+            println!("    Trips near {}:", centroid_data.centroid_time);
+            for trip in &centroid_data.trips {
+                let day_type_str = match &trip.day_type {
+                    Some(DayType::Holiday) => "Holiday",
+                    Some(DayType::Weekend) => "Weekend",
+                    Some(DayType::Weekday) => "Weekday",
+                    None => "Unknown",
+                };
+                let calculation_result = trip.calculate_cost();
+                let calculated_cost_str = calculation_result
+                    .map(|(c, _)| format!("{:.2}", c))
+                    .unwrap_or_else(|| "?".to_string());
 
-        let minutes: Vec<u32> = trips
-            .iter()
-            .filter_map(|t| parse_time_to_minutes(&t.entry_time))
-            .collect();
+                if calculated_cost_str != trip.toll_charge {
+                    let calculated_dist_str = calculation_result
+                        .map(|(_, d)| format!("{:.3}", d))
+                        .unwrap_or_else(|| "?".to_string());
 
-        if !minutes.is_empty() {
-            let mut wcss_values = Vec::new();
-            let mut clusters_map = HashMap::new();
-
-            // Run for k=1 to 5 (or fewer if not enough points)
-            let max_k = 5.min(minutes.len());
-            for k in 1..=max_k {
-                let (centroids, wcss) = k_means_1d(&minutes, k);
-                wcss_values.push(wcss);
-                clusters_map.insert(k, centroids);
+                    println!(
+                        "      - {} {} ({} -> {}: {}km) [{}] [Calc: ${}] [Actual: ${}] [Calc Dist: {}km]",
+                        trip.date_of_trip,
+                        trip.entry_time,
+                        trip.entry_point,
+                        trip.exit_point,
+                        trip.distance_km,
+                        day_type_str,
+                        calculated_cost_str,
+                        trip.toll_charge,
+                        calculated_dist_str
+                    );
+                } else {
+                    println!(
+                        "      - {} {} ({} -> {}: {}km) [{}] [Calc: ${}] [Actual: ${}]",
+                        trip.date_of_trip,
+                        trip.entry_time,
+                        trip.entry_point,
+                        trip.exit_point,
+                        trip.distance_km,
+                        day_type_str,
+                        calculated_cost_str,
+                        trip.toll_charge
+                    );
+                }
             }
 
-            let best_k = find_best_k(&wcss_values);
-
-            if let Some(best_centroids) = clusters_map.get(&best_k) {
-                let formatted_centroids: Vec<String> = best_centroids
-                    .iter()
-                    .map(|&c| format_minutes_to_time(c))
-                    .collect();
+            if !centroid_data.trips.is_empty() {
                 println!(
-                    "  Best k={} (Elbow Method): [{}]",
-                    best_k,
-                    formatted_centroids.join(", ")
+                    "      Average Entry Time: {}",
+                    centroid_data.average_entry_time
                 );
-
-                for &centroid in best_centroids {
-                    println!("    Trips near {}:", format_minutes_to_time(centroid));
-                    let mut cluster_trip_minutes = Vec::new();
-
-                    for trip in &trips {
-                        if let Some(trip_minutes) = parse_time_to_minutes(&trip.entry_time) {
-                            let diff = (trip_minutes as i32 - centroid as i32).abs();
-                            let dist = diff.min(1440 - diff); // Handle wrap-around for time
-
-                            if dist <= 30 {
-                                let day_type_str = match &trip.day_type {
-                                    Some(DayType::Holiday) => "Holiday",
-                                    Some(DayType::Weekend) => "Weekend",
-                                    Some(DayType::Weekday) => "Weekday",
-                                    None => "Unknown",
-                                };
-                                let calculated_cost = trip
-                                    .calculate_cost()
-                                    .map(|(c, _)| format!("{:.2}", c))
-                                    .unwrap_or("?".to_string());
-                                println!(
-                                    "      - {} {} ({} -> {}) [{}] [Calc: ${}] [Actual: ${}]",
-                                    trip.date_of_trip,
-                                    trip.entry_time,
-                                    trip.entry_point,
-                                    trip.exit_point,
-                                    day_type_str,
-                                    calculated_cost,
-                                    trip.toll_charge
-                                );
-
-                                // Normalize trip minutes relative to centroid for averaging
-                                // If trip is e.g. 00:10 (10) and centroid is 23:50 (1430),
-                                // we want to treat 00:10 as 24:10 (1450) if it's "after" the centroid in a circular sense
-                                // simpler: just use the signed difference from centroid
-
-                                let mut signed_diff = trip_minutes as i32 - centroid as i32;
-                                if signed_diff > 720 {
-                                    signed_diff -= 1440;
-                                } else if signed_diff < -720 {
-                                    signed_diff += 1440;
-                                }
-
-                                cluster_trip_minutes.push(centroid as i32 + signed_diff);
-                            }
-                        }
-                    }
-
-                    if !cluster_trip_minutes.is_empty() {
-                        let sum: i32 = cluster_trip_minutes.iter().sum();
-                        let avg_minutes = sum as f64 / cluster_trip_minutes.len() as f64;
-                        // Normalize back to 0-1439 range
-                        let mut normalized_avg = avg_minutes.round() as i32;
-                        while normalized_avg < 0 {
-                            normalized_avg += 1440;
-                        }
-                        while normalized_avg >= 1440 {
-                            normalized_avg -= 1440;
-                        }
-
-                        println!(
-                            "      Average Entry Time: {}",
-                            format_minutes_to_time(normalized_avg as u32)
-                        );
-                    }
-                }
+                println!(
+                    "      Total Distance: {:.3} km",
+                    centroid_data.total_distance
+                );
+                println!(
+                    "      Total Toll Charge: ${:.2}",
+                    centroid_data.total_toll_charge
+                );
             }
         }
     }
