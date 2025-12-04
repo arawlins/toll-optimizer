@@ -915,36 +915,17 @@ fn main() -> io::Result<()> {
                     .map(|(c, _)| format!("{:.2}", c))
                     .unwrap_or_else(|| "?".to_string());
 
-                if calculated_cost_str != trip.toll_charge {
-                    let calculated_dist_str = calculation_result
-                        .map(|(_, d)| format!("{:.3}", d))
-                        .unwrap_or_else(|| "?".to_string());
-
-                    println!(
-                        "      - {} {} ({} -> {}: {}km) [{}] [Calc: ${}] [Actual: ${}] [Calc Dist: {}km]",
-                        trip.date_of_trip,
-                        trip.entry_time,
-                        trip.entry_point,
-                        trip.exit_point,
-                        trip.distance_km,
-                        day_type_str,
-                        calculated_cost_str,
-                        trip.toll_charge,
-                        calculated_dist_str
-                    );
-                } else {
-                    println!(
-                        "      - {} {} ({} -> {}: {}km) [{}] [Calc: ${}] [Actual: ${}]",
-                        trip.date_of_trip,
-                        trip.entry_time,
-                        trip.entry_point,
-                        trip.exit_point,
-                        trip.distance_km,
-                        day_type_str,
-                        calculated_cost_str,
-                        trip.toll_charge
-                    );
-                }
+                println!(
+                    "      - {} {} ({} -> {}: {}km) [{}] [Calc: ${}] [Actual: ${}]",
+                    trip.date_of_trip,
+                    trip.entry_time,
+                    trip.entry_point,
+                    trip.exit_point,
+                    trip.distance_km,
+                    day_type_str,
+                    calculated_cost_str,
+                    trip.toll_charge
+                );
             }
 
             if !centroid_data.trips.is_empty() {
