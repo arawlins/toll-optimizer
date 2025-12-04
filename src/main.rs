@@ -677,61 +677,60 @@ fn main() -> io::Result<()> {
         let reader = io::BufReader::new(file);
         let lines: Vec<String> = reader.lines().collect::<Result<_, _>>()?;
 
-        // We need at least 5 lines to have a header (line 5 is index 4)
-        if lines.len() < 5 {
-            continue;
-        }
+        let mut header_found = false;
+        for line in lines {
+            if !header_found {
+                if line.contains("Transponder/Plate Number") {
+                    header_found = true;
+                }
+                continue;
+            }
 
-        // Skip header (line 5), print the rest
-        if lines.len() > 5 {
-            for line in &lines[5..] {
-                if let Some(mut record) = TripRecord::from_csv_line(line) {
-                    if OLD_ACCESSS_POINTS.contains(&record.entry_point.as_str())
-                        || OLD_ACCESSS_POINTS.contains(&record.exit_point.as_str())
-                    {
-                        continue;
+            if let Some(mut record) = TripRecord::from_csv_line(&line) {
+                if OLD_ACCESSS_POINTS.contains(&record.entry_point.as_str())
+                    || OLD_ACCESSS_POINTS.contains(&record.exit_point.as_str())
+                {
+                    continue;
+                }
+                if record.vehicle_class != "Light vehicle" {
+                    continue;
+                }
+
+                for &(key, val) in &ACCESS_POINT_SYNONYMS {
+                    if record.entry_point == key {
+                        record.entry_point = val.to_string();
                     }
-                    if record.vehicle_class != "Light vehicle" {
-                        continue;
+                    if record.exit_point == key {
+                        record.exit_point = val.to_string();
                     }
+                }
 
-                    for &(key, val) in &ACCESS_POINT_SYNONYMS {
-                        if record.entry_point == key {
-                            record.entry_point = val.to_string();
-                        }
-                        if record.exit_point == key {
-                            record.exit_point = val.to_string();
-                        }
-                    }
+                let entry_index = ACCESS_POINTS.iter().position(|&r| r == record.entry_point);
+                let exit_index = ACCESS_POINTS.iter().position(|&r| r == record.exit_point);
 
-                    let entry_index = ACCESS_POINTS.iter().position(|&r| r == record.entry_point);
-                    let exit_index = ACCESS_POINTS.iter().position(|&r| r == record.exit_point);
-
-                    if let (Some(entry_idx), Some(exit_idx)) = (entry_index, exit_index) {
-                        record.direction = Some(if exit_idx > entry_idx {
-                            Direction::Eastbound
-                        } else {
-                            Direction::Westbound
-                        });
-                        // println!("Entry: {}, Exit: {}, Direction: {:?}", record.entry_point, record.exit_point, record.direction.as_ref().unwrap());
-
-                        let plate = record.transponder_plate.clone();
-                        trips_by_transponder.entry(plate).or_default().push(record);
+                if let (Some(entry_idx), Some(exit_idx)) = (entry_index, exit_index) {
+                    record.direction = Some(if exit_idx > entry_idx {
+                        Direction::Eastbound
                     } else {
-                        // If we can't find the points (shouldn't happen due to previous checks, but good for safety)
-                        if entry_index.is_none() {
-                            println!(
-                                "UNKNOWN ENTRY POINT {}: {}",
-                                record.date_of_trip, record.entry_point
-                            );
-                        }
+                        Direction::Westbound
+                    });
 
-                        if exit_index.is_none() {
-                            println!(
-                                "UNKNOWN EXIT POINT {}: {}",
-                                record.date_of_trip, record.exit_point
-                            );
-                        }
+                    let plate = record.transponder_plate.clone();
+                    trips_by_transponder.entry(plate).or_default().push(record);
+                } else {
+                    // If we can't find the points (shouldn't happen due to previous checks, but good for safety)
+                    if entry_index.is_none() {
+                        println!(
+                            "UNKNOWN ENTRY POINT {}: {}",
+                            record.date_of_trip, record.entry_point
+                        );
+                    }
+
+                    if exit_index.is_none() {
+                        println!(
+                            "UNKNOWN EXIT POINT {}: {}",
+                            record.date_of_trip, record.exit_point
+                        );
                     }
                 }
             }
