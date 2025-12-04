@@ -283,11 +283,15 @@ impl TripRecord {
     }
     fn get_timeslot_index(&self) -> Option<usize> {
         let entry_minutes = parse_time_to_minutes(&self.entry_time)?;
+        let (_, _, year) = parse_date(&self.date_of_trip)?;
 
-        let slots = match self.day_type {
-            Some(DayType::Weekday) => &WEEKDAY_TIMESLOTS_2026[..],
-            Some(DayType::Weekend) | Some(DayType::Holiday) => &WEEKEND_TIMESLOTS_2026[..],
-            None => return None,
+        let slots = match (year, self.day_type.as_ref()?) {
+            (y, DayType::Weekday) if y <= 2025 => &WEEKDAY_TIMESLOTS_2025[..],
+            (_, DayType::Weekday) => &WEEKDAY_TIMESLOTS_2026[..],
+            (y, DayType::Weekend) | (y, DayType::Holiday) if y <= 2025 => {
+                &WEEKEND_TIMESLOTS_2025[..]
+            }
+            (_, DayType::Weekend) | (_, DayType::Holiday) => &WEEKEND_TIMESLOTS_2026[..],
         };
 
         let slot_minutes: Vec<u32> = slots
@@ -317,6 +321,7 @@ impl TripRecord {
         let timeslot_idx = self.get_timeslot_index()?;
         let direction = self.direction.as_ref()?;
         let day_type = self.day_type.as_ref()?;
+        let (_, _, year) = parse_date(&self.date_of_trip)?;
 
         // Use ACCESS_POINTS as the canonical list for indices
         let start_idx = ACCESS_POINTS
@@ -342,20 +347,28 @@ impl TripRecord {
                     let zone = EB_ZONES.iter().find(|&&(name, _)| name == ap_name)?.1 as usize;
 
                     // Price lookup
-                    let price_rate = match day_type {
-                        DayType::Weekday => {
+                    let price_rate = match (year, day_type) {
+                        (y, DayType::Weekday) if y <= 2025 => {
+                            light_vehicles::WEEKDAY_EB_TOLL_PRICES_BY_TIMESLOT_AND_ZONE_2025
+                                [timeslot_idx][zone - 1]
+                        }
+                        (_, DayType::Weekday) => {
                             light_vehicles::WEEKDAY_EB_TOLL_PRICES_BY_TIMESLOT_AND_ZONE_2026
                                 [timeslot_idx][zone - 1]
                         }
-                        DayType::Weekend | DayType::Holiday => {
+                        (y, DayType::Weekend | DayType::Holiday) if y <= 2025 => {
+                            light_vehicles::WEEKEND_EB_TOLL_PRICES_BY_TIMESLOT_AND_ZONE_2025
+                                [timeslot_idx][zone - 1]
+                        }
+                        (_, DayType::Weekend | DayType::Holiday) => {
                             light_vehicles::WEEKEND_EB_TOLL_PRICES_BY_TIMESLOT_AND_ZONE_2026
                                 [timeslot_idx][zone - 1]
                         }
                     };
-                    println!(
-                        "Index: {}\nDistance: {}\nAccess point: {}\nZone: {}\nPrice rate: {}\n",
-                        i, distance, ap_name, zone, price_rate
-                    );
+                    // println!(
+                    //     "Index: {}\nDistance: {}\nAccess point: {}\nZone: {}\nPrice rate: {}\n",
+                    //     i, distance, ap_name, zone, price_rate
+                    // );
                     total_cost += distance * price_rate;
                 }
             }
@@ -374,12 +387,20 @@ impl TripRecord {
                     let ap_name = ACCESS_POINTS[i + 1];
                     let zone = WB_ZONES.iter().find(|&&(name, _)| name == ap_name)?.1 as usize;
 
-                    let price_rate = match day_type {
-                        DayType::Weekday => {
+                    let price_rate = match (year, day_type) {
+                        (y, DayType::Weekday) if y <= 2025 => {
+                            light_vehicles::WEEKDAY_WB_TOLL_PRICES_BY_TIMESLOT_AND_ZONE_2025
+                                [timeslot_idx][zone - 1]
+                        }
+                        (_, DayType::Weekday) => {
                             light_vehicles::WEEKDAY_WB_TOLL_PRICES_BY_TIMESLOT_AND_ZONE_2026
                                 [timeslot_idx][zone - 1]
                         }
-                        DayType::Weekend | DayType::Holiday => {
+                        (y, DayType::Weekend | DayType::Holiday) if y <= 2025 => {
+                            light_vehicles::WEEKEND_WB_TOLL_PRICES_BY_TIMESLOT_AND_ZONE_2025
+                                [timeslot_idx][zone - 1]
+                        }
+                        (_, DayType::Weekend | DayType::Holiday) => {
                             light_vehicles::WEEKEND_WB_TOLL_PRICES_BY_TIMESLOT_AND_ZONE_2026
                                 [timeslot_idx][zone - 1]
                         }
