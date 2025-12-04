@@ -4,7 +4,10 @@ use std::fs;
 use std::io::{self, BufRead};
 use std::path::Path;
 
+mod heavy_multiple_unit;
+mod heavy_single_unit;
 mod light_vehicles;
+mod medium_vehicles;
 mod motorcycles;
 
 const OLD_ACCESSS_POINTS: [&str; 9] = [
