@@ -219,6 +219,13 @@ impl TripRecord {
         let timeslot_idx = self.get_timeslot_index()?;
         self.calculate_cost_at_timeslot(timeslot_idx)
     }
+
+    pub fn get_total_recorded_cost(&self) -> f64 {
+        let toll = self.toll_charge.trim().parse::<f64>().unwrap_or(0.0);
+        let trip_toll = self.trip_toll_charge.trim().parse::<f64>().unwrap_or(0.0);
+        let camera = self.camera_charge.trim().parse::<f64>().unwrap_or(0.0);
+        toll + trip_toll + camera
+    }
 }
 
 pub fn parse_time_to_minutes(time: &str) -> Option<u32> {

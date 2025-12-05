@@ -152,11 +152,13 @@ fn main() -> io::Result<()> {
     println!("\nTotal Trips per Transponder:");
 
     for ((plate, direction), trips) in &results {
+        let total_cost: f64 = trips.iter().map(|t| t.get_total_recorded_cost()).sum();
         println!(
-            "Transponder: {}, Direction: {:?}, Total Trips: {}",
+            "Transponder: {}, Direction: {:?}, Total Trips: {}, Total Cost: ${:.2}",
             plate,
             direction,
-            trips.len()
+            trips.len(),
+            total_cost
         );
         for trip in trips {
             let day_type_str = match &trip.day_type {
