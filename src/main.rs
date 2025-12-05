@@ -251,10 +251,12 @@ struct CentroidData<'a> {
     average_entry_time: String,
     total_distance: f64,
     total_toll_charge: f64,
+    total_toll_charge_previous_timeslot: f64,
+    total_toll_charge_next_timeslot: f64,
 }
 
 #[derive(Debug)]
-struct TransponderSummary<'a> {
+struct TransponderSummaryByTime<'a> {
     transponder_plate: String,
     direction: Direction,
     centroids: Vec<CentroidData<'a>>,
@@ -299,8 +301,21 @@ impl TripRecord {
             day_type,
         })
     }
-    fn get_timeslot_index(&self) -> Option<usize> {
-        let entry_minutes = parse_time_to_minutes(&self.entry_time)?;
+    fn get_timeslot_count(&self) -> Option<usize> {
+        let (_, _, year) = parse_date(&self.date_of_trip)?;
+        let count = match (year, self.day_type.as_ref()?) {
+            (y, DayType::Weekday) if y <= 2025 => WEEKDAY_TIMESLOTS_2025.len(),
+            (_, DayType::Weekday) => WEEKDAY_TIMESLOTS_2026.len(),
+            (y, DayType::Weekend) | (y, DayType::Holiday) if y <= 2025 => {
+                WEEKEND_TIMESLOTS_2025.len()
+            }
+            (_, DayType::Weekend) | (_, DayType::Holiday) => WEEKEND_TIMESLOTS_2026.len(),
+        };
+        Some(count)
+    }
+
+    fn get_timeslot_index_for_time(&self, time_str: &str) -> Option<usize> {
+        let entry_minutes = parse_time_to_minutes(time_str)?;
         let (_, _, year) = parse_date(&self.date_of_trip)?;
 
         let slots = match (year, self.day_type.as_ref()?) {
@@ -335,8 +350,12 @@ impl TripRecord {
         }
         Some(index)
     }
-    fn calculate_cost(&self) -> Option<(f64, f64)> {
-        let timeslot_idx = self.get_timeslot_index()?;
+
+    fn get_timeslot_index(&self) -> Option<usize> {
+        self.get_timeslot_index_for_time(&self.entry_time)
+    }
+
+    fn calculate_cost_at_timeslot(&self, timeslot_idx: usize) -> Option<(f64, f64)> {
         let direction = self.direction.as_ref()?;
         let day_type = self.day_type.as_ref()?;
         let (_, _, year) = parse_date(&self.date_of_trip)?;
@@ -385,10 +404,6 @@ impl TripRecord {
                                 [timeslot_idx][zone - 1]
                         }
                     };
-                    // println!(
-                    //     "Index: {}\nDistance: {}\nAccess point: {}\nZone: {}\nPrice rate: {}\n",
-                    //     i, distance, ap_name, zone, price_rate
-                    // );
                     total_cost += distance * price_rate;
                 }
             }
@@ -397,9 +412,6 @@ impl TripRecord {
                     return None;
                 } // Invalid for Westbound
                 // Segments are from end_idx to start_idx - 1 (traversed in reverse)
-                // For WB, if we go from index 10 to 5.
-                // We traverse segments 9, 8, 7, 6, 5.
-                // i goes from end_idx to start_idx - 1.
                 for i in end_idx..start_idx {
                     let distance = ACCESS_POINT_DISTANCES[i] as f64;
                     total_distance += distance;
@@ -433,6 +445,11 @@ impl TripRecord {
         }
 
         Some((total_cost / 100.0, total_distance)) // Convert cents to dollars
+    }
+
+    fn calculate_cost(&self) -> Option<(f64, f64)> {
+        let timeslot_idx = self.get_timeslot_index()?;
+        self.calculate_cost_at_timeslot(timeslot_idx)
     }
 }
 
@@ -555,96 +572,106 @@ fn classify_day(date: &str) -> Option<DayType> {
     None
 }
 
+// 1D K-means clustering
 fn k_means_1d(data: &[u32], k: usize) -> (Vec<u32>, f64) {
-    if data.is_empty() {
-        return (Vec::new(), 0.0);
-    }
-    if k == 0 {
+    if data.is_empty() || k == 0 {
         return (Vec::new(), 0.0);
     }
 
-    let min = *data.iter().min().unwrap();
-    let max = *data.iter().max().unwrap();
-
-    // Initialize centroids evenly spaced between min and max
-    let mut centroids: Vec<f64> = (0..k)
-        .map(|i| min as f64 + (max - min) as f64 * (i as f64 / (k.max(2) - 1) as f64))
-        .collect();
-
-    if k == 1 {
-        centroids = vec![data.iter().sum::<u32>() as f64 / data.len() as f64];
-    } else if k > 1 && min == max {
-        return (vec![min], 0.0);
+    // Initialize centroids (simple method: pick random or evenly spaced points)
+    // Here we'll just pick the first k distinct points or evenly spaced if not enough distinct
+    let mut centroids: Vec<f64> = data.iter().take(k).map(|&x| x as f64).collect();
+    while centroids.len() < k {
+        centroids.push(data[0] as f64); // Fallback
     }
 
-    let mut final_clusters: Vec<Vec<u32>> = vec![vec![]; k];
+    let mut assignments = vec![0; data.len()];
+    let mut wcss = 0.0;
 
     for _ in 0..100 {
         // Max iterations
-        let mut clusters: Vec<Vec<u32>> = vec![vec![]; k];
+        let mut changed = false;
+        wcss = 0.0;
 
-        // Assign points to clusters
-        for &point in data {
-            let mut best_cluster = 0;
+        // Assignment step
+        for (i, &point) in data.iter().enumerate() {
             let mut min_dist = f64::MAX;
+            let mut best_cluster = 0;
 
-            for (i, &centroid) in centroids.iter().enumerate() {
-                let dist = (point as f64 - centroid).abs();
+            for (c_idx, &centroid) in centroids.iter().enumerate() {
+                let diff = (point as f64 - centroid).abs();
+                // Handle wrap-around (24 hours = 1440 minutes)
+                let dist = diff.min(1440.0 - diff);
                 if dist < min_dist {
                     min_dist = dist;
-                    best_cluster = i;
+                    best_cluster = c_idx;
                 }
             }
-            clusters[best_cluster].push(point);
-        }
-
-        // Update centroids
-        let mut new_centroids = Vec::new();
-        let mut changed = false;
-
-        for (i, cluster) in clusters.iter().enumerate() {
-            if cluster.is_empty() {
-                // If a cluster is empty, keep the old centroid (or could re-initialize)
-                new_centroids.push(centroids[i]);
-            } else {
-                let mean = cluster.iter().sum::<u32>() as f64 / cluster.len() as f64;
-                if (mean - centroids[i]).abs() > 0.1 {
-                    changed = true;
-                }
-                new_centroids.push(mean);
+            if assignments[i] != best_cluster {
+                assignments[i] = best_cluster;
+                changed = true;
             }
+            wcss += min_dist * min_dist;
         }
 
-        centroids = new_centroids;
-        final_clusters = clusters;
+        // Update step
         if !changed {
             break;
         }
-    }
 
-    let mut result: Vec<u32> = centroids.iter().map(|&c| c.round() as u32).collect();
-    result.sort();
-
-    // Calculate WCSS
-    let mut wcss = 0.0;
-    for (i, cluster) in final_clusters.iter().enumerate() {
-        let centroid = centroids[i];
-        for &point in cluster {
-            wcss += (point as f64 - centroid).powi(2);
+        for c_idx in 0..k {
+            let mut sum = 0.0;
+            let mut count = 0;
+            // We need to handle the circular mean carefully.
+            // A simple approximation for now: if points are far apart, this might be tricky.
+            // But for toll data, clusters are likely tight.
+            // Let's use a simple linear mean for now, assuming clusters don't span midnight widely.
+            // If they do, we'd need vector averaging.
+            for (i, &point) in data.iter().enumerate() {
+                if assignments[i] == c_idx {
+                    // Adjust point to be close to current centroid to handle wrap-around for averaging
+                    let mut p = point as f64;
+                    if (p - centroids[c_idx]).abs() > 720.0 {
+                        if p < centroids[c_idx] {
+                            p += 1440.0;
+                        } else {
+                            p -= 1440.0;
+                        }
+                    }
+                    sum += p;
+                    count += 1;
+                }
+            }
+            if count > 0 {
+                let mut new_mean = sum / count as f64;
+                if new_mean < 0.0 {
+                    new_mean += 1440.0;
+                }
+                if new_mean >= 1440.0 {
+                    new_mean -= 1440.0;
+                }
+                centroids[c_idx] = new_mean;
+            }
         }
     }
 
-    (result, wcss)
+    let u32_centroids: Vec<u32> = centroids.iter().map(|&c| c.round() as u32).collect();
+    (u32_centroids, wcss)
 }
 
 fn find_best_k(wcss_values: &[f64]) -> usize {
-    if wcss_values.len() < 3 {
-        return wcss_values.len();
+    if wcss_values.len() < 2 {
+        return 1;
     }
+    // Simple elbow method: find the point with the maximum curvature or largest drop?
+    // Let's look for the "elbow" where the reduction in WCSS slows down significantly.
+    // A simple heuristic: if reduction is less than X% of previous reduction?
+    // Or just pick k where WCSS is "low enough".
 
+    // Let's try a simple angle-based method or just max distance from line connecting first and last.
     let n = wcss_values.len();
-    let p1 = (1.0, wcss_values[0]);
-    let p2 = (n as f64, wcss_values[n - 1]);
+    let first = (1.0, wcss_values[0]);
+    let last = (n as f64, wcss_values[n - 1]);
 
     let mut max_dist = -1.0;
     let mut best_k = 1;
@@ -652,15 +679,12 @@ fn find_best_k(wcss_values: &[f64]) -> usize {
     for i in 0..n {
         let k = (i + 1) as f64;
         let wcss = wcss_values[i];
-
-        // Perpendicular distance from point (k, wcss) to line p1-p2
-        // Line equation: Ax + By + C = 0
-        // (y2 - y1)x - (x2 - x1)y + x2y1 - y2x1 = 0
-
-        let numerator =
-            ((p2.1 - p1.1) * k - (p2.0 - p1.0) * wcss + p2.0 * p1.1 - p2.1 * p1.0).abs();
-        let denominator = ((p2.1 - p1.1).powi(2) + (p2.0 - p1.0).powi(2)).sqrt();
-
+        // Distance from point (k, wcss) to line defined by first and last
+        // Line eq: (y2-y1)x - (x2-x1)y + x2y1 - y2x1 = 0
+        let numerator = ((last.1 - first.1) * k - (last.0 - first.0) * wcss + last.0 * first.1
+            - last.1 * first.0)
+            .abs();
+        let denominator = ((last.1 - first.1).powi(2) + (last.0 - first.0).powi(2)).sqrt();
         let dist = numerator / denominator;
 
         if dist > max_dist {
@@ -674,7 +698,7 @@ fn find_best_k(wcss_values: &[f64]) -> usize {
 
 fn analyze_trips<'a>(
     trips_by_transponder_direction: Vec<((String, Direction), Vec<&'a TripRecord>)>,
-) -> Vec<TransponderSummary<'a>> {
+) -> Vec<TransponderSummaryByTime<'a>> {
     let mut summaries = Vec::new();
 
     for ((plate, direction), trips) in trips_by_transponder_direction {
@@ -743,6 +767,9 @@ fn analyze_trips<'a>(
                     }
 
                     let mut average_entry_time = "N/A".to_string();
+                    let mut total_toll_charge_previous_timeslot = 0.0;
+                    let mut total_toll_charge_next_timeslot = 0.0;
+
                     if !cluster_trip_minutes.is_empty() {
                         let sum: i32 = cluster_trip_minutes.iter().sum();
                         let avg_minutes = sum as f64 / cluster_trip_minutes.len() as f64;
@@ -755,6 +782,28 @@ fn analyze_trips<'a>(
                             normalized_avg -= 1440;
                         }
                         average_entry_time = format_minutes_to_time(normalized_avg as u32);
+
+                        // Calculate previous and next timeslot totals
+                        for trip in &cluster_trips {
+                            if let (Some(avg_idx), Some(count)) = (
+                                trip.get_timeslot_index_for_time(&average_entry_time),
+                                trip.get_timeslot_count(),
+                            ) {
+                                let prev_idx = if avg_idx == 0 { count - 1 } else { avg_idx - 1 };
+                                let next_idx = if avg_idx == count - 1 { 0 } else { avg_idx + 1 };
+
+                                if let Some((prev_cost, _)) =
+                                    trip.calculate_cost_at_timeslot(prev_idx)
+                                {
+                                    total_toll_charge_previous_timeslot += prev_cost;
+                                }
+                                if let Some((next_cost, _)) =
+                                    trip.calculate_cost_at_timeslot(next_idx)
+                                {
+                                    total_toll_charge_next_timeslot += next_cost;
+                                }
+                            }
+                        }
                     }
 
                     let centroid_data = CentroidData {
@@ -763,11 +812,13 @@ fn analyze_trips<'a>(
                         average_entry_time,
                         total_distance,
                         total_toll_charge,
+                        total_toll_charge_previous_timeslot,
+                        total_toll_charge_next_timeslot,
                     };
                     centroid_data_list.push(centroid_data);
                 }
 
-                summaries.push(TransponderSummary {
+                summaries.push(TransponderSummaryByTime {
                     transponder_plate: plate,
                     direction,
                     centroids: centroid_data_list,
@@ -890,7 +941,7 @@ fn main() -> io::Result<()> {
 
     let summaries = analyze_trips(results);
 
-    for summary in summaries {
+    for summary in &summaries {
         println!(
             "Transponder: {}, Direction: {:?}",
             summary.transponder_plate, summary.direction
@@ -901,7 +952,7 @@ fn main() -> io::Result<()> {
             summary.formatted_centroids.join(", ")
         );
 
-        for centroid_data in summary.centroids {
+        for centroid_data in &summary.centroids {
             println!("    Trips near {}:", centroid_data.centroid_time);
             for trip in &centroid_data.trips {
                 let day_type_str = match &trip.day_type {
@@ -910,21 +961,41 @@ fn main() -> io::Result<()> {
                     Some(DayType::Weekday) => "Weekday",
                     None => "Unknown",
                 };
-                let calculation_result = trip.calculate_cost();
-                let calculated_cost_str = calculation_result
-                    .map(|(c, _)| format!("{:.2}", c))
-                    .unwrap_or_else(|| "?".to_string());
+
+                let mut optimization_msg = String::new();
+                if let (Some(avg_idx), Some(count)) = (
+                    trip.get_timeslot_index_for_time(&centroid_data.average_entry_time),
+                    trip.get_timeslot_count(),
+                ) {
+                    let prev_idx = if avg_idx == 0 { count - 1 } else { avg_idx - 1 };
+                    let next_idx = if avg_idx == count - 1 { 0 } else { avg_idx + 1 };
+
+                    let current_cost = trip.toll_charge.parse::<f64>().unwrap_or(f64::MAX);
+
+                    if let Some((prev_cost, _)) = trip.calculate_cost_at_timeslot(prev_idx) {
+                        if prev_cost < current_cost - 0.005 {
+                            optimization_msg
+                                .push_str(&format!(" [Cheaper Prev: ${:.2}]", prev_cost));
+                        }
+                    }
+                    if let Some((next_cost, _)) = trip.calculate_cost_at_timeslot(next_idx) {
+                        if next_cost < current_cost - 0.005 {
+                            optimization_msg
+                                .push_str(&format!(" [Cheaper Next: ${:.2}]", next_cost));
+                        }
+                    }
+                }
 
                 println!(
-                    "      - {} {} ({} -> {}: {}km) [{}] [Calc: ${}] [Actual: ${}]",
+                    "      - {} {} ({} -> {}: {}km) [{}] [${}]{}",
                     trip.date_of_trip,
                     trip.entry_time,
                     trip.entry_point,
                     trip.exit_point,
                     trip.distance_km,
                     day_type_str,
-                    calculated_cost_str,
-                    trip.toll_charge
+                    trip.toll_charge,
+                    optimization_msg
                 );
             }
 
@@ -941,6 +1012,36 @@ fn main() -> io::Result<()> {
                     "      Total Toll Charge: ${:.2}",
                     centroid_data.total_toll_charge
                 );
+                if centroid_data.total_toll_charge_previous_timeslot
+                    < centroid_data.total_toll_charge - 0.005
+                {
+                    println!(
+                        "      Total Toll Charge (Previous Timeslot): ${:.2} (Save ${:.2})",
+                        centroid_data.total_toll_charge_previous_timeslot,
+                        centroid_data.total_toll_charge
+                            - centroid_data.total_toll_charge_previous_timeslot
+                    );
+                } else {
+                    println!(
+                        "      Total Toll Charge (Previous Timeslot): ${:.2}",
+                        centroid_data.total_toll_charge_previous_timeslot
+                    );
+                }
+                if centroid_data.total_toll_charge_next_timeslot
+                    < centroid_data.total_toll_charge - 0.005
+                {
+                    println!(
+                        "      Total Toll Charge (Next Timeslot): ${:.2} (Save ${:.2})",
+                        centroid_data.total_toll_charge_next_timeslot,
+                        centroid_data.total_toll_charge
+                            - centroid_data.total_toll_charge_next_timeslot
+                    );
+                } else {
+                    println!(
+                        "      Total Toll Charge (Next Timeslot): ${:.2}",
+                        centroid_data.total_toll_charge_next_timeslot
+                    );
+                }
             }
         }
     }
