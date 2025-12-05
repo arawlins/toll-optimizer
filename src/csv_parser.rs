@@ -1,4 +1,5 @@
-use crate::{ACCESS_POINT_SYNONYMS, ACCESS_POINTS, Direction, OLD_ACCESSS_POINTS, TripRecord};
+use crate::trip_analyzer::{Direction, TripRecord};
+use crate::{ACCESS_POINT_SYNONYMS, ACCESS_POINTS, OLD_ACCESSS_POINTS};
 use std::collections::HashMap;
 
 pub fn parse_trips(lines: Vec<String>) -> Vec<((String, Direction), Vec<TripRecord>)> {
