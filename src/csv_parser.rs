@@ -1,7 +1,7 @@
 use crate::{ACCESS_POINT_SYNONYMS, ACCESS_POINTS, Direction, OLD_ACCESSS_POINTS, TripRecord};
 use std::collections::HashMap;
 
-pub fn parse_trips(lines: Vec<String>) -> HashMap<(String, Direction), Vec<TripRecord>> {
+pub fn parse_trips(lines: Vec<String>) -> Vec<((String, Direction), Vec<TripRecord>)> {
     let mut trips_by_transponder: HashMap<String, Vec<TripRecord>> = HashMap::new();
     let mut header_found = false;
 
@@ -61,5 +61,15 @@ pub fn parse_trips(lines: Vec<String>) -> HashMap<(String, Direction), Vec<TripR
         }
     }
 
-    trips_by_transponder_direction
+    let mut results: Vec<((String, Direction), Vec<TripRecord>)> =
+        trips_by_transponder_direction.into_iter().collect();
+
+    // Sort results by plate and direction for consistent output
+    results.sort_by(|a, b| {
+        a.0.0
+            .cmp(&b.0.0)
+            .then_with(|| format!("{:?}", a.0.1).cmp(&format!("{:?}", b.0.1)))
+    });
+
+    results
 }

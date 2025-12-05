@@ -23,7 +23,7 @@ pub enum DayType {
     Holiday,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct TripRecord {
     pub transponder_plate: String,
     pub vehicle_class: String,
@@ -492,7 +492,7 @@ fn find_best_k(wcss_values: &[f64]) -> usize {
 }
 
 fn analyze_trips<'a>(
-    trips_by_transponder_direction: Vec<((String, Direction), Vec<&'a TripRecord>)>,
+    trips_by_transponder_direction: &'a [((String, Direction), Vec<TripRecord>)],
 ) -> Vec<TransponderSummaryByTime<'a>> {
     let mut summaries = Vec::new();
 
@@ -532,13 +532,13 @@ fn analyze_trips<'a>(
                     let mut total_distance = 0.0;
                     let mut total_toll_charge = 0.0;
 
-                    for trip in &trips {
+                    for trip in trips {
                         if let Some(trip_minutes) = parse_time_to_minutes(&trip.entry_time) {
                             let diff = (trip_minutes as i32 - centroid as i32).abs();
                             let dist = diff.min(1440 - diff); // Handle wrap-around for time
 
                             if dist <= 30 {
-                                cluster_trips.push(*trip);
+                                cluster_trips.push(trip);
 
                                 // Parse distance and toll charge
                                 if let Ok(d) = trip.distance_km.trim().parse::<f64>() {
@@ -614,8 +614,8 @@ fn analyze_trips<'a>(
                 }
 
                 summaries.push(TransponderSummaryByTime {
-                    transponder_plate: plate,
-                    direction,
+                    transponder_plate: plate.clone(),
+                    direction: direction.clone(),
                     centroids: centroid_data_list,
                     best_k,
                     formatted_centroids,
@@ -657,22 +657,9 @@ fn main() -> io::Result<()> {
         }
     }
 
-    let trips_by_transponder_direction = csv_parser::parse_trips(all_lines);
+    let results = csv_parser::parse_trips(all_lines);
 
-    let mut results: Vec<((String, Direction), Vec<&TripRecord>)> = Vec::new();
-    for ((plate, direction), trips) in &trips_by_transponder_direction {
-        let trip_refs: Vec<&TripRecord> = trips.iter().collect();
-        results.push(((plate.clone(), direction.clone()), trip_refs));
-    }
-
-    // Sort results by plate and direction for consistent output
-    results.sort_by(|a, b| {
-        a.0.0
-            .cmp(&b.0.0)
-            .then_with(|| format!("{:?}", a.0.1).cmp(&format!("{:?}", b.0.1)))
-    });
-
-    let summaries = analyze_trips(results.clone());
+    let summaries = analyze_trips(&results);
 
     for summary in &summaries {
         println!(
