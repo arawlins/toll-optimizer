@@ -4,13 +4,10 @@ use std::fs;
 use std::io::{self, BufRead};
 use std::path::Path;
 
-mod heavy_multiple_unit;
-mod heavy_single_unit;
-mod light_vehicles;
-mod medium_vehicles;
-mod motorcycles;
+mod vehicle_class;
+use vehicle_class::light_vehicles;
 
-const OLD_ACCESSS_POINTS: [&str; 9] = [
+pub const OLD_ACCESSS_POINTS: [&str; 9] = [
     "LakeRidg",
     "LakeRidge",
     "Baldwin",
@@ -34,13 +31,13 @@ const WEEKEND_TIMESLOTS_2026: [&str; 4] = ["8:30 AM", "10:00 AM", "7:00 PM", "9:
 
 const WEEKEND_TIMESLOTS_2025: [&str; 5] = ["12:00 AM", "8:30 AM", "10:00 AM", "7:00 PM", "9:00 PM"];
 
-const ACCESS_POINT_SYNONYMS: [(&str, &str); 3] = [
+pub const ACCESS_POINT_SYNONYMS: [(&str, &str); 3] = [
     ("Brock", "Brock(Hwy7)"),
     ("Brock407", "Brock(Hwy7)"),
     ("YorkDur", "York-DurhamLine"),
 ];
 
-const ACCESS_POINTS: [&str; 41] = [
+pub const ACCESS_POINTS: [&str; 41] = [
     "QEW",
     "Dundas",
     "Appleby",
@@ -216,32 +213,32 @@ const WB_ZONES: [(&str, u8); 41] = [
 ];
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
-enum Direction {
+pub enum Direction {
     Eastbound,
     Westbound,
 }
 
 #[derive(Debug, Clone, PartialEq)]
-enum DayType {
+pub enum DayType {
     Weekday,
     Weekend,
     Holiday,
 }
 
 #[derive(Debug)]
-struct TripRecord {
-    transponder_plate: String,
-    vehicle_class: String,
-    date_of_trip: String,
-    entry_time: String,
-    entry_point: String,
-    exit_point: String,
-    distance_km: String,
-    toll_charge: String,
-    trip_toll_charge: String,
-    camera_charge: String,
-    direction: Option<Direction>,
-    day_type: Option<DayType>,
+pub struct TripRecord {
+    pub transponder_plate: String,
+    pub vehicle_class: String,
+    pub date_of_trip: String,
+    pub entry_time: String,
+    pub entry_point: String,
+    pub exit_point: String,
+    pub distance_km: String,
+    pub toll_charge: String,
+    pub trip_toll_charge: String,
+    pub camera_charge: String,
+    pub direction: Option<Direction>,
+    pub day_type: Option<DayType>,
 }
 
 #[derive(Debug)]
@@ -265,7 +262,7 @@ struct TransponderSummaryByTime<'a> {
 }
 
 impl TripRecord {
-    fn from_csv_line(line: &str) -> Option<Self> {
+    pub fn from_csv_line(line: &str) -> Option<Self> {
         // The CSV format seems to be "value","value","value"...
         // We can split by "," to separate fields.
         // Note: This assumes that the values themselves do not contain ",".
@@ -832,6 +829,8 @@ fn analyze_trips<'a>(
     summaries
 }
 
+mod csv_parser;
+
 fn main() -> io::Result<()> {
     let csv_dir = Path::new("csv");
     if !csv_dir.exists() {
@@ -851,95 +850,31 @@ fn main() -> io::Result<()> {
 
     entries.sort();
 
-    let mut trips_by_transponder: HashMap<String, Vec<TripRecord>> = HashMap::new();
-
+    let mut all_lines = Vec::new();
     for path in entries {
         let file = fs::File::open(&path)?;
         let reader = io::BufReader::new(file);
-        let lines: Vec<String> = reader.lines().collect::<Result<_, _>>()?;
-
-        let mut header_found = false;
-        for line in lines {
-            if !header_found {
-                if line.contains("Transponder/Plate Number") {
-                    header_found = true;
-                }
-                continue;
-            }
-
-            if let Some(mut record) = TripRecord::from_csv_line(&line) {
-                if OLD_ACCESSS_POINTS.contains(&record.entry_point.as_str())
-                    || OLD_ACCESSS_POINTS.contains(&record.exit_point.as_str())
-                {
-                    continue;
-                }
-                if record.vehicle_class != "Light vehicle" {
-                    continue;
-                }
-
-                for &(key, val) in &ACCESS_POINT_SYNONYMS {
-                    if record.entry_point == key {
-                        record.entry_point = val.to_string();
-                    }
-                    if record.exit_point == key {
-                        record.exit_point = val.to_string();
-                    }
-                }
-
-                let entry_index = ACCESS_POINTS.iter().position(|&r| r == record.entry_point);
-                let exit_index = ACCESS_POINTS.iter().position(|&r| r == record.exit_point);
-
-                if let (Some(entry_idx), Some(exit_idx)) = (entry_index, exit_index) {
-                    record.direction = Some(if exit_idx > entry_idx {
-                        Direction::Eastbound
-                    } else {
-                        Direction::Westbound
-                    });
-
-                    let plate = record.transponder_plate.clone();
-                    trips_by_transponder.entry(plate).or_default().push(record);
-                } else {
-                    // If we can't find the points (shouldn't happen due to previous checks, but good for safety)
-                    if entry_index.is_none() {
-                        println!(
-                            "UNKNOWN ENTRY POINT {}: {}",
-                            record.date_of_trip, record.entry_point
-                        );
-                    }
-
-                    if exit_index.is_none() {
-                        println!(
-                            "UNKNOWN EXIT POINT {}: {}",
-                            record.date_of_trip, record.exit_point
-                        );
-                    }
-                }
-            }
+        for line in reader.lines() {
+            all_lines.push(line?);
         }
     }
 
-    let mut trips_by_transponder_direction: HashMap<(String, Direction), Vec<&TripRecord>> =
-        HashMap::new();
+    let trips_by_transponder_direction = csv_parser::parse_trips(all_lines);
 
-    for (plate, trips) in &trips_by_transponder {
-        for trip in trips {
-            if let Some(direction) = &trip.direction {
-                trips_by_transponder_direction
-                    .entry((plate.clone(), direction.clone()))
-                    .or_default()
-                    .push(trip);
-            }
-        }
+    let mut results: Vec<((String, Direction), Vec<&TripRecord>)> = Vec::new();
+    for ((plate, direction), trips) in &trips_by_transponder_direction {
+        let trip_refs: Vec<&TripRecord> = trips.iter().collect();
+        results.push(((plate.clone(), direction.clone()), trip_refs));
     }
 
-    let mut results: Vec<_> = trips_by_transponder_direction.into_iter().collect();
+    // Sort results by plate and direction for consistent output
     results.sort_by(|a, b| {
         a.0.0
             .cmp(&b.0.0)
             .then_with(|| format!("{:?}", a.0.1).cmp(&format!("{:?}", b.0.1)))
     });
 
-    let summaries = analyze_trips(results);
+    let summaries = analyze_trips(results.clone());
 
     for summary in &summaries {
         println!(
@@ -1047,8 +982,14 @@ fn main() -> io::Result<()> {
     }
 
     println!("\nTotal Trips per Transponder:");
-    for (plate, trips) in &trips_by_transponder {
-        println!("Transponder: {}, Total Trips: {}", plate, trips.len());
+
+    for ((plate, direction), trips) in &results {
+        println!(
+            "Transponder: {}, Direction: {:?}, Total Trips: {}",
+            plate,
+            direction,
+            trips.len()
+        );
         for trip in trips {
             let day_type_str = match &trip.day_type {
                 Some(DayType::Holiday) => "Holiday",
