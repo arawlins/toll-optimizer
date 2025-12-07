@@ -42,7 +42,7 @@ fn main() -> io::Result<()> {
 
     let results = csv_parser::parse_trips(all_lines);
 
-    let summaries = trip_analyzer::analyze_trips(&results);
+    let summaries = trip_analyzer::analyze_trips_by_time(&results);
 
     for summary in &summaries {
         println!(
@@ -180,6 +180,52 @@ fn main() -> io::Result<()> {
                     calculated_cost_str,
                     trip.toll_charge,
                     calculated_dist_str
+                );
+            }
+        }
+    }
+
+    let summaries_by_distance = trip_analyzer::analyze_trips_by_distance(&results);
+
+    println!("\n--- Distance-Based (Zones) Clustering Analysis ---");
+    for summary in &summaries_by_distance {
+        println!(
+            "Transponder: {}, Direction: {:?}",
+            summary.transponder_plate, summary.direction
+        );
+        println!(
+            "  Best k={} (Elbow Method): [{}]",
+            summary.best_k,
+            summary.formatted_centroids.join(", ")
+        );
+
+        for centroid_data in &summary.centroids {
+            println!(
+                "    Trips near {:.2} km (Avg: {:.2} km):",
+                centroid_data.centroid_distance, centroid_data.average_distance
+            );
+            println!(
+                "      Total Toll Charge: ${:.2}",
+                centroid_data.total_toll_charge
+            );
+            for trip_summary in &centroid_data.trips {
+                let trip = trip_summary.trip;
+                let day_type_str = match &trip.day_type {
+                    Some(DayType::Holiday) => "Holiday",
+                    Some(DayType::Weekend) => "Weekend",
+                    Some(DayType::Weekday) => "Weekday",
+                    None => "Unknown",
+                };
+
+                println!(
+                    "      - {} {} ({} -> {}: {}km) [{}] [${}]",
+                    trip.date_of_trip,
+                    trip.entry_time,
+                    trip.entry_point,
+                    trip.exit_point,
+                    trip.distance_km,
+                    day_type_str,
+                    trip.toll_charge
                 );
             }
         }

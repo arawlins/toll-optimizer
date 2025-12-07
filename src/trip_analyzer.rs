@@ -375,7 +375,24 @@ pub struct TransponderSummaryByTime<'a> {
     pub formatted_centroids: Vec<String>,
 }
 
-// 1D K-means clustering
+#[derive(Debug)]
+pub struct CentroidDataByDistance<'a> {
+    pub centroid_distance: f64,
+    pub trips: Vec<TripSummary<'a>>,
+    pub average_distance: f64,
+    pub total_toll_charge: f64,
+}
+
+#[derive(Debug)]
+pub struct TransponderSummaryByDistance<'a> {
+    pub transponder_plate: String,
+    pub direction: Direction,
+    pub centroids: Vec<CentroidDataByDistance<'a>>,
+    pub best_k: usize,
+    pub formatted_centroids: Vec<String>,
+}
+
+// 1D K-means clustering (Angular/Circular for time)
 fn k_means_1d(data: &[u32], k: usize) -> (Vec<u32>, f64) {
     if data.is_empty() || k == 0 {
         return (Vec::new(), 0.0);
@@ -462,6 +479,64 @@ fn k_means_1d(data: &[u32], k: usize) -> (Vec<u32>, f64) {
     (u32_centroids, wcss)
 }
 
+// 1D K-means clustering (Linear for distance)
+fn k_means_1d_linear(data: &[f64], k: usize) -> (Vec<f64>, f64) {
+    if data.is_empty() || k == 0 {
+        return (Vec::new(), 0.0);
+    }
+
+    let mut centroids: Vec<f64> = data.iter().take(k).cloned().collect();
+    while centroids.len() < k {
+        centroids.push(data[0]);
+    }
+
+    let mut assignments = vec![0; data.len()];
+    let mut wcss = 0.0;
+
+    for _ in 0..100 {
+        let mut changed = false;
+        wcss = 0.0;
+
+        for (i, &point) in data.iter().enumerate() {
+            let mut min_dist = f64::MAX;
+            let mut best_cluster = 0;
+
+            for (c_idx, &centroid) in centroids.iter().enumerate() {
+                let dist = (point - centroid).abs();
+                if dist < min_dist {
+                    min_dist = dist;
+                    best_cluster = c_idx;
+                }
+            }
+            if assignments[i] != best_cluster {
+                assignments[i] = best_cluster;
+                changed = true;
+            }
+            wcss += min_dist * min_dist;
+        }
+
+        if !changed {
+            break;
+        }
+
+        for c_idx in 0..k {
+            let mut sum = 0.0;
+            let mut count = 0;
+            for (i, &point) in data.iter().enumerate() {
+                if assignments[i] == c_idx {
+                    sum += point;
+                    count += 1;
+                }
+            }
+            if count > 0 {
+                centroids[c_idx] = sum / count as f64;
+            }
+        }
+    }
+
+    (centroids, wcss)
+}
+
 fn find_best_k(wcss_values: &[f64]) -> usize {
     if wcss_values.len() < 2 {
         return 1;
@@ -499,7 +574,7 @@ fn find_best_k(wcss_values: &[f64]) -> usize {
     best_k
 }
 
-pub fn analyze_trips<'a>(
+pub fn analyze_trips_by_time<'a>(
     trips_by_transponder_direction: &'a [((String, Direction), Vec<TripRecord>)],
 ) -> Vec<TransponderSummaryByTime<'a>> {
     let mut summaries = Vec::new();
@@ -658,6 +733,122 @@ pub fn analyze_trips<'a>(
                     centroids: centroid_data_list,
                     best_k,
                     formatted_centroids,
+                });
+            }
+        }
+    }
+
+    summaries
+}
+
+pub fn analyze_trips_by_distance<'a>(
+    trips_by_transponder_direction: &'a [((String, Direction), Vec<TripRecord>)],
+) -> Vec<TransponderSummaryByDistance<'a>> {
+    let mut summaries = Vec::new();
+
+    for ((plate, direction), trips) in trips_by_transponder_direction {
+        let distances: Vec<f64> = trips
+            .iter()
+            .filter_map(|t| t.distance_km.trim().parse::<f64>().ok())
+            .collect();
+
+        if !distances.is_empty() {
+            let mut wcss_values = Vec::new();
+            let mut clusters_map = HashMap::new();
+
+            // Run for k=1 to 5 (or fewer if not enough points)
+            let max_k = 5.min(distances.len());
+            for k in 1..=max_k {
+                let (centroids, wcss) = k_means_1d_linear(&distances, k);
+                wcss_values.push(wcss);
+                clusters_map.insert(k, centroids);
+            }
+
+            let best_k = find_best_k(&wcss_values);
+
+            if let Some(best_centroids) = clusters_map.get(&best_k) {
+                let formatted_centroids: Vec<String> = best_centroids
+                    .iter()
+                    .map(|&c| format!("{:.2} km", c))
+                    .collect();
+
+                let mut centroid_data_list = Vec::new();
+
+                for &centroid in best_centroids {
+                    let mut cluster_trips = Vec::new();
+                    let mut total_distance = 0.0;
+                    let mut total_toll_charge = 0.0;
+
+                    for trip in trips {
+                        if let Ok(dist) = trip.distance_km.trim().parse::<f64>() {
+                            let diff = (dist - centroid).abs();
+
+                            // Use a reasonably tight bound for distance clustering assignment, e.g., 2km
+                            if diff <= 2.0 {
+                                // Since we don't have analysis data for distance clustering yet (like prev/next/avg timeslot)
+                                // We will create a simplified TripSummary with None for those fields.
+                                // If needed in future, we can compute relevant stats for distance too.
+                                cluster_trips.push(TripSummary {
+                                    trip,
+                                    avg_idx: None,
+                                    total_cost_previous_timeslot: None,
+                                    total_cost_next_timeslot: None,
+                                });
+
+                                total_distance += dist;
+                                if let Ok(c) = trip.toll_charge.trim().parse::<f64>() {
+                                    total_toll_charge += c;
+                                }
+                            }
+                        }
+                    }
+
+                    let average_distance = if !cluster_trips.is_empty() {
+                        total_distance / cluster_trips.len() as f64
+                    } else {
+                        0.0
+                    };
+
+                    let centroid_data = CentroidDataByDistance {
+                        centroid_distance: centroid,
+                        trips: cluster_trips,
+                        average_distance,
+                        total_toll_charge,
+                    };
+                    centroid_data_list.push(centroid_data);
+                }
+
+                // Sort centroids by distance
+                centroid_data_list.sort_by(|a, b| {
+                    a.centroid_distance
+                        .partial_cmp(&b.centroid_distance)
+                        .unwrap_or(std::cmp::Ordering::Equal)
+                });
+                let mut sorted_formatted_centroids = formatted_centroids.clone();
+                sorted_formatted_centroids.sort_by(|a, b| {
+                    let dist_a = a
+                        .split_whitespace()
+                        .next()
+                        .unwrap_or("0")
+                        .parse::<f64>()
+                        .unwrap_or(0.0);
+                    let dist_b = b
+                        .split_whitespace()
+                        .next()
+                        .unwrap_or("0")
+                        .parse::<f64>()
+                        .unwrap_or(0.0);
+                    dist_a
+                        .partial_cmp(&dist_b)
+                        .unwrap_or(std::cmp::Ordering::Equal)
+                });
+
+                summaries.push(TransponderSummaryByDistance {
+                    transponder_plate: plate.clone(),
+                    direction: direction.clone(),
+                    centroids: centroid_data_list,
+                    best_k,
+                    formatted_centroids: sorted_formatted_centroids,
                 });
             }
         }
