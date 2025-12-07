@@ -57,7 +57,8 @@ fn main() -> io::Result<()> {
 
         for centroid_data in &summary.centroids {
             println!("    Trips near {}:", centroid_data.centroid_time);
-            for trip in &centroid_data.trips {
+            for trip_summary in &centroid_data.trips {
+                let trip = trip_summary.trip;
                 let day_type_str = match &trip.day_type {
                     Some(DayType::Holiday) => "Holiday",
                     Some(DayType::Weekend) => "Weekend",
@@ -66,26 +67,17 @@ fn main() -> io::Result<()> {
                 };
 
                 let mut optimization_msg = String::new();
-                if let (Some(avg_idx), Some(count)) = (
-                    trip.get_timeslot_index_for_time(&centroid_data.average_entry_time),
-                    trip.get_timeslot_count(),
-                ) {
-                    let prev_idx = if avg_idx == 0 { count - 1 } else { avg_idx - 1 };
-                    let next_idx = if avg_idx == count - 1 { 0 } else { avg_idx + 1 };
+                let current_cost = trip.get_total_recorded_cost();
 
-                    let current_cost = trip.toll_charge.parse::<f64>().unwrap_or(f64::MAX);
-
-                    if let Some((prev_cost, _)) = trip.calculate_cost_at_timeslot(prev_idx) {
-                        if prev_cost < current_cost - 0.005 {
-                            optimization_msg
-                                .push_str(&format!(" [Cheaper Prev: ${:.2}]", prev_cost));
-                        }
+                if let Some(prev_cost) = trip_summary.total_cost_previous_timeslot {
+                    if prev_cost < current_cost - 0.005 {
+                        optimization_msg.push_str(&format!(" [Cheaper Prev: ${:.2}]", prev_cost));
                     }
-                    if let Some((next_cost, _)) = trip.calculate_cost_at_timeslot(next_idx) {
-                        if next_cost < current_cost - 0.005 {
-                            optimization_msg
-                                .push_str(&format!(" [Cheaper Next: ${:.2}]", next_cost));
-                        }
+                }
+
+                if let Some(next_cost) = trip_summary.total_cost_next_timeslot {
+                    if next_cost < current_cost - 0.005 {
+                        optimization_msg.push_str(&format!(" [Cheaper Next: ${:.2}]", next_cost));
                     }
                 }
 

@@ -348,9 +348,17 @@ fn classify_day(date: &str) -> Option<DayType> {
 }
 
 #[derive(Debug)]
+pub struct TripSummary<'a> {
+    pub trip: &'a TripRecord,
+    pub avg_idx: Option<usize>,
+    pub total_cost_previous_timeslot: Option<f64>,
+    pub total_cost_next_timeslot: Option<f64>,
+}
+
+#[derive(Debug)]
 pub struct CentroidData<'a> {
     pub centroid_time: String,
-    pub trips: Vec<&'a TripRecord>,
+    pub trips: Vec<TripSummary<'a>>,
     pub average_entry_time: String,
     pub total_distance: f64,
     pub total_toll_charge: f64,
@@ -561,6 +569,7 @@ pub fn analyze_trips<'a>(
                         }
                     }
 
+                    let mut trip_summaries = Vec::new();
                     let mut average_entry_time = "N/A".to_string();
                     let mut total_toll_charge_previous_timeslot = 0.0;
                     let mut total_toll_charge_next_timeslot = 0.0;
@@ -580,30 +589,60 @@ pub fn analyze_trips<'a>(
 
                         // Calculate previous and next timeslot totals
                         for trip in &cluster_trips {
+                            let mut prev_cost_opt = None;
+                            let mut next_cost_opt = None;
+                            let mut avg_idx_opt = None;
+
                             if let (Some(avg_idx), Some(count)) = (
                                 trip.get_timeslot_index_for_time(&average_entry_time),
                                 trip.get_timeslot_count(),
                             ) {
+                                avg_idx_opt = Some(avg_idx);
                                 let prev_idx = if avg_idx == 0 { count - 1 } else { avg_idx - 1 };
                                 let next_idx = if avg_idx == count - 1 { 0 } else { avg_idx + 1 };
+
+                                let trip_toll =
+                                    trip.trip_toll_charge.trim().parse::<f64>().unwrap_or(0.0);
+                                let camera =
+                                    trip.camera_charge.trim().parse::<f64>().unwrap_or(0.0);
+                                let fixed_charges = trip_toll + camera;
 
                                 if let Some((prev_cost, _)) =
                                     trip.calculate_cost_at_timeslot(prev_idx)
                                 {
                                     total_toll_charge_previous_timeslot += prev_cost;
+                                    prev_cost_opt = Some(prev_cost + fixed_charges);
                                 }
                                 if let Some((next_cost, _)) =
                                     trip.calculate_cost_at_timeslot(next_idx)
                                 {
                                     total_toll_charge_next_timeslot += next_cost;
+                                    next_cost_opt = Some(next_cost + fixed_charges);
                                 }
                             }
+
+                            trip_summaries.push(TripSummary {
+                                trip,
+                                avg_idx: avg_idx_opt,
+                                total_cost_previous_timeslot: prev_cost_opt,
+                                total_cost_next_timeslot: next_cost_opt,
+                            });
+                        }
+                    } else {
+                        // Should not happen if cluster_trips is not empty, but effectively handles empty case
+                        for trip in &cluster_trips {
+                            trip_summaries.push(TripSummary {
+                                trip,
+                                avg_idx: None,
+                                total_cost_previous_timeslot: None,
+                                total_cost_next_timeslot: None,
+                            });
                         }
                     }
 
                     let centroid_data = CentroidData {
                         centroid_time: centroid_time_str,
-                        trips: cluster_trips,
+                        trips: trip_summaries,
                         average_entry_time,
                         total_distance,
                         total_toll_charge,
