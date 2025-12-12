@@ -123,18 +123,15 @@ impl TripRecord {
         self.get_timeslot_index_for_time(&self.entry_time)
     }
 
-    pub fn calculate_cost_at_timeslot(&self, timeslot_idx: usize) -> Option<(f64, f64)> {
+    pub fn calculate_cost_from_indices(
+        &self,
+        start_idx: usize,
+        end_idx: usize,
+        timeslot_idx: usize,
+    ) -> Option<(f64, f64)> {
         let direction = self.direction.as_ref()?;
         let day_type = self.day_type.as_ref()?;
         let (_, _, year) = parse_date(&self.date_of_trip)?;
-
-        // Use ACCESS_POINTS as the canonical list for indices
-        let start_idx = ACCESS_POINTS
-            .iter()
-            .position(|&name| name == self.entry_point)?;
-        let end_idx = ACCESS_POINTS
-            .iter()
-            .position(|&name| name == self.exit_point)?;
 
         let mut total_cost = 0.0;
         let mut total_distance = 0.0;
@@ -215,6 +212,18 @@ impl TripRecord {
         Some((total_cost / 100.0, total_distance)) // Convert cents to dollars
     }
 
+    pub fn calculate_cost_at_timeslot(&self, timeslot_idx: usize) -> Option<(f64, f64)> {
+        // Use ACCESS_POINTS as the canonical list for indices
+        let start_idx = ACCESS_POINTS
+            .iter()
+            .position(|&name| name == self.entry_point)?;
+        let end_idx = ACCESS_POINTS
+            .iter()
+            .position(|&name| name == self.exit_point)?;
+
+        self.calculate_cost_from_indices(start_idx, end_idx, timeslot_idx)
+    }
+
     pub fn calculate_cost(&self) -> Option<(f64, f64)> {
         let timeslot_idx = self.get_timeslot_index()?;
         self.calculate_cost_at_timeslot(timeslot_idx)
@@ -225,6 +234,10 @@ impl TripRecord {
         let trip_toll = self.trip_toll_charge.trim().parse::<f64>().unwrap_or(0.0);
         let camera = self.camera_charge.trim().parse::<f64>().unwrap_or(0.0);
         toll + trip_toll + camera
+    }
+
+    pub fn get_access_point_index(&self, name: &str) -> Option<usize> {
+        ACCESS_POINTS.iter().position(|&ap| ap == name)
     }
 }
 
@@ -353,6 +366,9 @@ pub struct TripSummary<'a> {
     pub avg_idx: Option<usize>,
     pub total_cost_previous_timeslot: Option<f64>,
     pub total_cost_next_timeslot: Option<f64>,
+    pub optimized_cost: Option<f64>,
+    pub optimized_saved: Option<f64>,
+    pub optimization_note: Option<String>,
 }
 
 #[derive(Debug)]
@@ -364,6 +380,7 @@ pub struct CentroidData<'a> {
     pub total_toll_charge: f64,
     pub total_toll_charge_previous_timeslot: f64,
     pub total_toll_charge_next_timeslot: f64,
+    pub total_optimized_savings: f64,
 }
 
 #[derive(Debug)]
@@ -381,6 +398,7 @@ pub struct CentroidDataByDistance<'a> {
     pub trips: Vec<TripSummary<'a>>,
     pub average_distance: f64,
     pub total_toll_charge: f64,
+    pub total_optimized_savings: f64,
 }
 
 #[derive(Debug)]
@@ -605,49 +623,70 @@ pub fn analyze_trips_by_time<'a>(
                     .map(|&c| format_minutes_to_time(c))
                     .collect();
 
+                // Create buckets for each centroid
+                let mut clusters_buckets: HashMap<u32, Vec<&TripRecord>> = HashMap::new();
+                for &centroid in best_centroids {
+                    clusters_buckets.insert(centroid, Vec::new());
+                }
+
+                // Assign each trip to the nearest centroid
+                for trip in trips {
+                    if let Some(trip_minutes) = parse_time_to_minutes(&trip.entry_time) {
+                        let mut min_dist = i32::MAX;
+                        let mut best_c = None;
+
+                        for &centroid in best_centroids {
+                            let diff = (trip_minutes as i32 - centroid as i32).abs();
+                            let dist = diff.min(1440 - diff); // Circular distance
+                            if dist < min_dist {
+                                min_dist = dist;
+                                best_c = Some(centroid);
+                            }
+                        }
+
+                        if let Some(c) = best_c {
+                            // Enforce strict 30-minute radius
+                            if min_dist <= 30 {
+                                if let Some(bucket) = clusters_buckets.get_mut(&c) {
+                                    bucket.push(trip);
+                                }
+                            }
+                        }
+                    }
+                }
+
                 let mut centroid_data_list = Vec::new();
 
                 for &centroid in best_centroids {
                     let centroid_time_str = format_minutes_to_time(centroid);
 
-                    let mut cluster_trips = Vec::new();
+                    // Retrieve trips for this centroid
+                    let cluster_trips = clusters_buckets
+                        .get(&centroid)
+                        .map(|v| v.clone())
+                        .unwrap_or_default();
                     let mut cluster_trip_minutes = Vec::new();
-                    let mut total_distance = 0.0;
-                    let mut total_toll_charge = 0.0;
 
-                    for trip in trips {
+                    for trip in &cluster_trips {
                         if let Some(trip_minutes) = parse_time_to_minutes(&trip.entry_time) {
-                            let diff = (trip_minutes as i32 - centroid as i32).abs();
-                            let dist = diff.min(1440 - diff); // Handle wrap-around for time
-
-                            if dist <= 30 {
-                                cluster_trips.push(trip);
-
-                                // Parse distance and toll charge
-                                if let Ok(d) = trip.distance_km.trim().parse::<f64>() {
-                                    total_distance += d;
-                                }
-                                if let Ok(c) = trip.toll_charge.trim().parse::<f64>() {
-                                    total_toll_charge += c;
-                                }
-
-                                // Normalize trip minutes relative to centroid for averaging
-                                let mut signed_diff = trip_minutes as i32 - centroid as i32;
-                                if signed_diff > 720 {
-                                    signed_diff -= 1440;
-                                } else if signed_diff < -720 {
-                                    signed_diff += 1440;
-                                }
-
-                                cluster_trip_minutes.push(centroid as i32 + signed_diff);
+                            // Normalize trip minutes relative to centroid for averaging
+                            let mut signed_diff = trip_minutes as i32 - centroid as i32;
+                            if signed_diff > 720 {
+                                signed_diff -= 1440;
+                            } else if signed_diff < -720 {
+                                signed_diff += 1440;
                             }
+                            cluster_trip_minutes.push(centroid as i32 + signed_diff);
                         }
                     }
 
                     let mut trip_summaries = Vec::new();
                     let mut average_entry_time = "N/A".to_string();
+                    let mut total_distance = 0.0;
+                    let mut total_toll_charge = 0.0;
                     let mut total_toll_charge_previous_timeslot = 0.0;
                     let mut total_toll_charge_next_timeslot = 0.0;
+                    let mut total_optimized_savings = 0.0;
 
                     if !cluster_trip_minutes.is_empty() {
                         let sum: i32 = cluster_trip_minutes.iter().sum();
@@ -664,53 +703,105 @@ pub fn analyze_trips_by_time<'a>(
 
                         // Calculate previous and next timeslot totals
                         for trip in &cluster_trips {
-                            let mut prev_cost_opt = None;
-                            let mut next_cost_opt = None;
-                            let mut avg_idx_opt = None;
+                            let total_cost = trip.get_total_recorded_cost();
+                            total_toll_charge += total_cost;
+                            total_distance += trip.distance_km.trim().parse::<f64>().unwrap_or(0.0);
 
-                            if let (Some(avg_idx), Some(count)) = (
-                                trip.get_timeslot_index_for_time(&average_entry_time),
-                                trip.get_timeslot_count(),
-                            ) {
-                                avg_idx_opt = Some(avg_idx);
-                                let prev_idx = if avg_idx == 0 { count - 1 } else { avg_idx - 1 };
-                                let next_idx = if avg_idx == count - 1 { 0 } else { avg_idx + 1 };
+                            // Add fixed charges to previous/next timeslot estimates
+                            let trip_toll =
+                                trip.trip_toll_charge.trim().parse::<f64>().unwrap_or(0.0);
+                            let camera = trip.camera_charge.trim().parse::<f64>().unwrap_or(0.0);
+                            let fixed_charges = trip_toll + camera;
 
-                                let trip_toll =
-                                    trip.trip_toll_charge.trim().parse::<f64>().unwrap_or(0.0);
-                                let camera =
-                                    trip.camera_charge.trim().parse::<f64>().unwrap_or(0.0);
-                                let fixed_charges = trip_toll + camera;
-
-                                if let Some((prev_cost, _)) =
-                                    trip.calculate_cost_at_timeslot(prev_idx)
+                            let (avg_idx_opt, prev_cost_opt, next_cost_opt) =
+                                if let Some(timeslot_idx) =
+                                    trip.get_timeslot_index_for_time(&centroid_time_str)
                                 {
-                                    total_toll_charge_previous_timeslot += prev_cost;
-                                    prev_cost_opt = Some(prev_cost + fixed_charges);
-                                }
-                                if let Some((next_cost, _)) =
-                                    trip.calculate_cost_at_timeslot(next_idx)
-                                {
-                                    total_toll_charge_next_timeslot += next_cost;
-                                    next_cost_opt = Some(next_cost + fixed_charges);
-                                }
-                            }
+                                    let mut prev_c = None;
+                                    let mut next_c = None;
+                                    let timeslots_len = trip.get_timeslot_count().unwrap_or(0);
+
+                                    let mut savings: f64 = 0.0;
+
+                                    if timeslot_idx > 0 {
+                                        if let Some((cost, _)) =
+                                            trip.calculate_cost_at_timeslot(timeslot_idx - 1)
+                                        {
+                                            let full_prev_cost = cost + fixed_charges;
+                                            total_toll_charge_previous_timeslot += full_prev_cost;
+                                            prev_c = Some(full_prev_cost);
+                                            if full_prev_cost < total_cost {
+                                                savings = savings.max(total_cost - full_prev_cost);
+                                            }
+                                        }
+                                    } else if timeslot_idx == 0 {
+                                        if let Some((cost, _)) =
+                                            trip.calculate_cost_at_timeslot(timeslots_len - 1)
+                                        {
+                                            let full_prev_cost = cost + fixed_charges;
+                                            total_toll_charge_previous_timeslot += full_prev_cost;
+                                            prev_c = Some(full_prev_cost);
+                                            if full_prev_cost < total_cost {
+                                                savings = savings.max(total_cost - full_prev_cost);
+                                            }
+                                        }
+                                    }
+
+                                    if timeslot_idx < timeslots_len - 1 {
+                                        if let Some((cost, _)) =
+                                            trip.calculate_cost_at_timeslot(timeslot_idx + 1)
+                                        {
+                                            let full_next_cost = cost + fixed_charges;
+                                            total_toll_charge_next_timeslot += full_next_cost;
+                                            next_c = Some(full_next_cost);
+                                            if full_next_cost < total_cost {
+                                                savings = savings.max(total_cost - full_next_cost);
+                                            }
+                                        }
+                                    } else if timeslot_idx == timeslots_len - 1 {
+                                        if let Some((cost, _)) = trip.calculate_cost_at_timeslot(0)
+                                        {
+                                            let full_next_cost = cost + fixed_charges;
+                                            total_toll_charge_next_timeslot += full_next_cost;
+                                            next_c = Some(full_next_cost);
+                                            if full_next_cost < total_cost {
+                                                savings = savings.max(total_cost - full_next_cost);
+                                            }
+                                        }
+                                    }
+
+                                    total_optimized_savings += savings;
+
+                                    (Some(timeslot_idx), prev_c, next_c)
+                                } else {
+                                    (None, None, None)
+                                };
 
                             trip_summaries.push(TripSummary {
                                 trip,
                                 avg_idx: avg_idx_opt,
                                 total_cost_previous_timeslot: prev_cost_opt,
                                 total_cost_next_timeslot: next_cost_opt,
+                                optimized_cost: None,
+                                optimized_saved: None,
+                                optimization_note: None,
                             });
                         }
                     } else {
-                        // Should not happen if cluster_trips is not empty, but effectively handles empty case
+                        // Use basic details if we can't calculate time-based stats
                         for trip in &cluster_trips {
+                            let total_cost = trip.get_total_recorded_cost();
+                            total_toll_charge += total_cost;
+                            total_distance += trip.distance_km.trim().parse::<f64>().unwrap_or(0.0);
+
                             trip_summaries.push(TripSummary {
                                 trip,
                                 avg_idx: None,
                                 total_cost_previous_timeslot: None,
                                 total_cost_next_timeslot: None,
+                                optimized_cost: None,
+                                optimized_saved: None,
+                                optimization_note: None,
                             });
                         }
                     }
@@ -723,6 +814,7 @@ pub fn analyze_trips_by_time<'a>(
                         total_toll_charge,
                         total_toll_charge_previous_timeslot,
                         total_toll_charge_next_timeslot,
+                        total_optimized_savings,
                     };
                     centroid_data_list.push(centroid_data);
                 }
@@ -772,34 +864,169 @@ pub fn analyze_trips_by_distance<'a>(
                     .map(|&c| format!("{:.2} km", c))
                     .collect();
 
-                let mut centroid_data_list = Vec::new();
+                // Create buckets for each centroid index
+                let mut clusters_buckets: HashMap<usize, Vec<&TripRecord>> = HashMap::new();
+                for i in 0..best_centroids.len() {
+                    clusters_buckets.insert(i, Vec::new());
+                }
 
-                for &centroid in best_centroids {
-                    let mut cluster_trips = Vec::new();
-                    let mut total_distance = 0.0;
-                    let mut total_toll_charge = 0.0;
+                // Assign each trip to the nearest centroid
+                for trip in trips {
+                    if let Ok(dist) = trip.distance_km.trim().parse::<f64>() {
+                        let mut min_diff = f64::MAX;
+                        let mut best_idx = None;
 
-                    for trip in trips {
-                        if let Ok(dist) = trip.distance_km.trim().parse::<f64>() {
+                        for (i, &centroid) in best_centroids.iter().enumerate() {
                             let diff = (dist - centroid).abs();
+                            if diff < min_diff {
+                                min_diff = diff;
+                                best_idx = Some(i);
+                            }
+                        }
 
-                            // Use a reasonably tight bound for distance clustering assignment, e.g., 2km
-                            if diff <= 2.0 {
-                                // Since we don't have analysis data for distance clustering yet (like prev/next/avg timeslot)
-                                // We will create a simplified TripSummary with None for those fields.
-                                // If needed in future, we can compute relevant stats for distance too.
-                                cluster_trips.push(TripSummary {
-                                    trip,
-                                    avg_idx: None,
-                                    total_cost_previous_timeslot: None,
-                                    total_cost_next_timeslot: None,
-                                });
-
-                                total_distance += dist;
-                                if let Ok(c) = trip.toll_charge.trim().parse::<f64>() {
-                                    total_toll_charge += c;
+                        if let Some(idx) = best_idx {
+                            // Enforce strict 2.0km radius
+                            if min_diff <= 2.0 {
+                                if let Some(bucket) = clusters_buckets.get_mut(&idx) {
+                                    bucket.push(trip);
                                 }
                             }
+                        }
+                    }
+                }
+
+                let mut centroid_data_list = Vec::new();
+
+                for (idx, &centroid) in best_centroids.iter().enumerate() {
+                    // Retrieve trips for this centroid
+                    let assigned_trips = clusters_buckets
+                        .get(&idx)
+                        .map(|v| v.clone())
+                        .unwrap_or_default();
+
+                    let mut cluster_trips = Vec::new(); // Summaries
+                    let mut total_distance = 0.0;
+                    let mut total_toll_charge = 0.0;
+                    let mut total_optimized_savings = 0.0;
+
+                    for trip in &assigned_trips {
+                        // All trips in this bucket are assigned here.
+                        let dist = trip.distance_km.trim().parse::<f64>().unwrap_or(0.0);
+
+                        let mut optimized_cost = None;
+                        let mut optimized_saved = None;
+                        let mut optimization_note = None;
+
+                        if let (Some(start_idx), Some(end_idx), Some(timeslot_idx)) = (
+                            trip.get_access_point_index(&trip.entry_point),
+                            trip.get_access_point_index(&trip.exit_point),
+                            trip.get_timeslot_index(),
+                        ) {
+                            let is_hwy_entry =
+                                trip.entry_point.starts_with("Hwy") || trip.entry_point == "QEW";
+                            let direction = trip.direction.as_ref();
+
+                            let mut new_start_idx = start_idx;
+                            let mut new_end_idx = end_idx;
+                            let mut strategy = "";
+
+                            match direction {
+                                Some(Direction::Eastbound) => {
+                                    if is_hwy_entry {
+                                        // Shrink from Exit side (move exit closer to entry/start)
+                                        // Eastbound: start < end. Move end to end - 1.
+                                        if new_end_idx > new_start_idx {
+                                            new_end_idx -= 1;
+                                            strategy = "Exit -1";
+                                        }
+                                    } else {
+                                        // Shrink from Entry side (move entry closer to exit/end)
+                                        // Eastbound: start < end. Move start to start + 1.
+                                        if new_start_idx < new_end_idx {
+                                            new_start_idx += 1;
+                                            strategy = "Entry +1";
+                                        }
+                                    }
+                                }
+                                Some(Direction::Westbound) => {
+                                    if is_hwy_entry {
+                                        // Shrink from Exit side (move exit closer to entry/start)
+                                        // Westbound: start > end. Move end to end + 1.
+                                        if new_end_idx < new_start_idx {
+                                            new_end_idx += 1;
+                                            strategy = "Exit +1";
+                                        }
+                                    } else {
+                                        // Shrink from Entry side (move entry closer to exit/end)
+                                        // Westbound: start > end. Move start to start - 1.
+                                        if new_start_idx > new_end_idx {
+                                            new_start_idx -= 1;
+                                            strategy = "Entry -1";
+                                        }
+                                    }
+                                }
+                                None => {}
+                            }
+
+                            if new_start_idx != start_idx || new_end_idx != end_idx {
+                                // Calculate cost for optimized trip
+                                if let Some((toll_cost, _)) = trip.calculate_cost_from_indices(
+                                    new_start_idx,
+                                    new_end_idx,
+                                    timeslot_idx,
+                                ) {
+                                    let current_toll =
+                                        trip.toll_charge.trim().parse::<f64>().unwrap_or(0.0);
+                                    // Trip toll and camera charges remain constant
+                                    let trip_toll =
+                                        trip.trip_toll_charge.trim().parse::<f64>().unwrap_or(0.0);
+                                    let camera =
+                                        trip.camera_charge.trim().parse::<f64>().unwrap_or(0.0);
+
+                                    let current_total = current_toll + trip_toll + camera;
+                                    let new_total = toll_cost + trip_toll + camera;
+
+                                    if new_total < current_total {
+                                        optimized_cost = Some(new_total);
+                                        optimized_saved = Some(current_total - new_total);
+                                        let new_point_name = if new_start_idx != start_idx {
+                                            ACCESS_POINTS[new_start_idx]
+                                        } else {
+                                            ACCESS_POINTS[new_end_idx]
+                                        };
+
+                                        let change_type = if strategy.contains("Entry") {
+                                            "Move Entry to"
+                                        } else {
+                                            "Move Exit to"
+                                        };
+
+                                        optimization_note = Some(format!(
+                                            "{} {} (Save ${:.2})",
+                                            change_type,
+                                            new_point_name,
+                                            current_total - new_total
+                                        ));
+
+                                        total_optimized_savings += current_total - new_total;
+                                    }
+                                }
+                            }
+                        }
+
+                        cluster_trips.push(TripSummary {
+                            trip,
+                            avg_idx: None,
+                            total_cost_previous_timeslot: None,
+                            total_cost_next_timeslot: None,
+                            optimized_cost,
+                            optimized_saved,
+                            optimization_note,
+                        });
+
+                        total_distance += dist;
+                        if let Ok(c) = trip.toll_charge.trim().parse::<f64>() {
+                            total_toll_charge += c;
                         }
                     }
 
@@ -814,6 +1041,7 @@ pub fn analyze_trips_by_distance<'a>(
                         trips: cluster_trips,
                         average_distance,
                         total_toll_charge,
+                        total_optimized_savings,
                     };
                     centroid_data_list.push(centroid_data);
                 }

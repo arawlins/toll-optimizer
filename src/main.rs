@@ -82,14 +82,14 @@ fn main() -> io::Result<()> {
                 }
 
                 println!(
-                    "      - {} {} ({} -> {}: {}km) [{}] [${}]{}",
+                    "      - {} {} ({} -> {}: {}km) [{}] [${:.2}]{}",
                     trip.date_of_trip,
                     trip.entry_time,
                     trip.entry_point,
                     trip.exit_point,
                     trip.distance_km,
                     day_type_str,
-                    trip.toll_charge,
+                    trip.get_total_recorded_cost(),
                     optimization_msg
                 );
             }
@@ -107,6 +107,8 @@ fn main() -> io::Result<()> {
                     "      Total Toll Charge: ${:.2}",
                     centroid_data.total_toll_charge
                 );
+
+                // Display comparison with previous/next timeslots (legacy logic preserved/simplified)
                 if centroid_data.total_toll_charge_previous_timeslot
                     < centroid_data.total_toll_charge - 0.005
                 {
@@ -122,6 +124,7 @@ fn main() -> io::Result<()> {
                         centroid_data.total_toll_charge_previous_timeslot
                     );
                 }
+
                 if centroid_data.total_toll_charge_next_timeslot
                     < centroid_data.total_toll_charge - 0.005
                 {
@@ -135,6 +138,13 @@ fn main() -> io::Result<()> {
                     println!(
                         "      Total Toll Charge (Next Timeslot): ${:.2}",
                         centroid_data.total_toll_charge_next_timeslot
+                    );
+                }
+
+                if centroid_data.total_optimized_savings > 0.0 {
+                    println!(
+                        "      Total Potential Savings: ${:.2}",
+                        centroid_data.total_optimized_savings
                     );
                 }
             }
@@ -164,6 +174,7 @@ fn main() -> io::Result<()> {
                 .map(|(c, _)| format!("{:.2}", c))
                 .unwrap_or_else(|| "?".to_string());
 
+            // check if calculated cost matches recorded cost
             if calculated_cost_str != trip.toll_charge {
                 let calculated_dist_str = calculation_result
                     .map(|(_, d)| format!("{:.3}", d))
@@ -208,6 +219,12 @@ fn main() -> io::Result<()> {
                 "      Total Toll Charge: ${:.2}",
                 centroid_data.total_toll_charge
             );
+            if centroid_data.total_optimized_savings > 0.0 {
+                println!(
+                    "      Total Potential Savings: ${:.2}",
+                    centroid_data.total_optimized_savings
+                );
+            }
             for trip_summary in &centroid_data.trips {
                 let trip = trip_summary.trip;
                 let day_type_str = match &trip.day_type {
@@ -217,15 +234,21 @@ fn main() -> io::Result<()> {
                     None => "Unknown",
                 };
 
+                let mut optimization_msg = String::new();
+                if let Some(note) = &trip_summary.optimization_note {
+                    optimization_msg = format!(" [{}]", note);
+                }
+
                 println!(
-                    "      - {} {} ({} -> {}: {}km) [{}] [${}]",
+                    "      - {} {} ({} -> {}: {}km) [{}] [${:.2}]{}",
                     trip.date_of_trip,
                     trip.entry_time,
                     trip.entry_point,
                     trip.exit_point,
                     trip.distance_km,
                     day_type_str,
-                    trip.toll_charge
+                    trip.get_total_recorded_cost(),
+                    optimization_msg
                 );
             }
         }
