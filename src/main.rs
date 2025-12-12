@@ -162,6 +162,14 @@ fn main() -> io::Result<()> {
             trips.len(),
             total_cost
         );
+
+        let total_cost_2026: f64 = trips
+            .iter()
+            .filter_map(|t| t.calculate_cost_2026())
+            .map(|(c, _)| c)
+            .sum();
+
+        println!("  Total Cost (2026 Projected): ${:.2}", total_cost_2026);
         for trip in trips {
             let day_type_str = match &trip.day_type {
                 Some(DayType::Holiday) => "Holiday",

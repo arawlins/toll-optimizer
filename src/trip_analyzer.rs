@@ -239,6 +239,105 @@ impl TripRecord {
     pub fn get_access_point_index(&self, name: &str) -> Option<usize> {
         ACCESS_POINTS.iter().position(|&ap| ap == name)
     }
+    pub fn get_timeslot_index_2026(&self) -> Option<usize> {
+        self.get_timeslot_index_for_time_2026(&self.entry_time)
+    }
+
+    pub fn get_timeslot_index_for_time_2026(&self, time_str: &str) -> Option<usize> {
+        let entry_minutes = parse_time_to_minutes(time_str)?;
+        // Always use 2026 constants
+        let slots = match self.day_type.as_ref()? {
+            DayType::Weekday => &WEEKDAY_TIMESLOTS_2026[..],
+            DayType::Weekend | DayType::Holiday => &WEEKEND_TIMESLOTS_2026[..],
+        };
+
+        let slot_minutes: Vec<u32> = slots
+            .iter()
+            .filter_map(|&t| parse_time_to_minutes(t))
+            .collect();
+
+        if slot_minutes.is_empty() {
+            return None;
+        }
+
+        let mut index = slot_minutes.len() - 1;
+        for (i, &slot_time) in slot_minutes.iter().enumerate() {
+            if entry_minutes < slot_time {
+                if i == 0 {
+                    return Some(slot_minutes.len() - 1);
+                }
+                return Some(i - 1);
+            }
+            index = i;
+        }
+        Some(index)
+    }
+
+    pub fn calculate_cost_2026(&self) -> Option<(f64, f64)> {
+        let timeslot_idx = self.get_timeslot_index_2026()?;
+        let direction = self.direction.as_ref()?;
+        let day_type = self.day_type.as_ref()?;
+
+        let start_idx = self.get_access_point_index(&self.entry_point)?;
+        let end_idx = self.get_access_point_index(&self.exit_point)?;
+
+        let mut total_cost = 0.0;
+        let mut total_distance = 0.0;
+
+        match direction {
+            Direction::Eastbound => {
+                if start_idx >= end_idx {
+                    return None;
+                }
+                for i in start_idx..end_idx {
+                    let distance = ACCESS_POINT_DISTANCES[i] as f64;
+                    total_distance += distance;
+                    let ap_name = ACCESS_POINTS[i];
+                    let zone = EB_ZONES.iter().find(|&&(name, _)| name == ap_name)?.1 as usize;
+
+                    let price_rate = match day_type {
+                        DayType::Weekday => {
+                            light_vehicles::WEEKDAY_EB_TOLL_PRICES_BY_TIMESLOT_AND_ZONE_2026
+                                [timeslot_idx][zone - 1]
+                        }
+                        DayType::Weekend | DayType::Holiday => {
+                            light_vehicles::WEEKEND_EB_TOLL_PRICES_BY_TIMESLOT_AND_ZONE_2026
+                                [timeslot_idx][zone - 1]
+                        }
+                    };
+                    total_cost += distance * price_rate;
+                }
+            }
+            Direction::Westbound => {
+                if start_idx <= end_idx {
+                    return None;
+                }
+                for i in end_idx..start_idx {
+                    let distance = ACCESS_POINT_DISTANCES[i] as f64;
+                    total_distance += distance;
+                    let ap_name = ACCESS_POINTS[i + 1];
+                    let zone = WB_ZONES.iter().find(|&&(name, _)| name == ap_name)?.1 as usize;
+
+                    let price_rate = match day_type {
+                        DayType::Weekday => {
+                            light_vehicles::WEEKDAY_WB_TOLL_PRICES_BY_TIMESLOT_AND_ZONE_2026
+                                [timeslot_idx][zone - 1]
+                        }
+                        DayType::Weekend | DayType::Holiday => {
+                            light_vehicles::WEEKEND_WB_TOLL_PRICES_BY_TIMESLOT_AND_ZONE_2026
+                                [timeslot_idx][zone - 1]
+                        }
+                    };
+                    total_cost += distance * price_rate;
+                }
+            }
+        }
+
+        let trip_toll = self.trip_toll_charge.trim().parse::<f64>().unwrap_or(0.0);
+        let camera = self.camera_charge.trim().parse::<f64>().unwrap_or(0.0);
+
+        Some(((total_cost / 100.0) + trip_toll + camera, total_distance))
+    }
 }
 
 pub fn parse_time_to_minutes(time: &str) -> Option<u32> {
