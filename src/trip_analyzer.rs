@@ -717,11 +717,6 @@ pub fn analyze_trips_by_time<'a>(
             let best_k = find_best_k(&wcss_values);
 
             if let Some(best_centroids) = clusters_map.get(&best_k) {
-                let formatted_centroids: Vec<String> = best_centroids
-                    .iter()
-                    .map(|&c| format_minutes_to_time(c))
-                    .collect();
-
                 // Create buckets for each centroid
                 let mut clusters_buckets: HashMap<u32, Vec<&TripRecord>> = HashMap::new();
                 for &centroid in best_centroids {
@@ -918,12 +913,27 @@ pub fn analyze_trips_by_time<'a>(
                     centroid_data_list.push(centroid_data);
                 }
 
+                // Filter out centroids with no trips
+                // We need to keep formatted_centroids in sync with the filtered list
+                // Since formatted_centroids in the summary is just a list of strings,
+                // and we want it to match the actual displayed centroids, we should rebuild it.
+
+                let filtered_centroid_data: Vec<CentroidData> = centroid_data_list
+                    .into_iter()
+                    .filter(|c| !c.trips.is_empty())
+                    .collect();
+
+                let filtered_formatted_centroids: Vec<String> = filtered_centroid_data
+                    .iter()
+                    .map(|c| c.centroid_time.clone())
+                    .collect();
+
                 summaries.push(TransponderSummaryByTime {
                     transponder_plate: plate.clone(),
                     direction: direction.clone(),
-                    centroids: centroid_data_list,
+                    centroids: filtered_centroid_data,
                     best_k,
-                    formatted_centroids,
+                    formatted_centroids: filtered_formatted_centroids,
                 });
             }
         }
@@ -1151,31 +1161,23 @@ pub fn analyze_trips_by_distance<'a>(
                         .partial_cmp(&b.centroid_distance)
                         .unwrap_or(std::cmp::Ordering::Equal)
                 });
-                let mut sorted_formatted_centroids = formatted_centroids.clone();
-                sorted_formatted_centroids.sort_by(|a, b| {
-                    let dist_a = a
-                        .split_whitespace()
-                        .next()
-                        .unwrap_or("0")
-                        .parse::<f64>()
-                        .unwrap_or(0.0);
-                    let dist_b = b
-                        .split_whitespace()
-                        .next()
-                        .unwrap_or("0")
-                        .parse::<f64>()
-                        .unwrap_or(0.0);
-                    dist_a
-                        .partial_cmp(&dist_b)
-                        .unwrap_or(std::cmp::Ordering::Equal)
-                });
+
+                let filtered_centroid_data: Vec<CentroidDataByDistance> = centroid_data_list
+                    .into_iter()
+                    .filter(|c| !c.trips.is_empty())
+                    .collect();
+
+                let filtered_formatted_centroids: Vec<String> = filtered_centroid_data
+                    .iter()
+                    .map(|c| format!("{:.2} km", c.centroid_distance))
+                    .collect();
 
                 summaries.push(TransponderSummaryByDistance {
                     transponder_plate: plate.clone(),
                     direction: direction.clone(),
-                    centroids: centroid_data_list,
+                    centroids: filtered_centroid_data,
                     best_k,
-                    formatted_centroids: sorted_formatted_centroids,
+                    formatted_centroids: filtered_formatted_centroids,
                 });
             }
         }
