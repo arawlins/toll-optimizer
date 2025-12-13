@@ -71,13 +71,25 @@ fn main() -> io::Result<()> {
 
                 if let Some(prev_cost) = trip_summary.total_cost_previous_timeslot {
                     if prev_cost < current_cost - 0.005 {
-                        optimization_msg.push_str(&format!(" [Cheaper Prev: ${:.2}]", prev_cost));
+                        let target_msg = trip_summary
+                            .prev_timeslot_target
+                            .as_ref()
+                            .map(|t| format!(" (<= {})", t))
+                            .unwrap_or_default();
+                        optimization_msg
+                            .push_str(&format!(" [Cheaper Prev: ${:.2}{}]", prev_cost, target_msg));
                     }
                 }
 
                 if let Some(next_cost) = trip_summary.total_cost_next_timeslot {
                     if next_cost < current_cost - 0.005 {
-                        optimization_msg.push_str(&format!(" [Cheaper Next: ${:.2}]", next_cost));
+                        let target_msg = trip_summary
+                            .next_timeslot_target
+                            .as_ref()
+                            .map(|t| format!(" (>= {})", t))
+                            .unwrap_or_default();
+                        optimization_msg
+                            .push_str(&format!(" [Cheaper Next: ${:.2}{}]", next_cost, target_msg));
                     }
                 }
 
