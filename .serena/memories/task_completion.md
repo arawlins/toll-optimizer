@@ -1,26 +1,24 @@
-# Task Completion: Phase 1 - Workspace Restructuring
+# Task Completion: Phase 2 - Database Setup
 
 ## Date
 2026-01-26
 
 ## Task
-Phase 1 of the Web Application transformation: Create a Cargo Workspace, extract core logic into a shared library, and refactor the CLI tool.
+Phase 2 of the Web Application transformation: Set up the `api` crate, `docker-compose` for Postgres, and define the initial database schema.
 
 ## Outcome
-- Created Cargo Workspace structure:
-    - `crates/core`: Shared library containing parser, analyzer, and models.
-    - `crates/cli`: Existing CLI logic refactored to depend on `core`.
-- Refactored `crates/core`:
-    - `csv_parser::parse_trips` now accepts any `IntoIterator<Item = String>`, enabling streaming support for the upcoming API.
-    - Added `serde::Serialize` to all major domain structs (`TripRecord`, `TripSummary`, etc.) to support JSON output.
-- Refactored `crates/cli`:
-    - Cleaned up imports to use `toll_optimizer_core`.
-    - Fixed `println!` formatting issues introduced during restructuring.
-- Updated Integration Tests:
-    - Moved tests to `crates/cli/tests/`.
-    - Updated binary paths to use `../../target/debug/toll-optimizer-cli`.
-- Verified all tests pass (Unit & Integration).
+- **Created `crates/api`**:
+    - Defined `Cargo.toml` with `axum`, `sqlx`, `tokio`, `tracing`, etc.
+    - Added a placeholder `main.rs` to verify compilation.
+- **Infrastructure**:
+    - Created `docker-compose.yml` to spin up a Postgres 16 container.
+    - Created `.env` with the default local connection string.
+- **Database Schema**:
+    - Created `crates/api/migrations/20260126000000_init_schema.sql`.
+    - Defined `users` table (UUID, email, password_hash).
+    - Defined `upload_summaries` table (UUID, user_id FK, totals, savings).
+- **Workspace**: Updated root `Cargo.toml` to include `crates/api`.
 
-## Key Learnings
-- Transitioning to a workspace requires careful path management in tests (`CARGO_MANIFEST_DIR` changes context).
-- Generic iterators in the parser simplify testing and future-proof for async streaming.
+## Next Steps
+- Implement the actual API logic (Phase 3).
+- User needs to run `docker-compose up -d` and `sqlx migrate run` locally to initialize the DB.
