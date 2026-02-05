@@ -11,7 +11,7 @@ The goal is to transform the `toll-optimizer` CLI tool into a distributed web ap
 *   **Async Runtime**: `tokio`.
 *   **Auth**: `argon2` (Password hashing) and `jsonwebtoken` (JWT for session management).
 *   **Serialization**: `serde` (JSON).
-*   **Observability**: `tracing`, `tracing-subscriber`, `opentelemetry` (OTLP exporter).
+*   **Observability**: `axum-prometheus` (Metrics), `tracing`, `tracing-subscriber` (Structured JSON Logging).
 
 ### Database (PostgreSQL)
 *   Standard relational storage for user accounts and historical summary metadata.
@@ -73,11 +73,14 @@ Minimalist design to support privacy and performance.
 ## 4. API Design
 
 ### Observability & Monitoring
-The API will be instrumented to provide visibility into request latency, error rates, and database performance.
-*   **Instrumentation**: All handlers and core logic will be instrumented with `#[tracing::instrument]`.
-*   **Infrastructure**: `tracing-subscriber` will be configured to export traces via OTLP (OpenTelemetry Protocol).
-*   **Middleware**: `tower_http::trace::TraceLayer` will automatically record HTTP request/response lifecycles.
-*   **Correlation**: Request IDs will be propagated to log entries for easier debugging.
+A "Hybrid" approach combining standard metrics with structured logs.
+*   **Metrics (Prometheus)**: `axum-prometheus` will expose a `/metrics` endpoint.
+    *   Tracks: Request latency, error rates, active connections.
+    *   Integration: Can be scraped by a Prometheus instance.
+*   **Structured Logging**: `tracing-subscriber` configured for JSON output to `stdout`.
+    *   All handlers instrumented with `#[tracing::instrument]`.
+    *   Logs will include request IDs, user IDs, and duration for debugging.
+    *   No complex OTLP infrastructure required.
 
 ### Authentication
 *   `POST /auth/register`: Create user.
