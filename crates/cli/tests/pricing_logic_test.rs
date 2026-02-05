@@ -12,7 +12,7 @@ use std::process::Command;
 fn run_single_trip_test(test_id: &str, csv_line: &str, expected_snippets: &[&str]) {
     // 1. Binary path (Assuming 'cargo test' has already built the binary)
     let manifest_dir = env::var("CARGO_MANIFEST_DIR").unwrap();
-    let bin_path = Path::new(&manifest_dir).join("target/debug/toll-optimizer");
+    let bin_path = Path::new(&manifest_dir).join("../../target/debug/toll-optimizer-cli");
 
     // 2. Setup UNIQUE temp dir for this test case to avoid parallel collisions
     let temp_dir_name = format!("toll-optimizer-test-{}", test_id);

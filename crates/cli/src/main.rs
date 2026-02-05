@@ -1,16 +1,7 @@
 use std::fs;
 use std::io::{self, BufRead};
 use std::path::Path;
-use trip_analyzer::{DayType, Direction, TripRecord};
-
-mod vehicle_class;
-use vehicle_class::light_vehicles;
-
-mod constants;
-use constants::*;
-
-mod csv_parser;
-pub mod trip_analyzer;
+use toll_optimizer_core::{csv_parser, trip_analyzer, DayType, Direction, TripRecord};
 
 fn main() -> io::Result<()> {
     let csv_dir = Path::new("csv");
@@ -47,7 +38,8 @@ fn main() -> io::Result<()> {
     for summary in &summaries {
         println!(
             "Transponder: {}, Direction: {:?}",
-            summary.transponder_plate, summary.direction
+            summary.transponder_plate,
+            summary.direction
         );
         println!(
             "  Best k={} (Elbow Method): [{}]",
@@ -222,7 +214,8 @@ fn main() -> io::Result<()> {
     for summary in &summaries_by_distance {
         println!(
             "Transponder: {}, Direction: {:?}",
-            summary.transponder_plate, summary.direction
+            summary.transponder_plate,
+            summary.direction
         );
         println!(
             "  Best k={} (Elbow Method): [{}]",
@@ -233,7 +226,8 @@ fn main() -> io::Result<()> {
         for centroid_data in &summary.centroids {
             println!(
                 "    Trips near {:.2} km (Avg: {:.2} km):",
-                centroid_data.centroid_distance, centroid_data.average_distance
+                centroid_data.centroid_distance,
+                centroid_data.average_distance
             );
             println!(
                 "      Total Toll Charge: ${:.2}",
@@ -256,7 +250,7 @@ fn main() -> io::Result<()> {
 
                 let mut optimization_msg = String::new();
                 if let Some(note) = &trip_summary.optimization_note {
-                    optimization_msg = format!(" [{}]", note);
+                    optimization_msg = format!(" [{}]\n", note);
                 }
 
                 println!(

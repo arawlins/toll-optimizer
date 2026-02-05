@@ -3,20 +3,22 @@ use crate::light_vehicles;
 use simple_datetime_rs::Date;
 use std::collections::HashMap;
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+use serde::Serialize;
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize)]
 pub enum Direction {
     Eastbound,
     Westbound,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize)]
 pub enum DayType {
     Weekday,
     Weekend,
     Holiday,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize)]
 pub struct TripRecord {
     pub transponder_plate: String,
     pub vehicle_class: String,
@@ -470,7 +472,7 @@ fn classify_day(date: &str) -> Option<DayType> {
     None
 }
 
-#[derive(Debug)]
+#[derive(Debug, Serialize)]
 pub struct TripSummary<'a> {
     pub trip: &'a TripRecord,
     pub avg_idx: Option<usize>,
@@ -483,7 +485,7 @@ pub struct TripSummary<'a> {
     pub next_timeslot_target: Option<String>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Serialize)]
 pub struct CentroidData<'a> {
     pub centroid_time: String,
     pub trips: Vec<TripSummary<'a>>,
@@ -495,7 +497,7 @@ pub struct CentroidData<'a> {
     pub total_optimized_savings: f64,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Serialize)]
 pub struct TransponderSummaryByTime<'a> {
     pub transponder_plate: String,
     pub direction: Direction,
@@ -504,7 +506,7 @@ pub struct TransponderSummaryByTime<'a> {
     pub formatted_centroids: Vec<String>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Serialize)]
 pub struct CentroidDataByDistance<'a> {
     pub centroid_distance: f64,
     pub trips: Vec<TripSummary<'a>>,
@@ -513,7 +515,7 @@ pub struct CentroidDataByDistance<'a> {
     pub total_optimized_savings: f64,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Serialize)]
 pub struct TransponderSummaryByDistance<'a> {
     pub transponder_plate: String,
     pub direction: Direction,

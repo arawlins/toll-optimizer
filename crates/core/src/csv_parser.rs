@@ -2,7 +2,10 @@ use crate::trip_analyzer::{Direction, TripRecord};
 use crate::{ACCESS_POINT_SYNONYMS, ACCESS_POINTS, OLD_ACCESSS_POINTS};
 use std::collections::HashMap;
 
-pub fn parse_trips(lines: Vec<String>) -> Vec<((String, Direction), Vec<TripRecord>)> {
+pub fn parse_trips<I>(lines: I) -> Vec<((String, Direction), Vec<TripRecord>)>
+where
+    I: IntoIterator<Item = String>,
+{
     let mut trips_by_transponder: HashMap<String, Vec<TripRecord>> = HashMap::new();
     let mut header_found = false;
 

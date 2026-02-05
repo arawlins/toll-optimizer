@@ -16,7 +16,7 @@ fn test_application_runs_on_sample_csv() {
     // 2. Locate the binary
     // Typically in target/debug/toll-optimizer
     let manifest_dir = env::var("CARGO_MANIFEST_DIR").unwrap();
-    let bin_path = Path::new(&manifest_dir).join("target/debug/toll-optimizer");
+    let bin_path = Path::new(&manifest_dir).join("../../target/debug/toll-optimizer-cli");
 
     // 3. Create a temporary directory for our test execution
     let temp_dir = env::temp_dir().join("toll-optimizer-test-run");
