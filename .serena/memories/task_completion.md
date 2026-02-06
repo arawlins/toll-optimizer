@@ -1,36 +1,29 @@
-# Task Completion: Phase 3 - Backend API Implementation
+# Task Completion: Phase 4 - Frontend Scaffold
 
 ## Date
 2026-01-26
 
 ## Task
-Phase 3 of the Web Application transformation: Implement the Axum Backend API, including Auth, Database, and Analysis logic.
+Phase 4 of the Web Application transformation: Scaffold the React Frontend with Vite, TypeScript, and Tailwind CSS.
 
 ## Outcome
+- **Scaffold**: Created `frontend/` using `npm create vite@latest` (React + TypeScript).
 - **Dependencies**:
-    - Added `axum` (w/ multipart), `tokio`, `sqlx`, `argon2`, `jsonwebtoken`, `rust_decimal`, `axum-prometheus`.
-- **Database Layer (`crates/api/src/db/`)**:
-    - Implemented `UserDb` trait for `PgPool` (Create/Get User).
-    - Implemented `SummaryDb` trait for `PgPool` (Create/Get Upload Summaries).
-- **Authentication (`crates/api/src/auth/`)**:
-    - Implemented Argon2 password hashing.
-    - Implemented JWT Minting/Decoding.
-    - Implemented `Claims` extractor for Axum handlers (Middleware-like).
-- **Handlers (`crates/api/src/handlers/`)**:
-    - `auth.rs`: `register` and `login` endpoints.
-    - `analyze.rs`:
-        - `analyze`: Handles Multipart upload, streams file content, parses via `core`, analyzes, saves summary to DB, and returns JSON.
-        - `history`: Returns user's upload history.
-- **Main Entry Point**:
-    - Configured Router with all routes.
-    - Added Middleware: `TraceLayer` (Logging), `PrometheusMetricLayer` (Metrics), `CorsLayer`.
-    - Bound to `0.0.0.0:3000`.
+    - Installed `react-router-dom` (Routing).
+    - Installed `@tanstack/react-query` (Data Fetching).
+    - Installed `axios` (HTTP Client).
+    - Installed `zustand` (State Management).
+    - Installed `clsx`, `tailwind-merge`, `lucide-react` (UI Utils & Icons).
+- **Styling**:
+    - Installed `tailwindcss` (v3.4.1), `postcss`, `autoprefixer`.
+    - Configured `tailwind.config.js` content paths.
+    - Updated `src/index.css` with Tailwind directives.
+- **Structure**: Created `components/`, `pages/`, `lib/`, `hooks/`.
+- **Verification**: Ran `npm run build` successfully (Exit Code 0).
 
 ## Key Learnings
-- `sqlx::query_as!` macros require a running database at compile time (or `sqlx-data.json`).
-- `axum` 0.7 requires explicit feature enablement for `multipart`.
-- `axum-prometheus` needs version compatibility with `axum`.
+- `tailwindcss` v4 (currently `latest`) has a different initialization process than v3. Forced v3.4.1 to maintain standard `tailwind.config.js` workflow.
+- `vite` scaffold is interactive; needed to handle directory cleanup carefully.
 
 ## Next Steps
-- User must run `docker-compose up` and apply migrations to successfully compile and run the API.
-- Proceed to Phase 4: Frontend Scaffold.
+- Implement Phase 5: Analysis UI (Build the actual React components and hook them up to the API).
