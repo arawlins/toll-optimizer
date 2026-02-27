@@ -206,8 +206,12 @@ export function Dashboard() {
                                             <th className="px-4 py-2.5 text-left text-gray-500 font-bold uppercase tracking-wider">Cost</th>
                                             {viewMode === 'time' && (
                                               <>
-                                                <th className="px-4 py-2.5 text-left text-gray-500 font-bold uppercase tracking-wider">Prev Slot</th>
-                                                <th className="px-4 py-2.5 text-left text-gray-500 font-bold uppercase tracking-wider">Next Slot</th>
+                                                <th className="px-4 py-2.5 text-left text-gray-500 font-bold uppercase tracking-wider">
+                                                  Before {centroid.trips?.[0]?.prev_timeslot_target || ''}
+                                                </th>
+                                                <th className="px-4 py-2.5 text-left text-gray-500 font-bold uppercase tracking-wider">
+                                                  After {centroid.trips?.[0]?.next_timeslot_target || ''}
+                                                </th>
                                               </>
                                             )}
                                           </tr>

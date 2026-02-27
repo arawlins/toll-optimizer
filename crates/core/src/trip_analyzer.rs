@@ -1004,7 +1004,7 @@ pub fn analyze_trips_by_time<'a>(
                         if !targets.is_empty() {
                             targets.sort();
                             targets.dedup();
-                            optimization_advice = Some(format!("To save, try to leave {}.", targets.join(" or ")));
+                            optimization_advice = Some(format!("Try leaving {} to save some $$$", targets.join(" or ")));
                         }
                     }
 

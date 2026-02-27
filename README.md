@@ -27,8 +27,8 @@ docker-compose up -d
 ### 2. Configure Environment
 Create a `.env` file in the root directory (or `crates/api`):
 ```env
-DATABASE_URL=postgres://admin:password@localhost:5433/toll_optimizer
-JWT_SECRET=your-secure-secret-key
+DATABASE_URL=
+JWT_SECRET=
 RUST_LOG=info
 ```
 
