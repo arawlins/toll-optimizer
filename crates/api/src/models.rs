@@ -40,3 +40,13 @@ pub struct UploadSummary {
     pub savings: rust_decimal::Decimal,
     pub uploaded_at: Option<DateTime<Utc>>,
 }
+
+#[derive(Debug, Serialize)]
+pub struct AnalysisResponse {
+    pub total_trips: usize,
+    pub total_cost: f64,
+    pub time_based_savings: f64,
+    pub distance_based_savings: f64,
+    pub time_analysis: serde_json::Value,
+    pub distance_analysis: serde_json::Value,
+}

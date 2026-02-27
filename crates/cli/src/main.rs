@@ -1,10 +1,10 @@
 use std::fs;
 use std::io::{self, BufRead};
 use std::path::Path;
-use toll_optimizer_core::{csv_parser, trip_analyzer, DayType, Direction, TripRecord};
+use toll_optimizer_core::{DayType, Direction, TripRecord, csv_parser, trip_analyzer};
 
 fn main() -> io::Result<()> {
-    let csv_dir = Path::new("csv");
+    let csv_dir = Path::new("../../csv");
     if !csv_dir.exists() {
         eprintln!("Directory 'csv' not found.");
         return Ok(());
@@ -38,8 +38,7 @@ fn main() -> io::Result<()> {
     for summary in &summaries {
         println!(
             "Transponder: {}, Direction: {:?}",
-            summary.transponder_plate,
-            summary.direction
+            summary.transponder_plate, summary.direction
         );
         println!(
             "  Best k={} (Elbow Method): [{}]",
@@ -214,8 +213,7 @@ fn main() -> io::Result<()> {
     for summary in &summaries_by_distance {
         println!(
             "Transponder: {}, Direction: {:?}",
-            summary.transponder_plate,
-            summary.direction
+            summary.transponder_plate, summary.direction
         );
         println!(
             "  Best k={} (Elbow Method): [{}]",
@@ -226,8 +224,7 @@ fn main() -> io::Result<()> {
         for centroid_data in &summary.centroids {
             println!(
                 "    Trips near {:.2} km (Avg: {:.2} km):",
-                centroid_data.centroid_distance,
-                centroid_data.average_distance
+                centroid_data.centroid_distance, centroid_data.average_distance
             );
             println!(
                 "      Total Toll Charge: ${:.2}",

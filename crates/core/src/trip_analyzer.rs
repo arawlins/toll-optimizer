@@ -495,6 +495,7 @@ pub struct CentroidData<'a> {
     pub total_toll_charge_previous_timeslot: f64,
     pub total_toll_charge_next_timeslot: f64,
     pub total_optimized_savings: f64,
+    pub optimization_advice: Option<String>,
 }
 
 #[derive(Debug, Serialize)]
@@ -513,6 +514,7 @@ pub struct CentroidDataByDistance<'a> {
     pub average_distance: f64,
     pub total_toll_charge: f64,
     pub total_optimized_savings: f64,
+    pub optimization_advice: Option<String>,
 }
 
 #[derive(Debug, Serialize)]
@@ -927,13 +929,29 @@ pub fn analyze_trips_by_time<'a>(
                                 (None, None, None, None, None)
                             };
 
+                            let (optimized_cost, optimized_saved) = if let (Some(pc), Some(nc)) = (prev_cost_opt, next_cost_opt) {
+                                if pc < total_cost && pc <= nc {
+                                    (Some(pc), Some(total_cost - pc))
+                                } else if nc < total_cost {
+                                    (Some(nc), Some(total_cost - nc))
+                                } else {
+                                    (None, None)
+                                }
+                            } else if let Some(pc) = prev_cost_opt {
+                                if pc < total_cost { (Some(pc), Some(total_cost - pc)) } else { (None, None) }
+                            } else if let Some(nc) = next_cost_opt {
+                                if nc < total_cost { (Some(nc), Some(total_cost - nc)) } else { (None, None) }
+                            } else {
+                                (None, None)
+                            };
+
                             trip_summaries.push(TripSummary {
                                 trip,
                                 avg_idx: avg_idx_opt,
                                 total_cost_previous_timeslot: prev_cost_opt,
                                 total_cost_next_timeslot: next_cost_opt,
-                                optimized_cost: None,
-                                optimized_saved: None,
+                                optimized_cost,
+                                optimized_saved,
                                 optimization_note: None,
                                 prev_timeslot_target: prev_target_opt,
                                 next_timeslot_target: next_target_opt,
@@ -960,6 +978,36 @@ pub fn analyze_trips_by_time<'a>(
                         }
                     }
 
+                    let mut optimization_advice = None;
+                    if total_optimized_savings > 0.01 {
+                        let mut targets = Vec::new();
+                        for ts in &trip_summaries {
+                            if let Some(saved) = ts.optimized_saved {
+                                if saved > 0.01 {
+                                    if let Some(prev) = ts.total_cost_previous_timeslot {
+                                        if (ts.trip.get_total_recorded_cost() - prev).abs() < 0.001 || ts.optimized_cost == Some(prev) {
+                                            if let Some(target) = &ts.prev_timeslot_target {
+                                                targets.push(format!("before {}", target));
+                                            }
+                                        }
+                                    }
+                                    if let Some(next) = ts.total_cost_next_timeslot {
+                                         if (ts.trip.get_total_recorded_cost() - next).abs() < 0.001 || ts.optimized_cost == Some(next) {
+                                            if let Some(target) = &ts.next_timeslot_target {
+                                                targets.push(format!("after {}", target));
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        if !targets.is_empty() {
+                            targets.sort();
+                            targets.dedup();
+                            optimization_advice = Some(format!("To save, try to leave {}.", targets.join(" or ")));
+                        }
+                    }
+
                     let centroid_data = CentroidData {
                         centroid_time: centroid_time_str,
                         trips: trip_summaries,
@@ -969,6 +1017,7 @@ pub fn analyze_trips_by_time<'a>(
                         total_toll_charge_previous_timeslot,
                         total_toll_charge_next_timeslot,
                         total_optimized_savings,
+                        optimization_advice,
                     };
                     centroid_data_list.push(centroid_data);
                 }
@@ -1202,12 +1251,40 @@ pub fn analyze_trips_by_distance<'a>(
                         0.0
                     };
 
+                    let mut advice_map = HashMap::new();
+                    for ts in &cluster_trips {
+                        if let Some(note) = &ts.optimization_note {
+                            *advice_map.entry(note.clone()).or_insert(0) += 1;
+                        }
+                    }
+                    
+                    let mut optimization_advice = None;
+                    if !advice_map.is_empty() {
+                        let mut best_advice = String::new();
+                        let mut max_count = 0;
+                        for (advice, count) in advice_map {
+                            if count > max_count {
+                                max_count = count;
+                                best_advice = advice;
+                            }
+                        }
+                        if !best_advice.is_empty() {
+                             // strip the (Save $...) part for the summary if it exists
+                             if let Some(idx) = best_advice.find(" (Save") {
+                                 optimization_advice = Some(best_advice[..idx].to_string());
+                             } else {
+                                 optimization_advice = Some(best_advice);
+                             }
+                        }
+                    }
+
                     let centroid_data = CentroidDataByDistance {
                         centroid_distance: centroid,
                         trips: cluster_trips,
                         average_distance,
                         total_toll_charge,
                         total_optimized_savings,
+                        optimization_advice,
                     };
                     centroid_data_list.push(centroid_data);
                 }

@@ -41,6 +41,15 @@ export interface AnalysisResult {
   centroids: any[];
 }
 
+export interface AnalysisResponse {
+  total_trips: number;
+  total_cost: number;
+  time_based_savings: number;
+  distance_based_savings: number;
+  time_analysis: AnalysisResult[];
+  distance_analysis: AnalysisResult[];
+}
+
 export const endpoints = {
   login: (data: any) => api.post<AuthResponse>('/auth/login', data),
   register: (data: any) => api.post<AuthResponse>('/auth/register', data),
@@ -48,7 +57,7 @@ export const endpoints = {
   analyze: (file: File) => {
     const formData = new FormData();
     formData.append('file', file);
-    return api.post<AnalysisResult[]>('/api/analyze', formData, {
+    return api.post<AnalysisResponse>('/api/analyze', formData, {
       headers: {
         'Content-Type': 'multipart/form-data',
       },

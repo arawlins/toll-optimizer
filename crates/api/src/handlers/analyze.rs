@@ -47,79 +47,70 @@ pub async fn analyze(
     let parsed_results = csv_parser::parse_trips(lines);
 
     // Analyze trips
-    let summaries = trip_analyzer::analyze_trips_by_time(&parsed_results);
+    let time_summaries = trip_analyzer::analyze_trips_by_time(&parsed_results);
+    let distance_summaries = trip_analyzer::analyze_trips_by_distance(&parsed_results);
 
-    // Calculate totals for DB summary
+    // Calculate totals
     let mut total_trips = 0;
-    let mut total_cost_actual = Decimal::new(0, 2);
-    let mut total_cost_optimized = Decimal::new(0, 2);
-    
-    // Iterate through summaries to calculate aggregate stats
-    // Note: The structure is hierarchical: Summary -> Centroids -> Trips
-    // We need to be careful not to double count if logic changes, but typically we iterate the results.
-    
-    // Simple aggregation based on the returned structure
-    for summary in &summaries {
-        for centroid in &summary.centroids {
-            for trip_summary in &centroid.trips {
-                total_trips += 1;
-                
-                let actual = Decimal::from_f64(trip_summary.trip.get_total_recorded_cost()).unwrap_or_default();
-                total_cost_actual += actual;
+    let mut total_cost_actual = 0.0;
+    let mut time_savings = 0.0;
+    let mut distance_savings = 0.0;
 
-                // Determine optimized cost for this trip
-                // If optimized_cost is present, use it. Otherwise use actual.
-                // Wait, logic in CLI:
-                // if let Some(prev_cost) = trip_summary.total_cost_previous_timeslot ...
-                // But trip_summary struct has `optimized_cost` field? 
-                // Let's check `TripSummary` definition in `core`.
-                
-                // In `core/trip_analyzer.rs`:
-                // pub struct TripSummary<'a> { ... pub optimized_cost: Option<f64>, ... }
-                // Use that if available.
-                
-                let optimized = if let Some(opt) = trip_summary.optimized_cost {
-                     Decimal::from_f64(opt).unwrap_or(actual)
-                } else if let Some(prev) = trip_summary.total_cost_previous_timeslot {
-                    // CLI logic checked if prev < current - 0.005
-                    let prev_dec = Decimal::from_f64(prev).unwrap_or(actual);
-                    if prev_dec < actual {
-                        prev_dec
-                    } else {
-                        actual
-                    }
-                } else if let Some(next) = trip_summary.total_cost_next_timeslot {
-                     let next_dec = Decimal::from_f64(next).unwrap_or(actual);
-                     if next_dec < actual {
-                         next_dec
-                     } else {
-                         actual
-                     }
-                } else {
-                    actual
-                };
-                
-                total_cost_optimized += optimized;
-            }
+    for ((_plate, _dir), trips) in &parsed_results {
+        total_trips += trips.len();
+        for trip in trips {
+            total_cost_actual += trip.get_total_recorded_cost();
         }
     }
 
-    let savings = total_cost_actual - total_cost_optimized;
+    for summary in &time_summaries {
+        for centroid in &summary.centroids {
+            time_savings += centroid.total_optimized_savings;
+        }
+    }
+
+    for summary in &distance_summaries {
+        for centroid in &summary.centroids {
+            distance_savings += centroid.total_optimized_savings;
+        }
+    }
+
+    let final_savings_f64 = time_savings.max(distance_savings);
+    let total_cost_optimized_f64 = total_cost_actual - final_savings_f64;
+
+    let cost_actual_dec = Decimal::from_f64(total_cost_actual).unwrap_or_default();
+    let cost_optimized_dec = Decimal::from_f64(total_cost_optimized_f64).unwrap_or_default();
+    let savings_dec = Decimal::from_f64(final_savings_f64).unwrap_or_default();
 
     // Save to DB
     let _summary = pool
         .create_summary(
             _claims.sub,
             &filename,
-            total_trips,
-            total_cost_actual,
-            total_cost_optimized,
-            savings,
+            total_trips as i32,
+            cost_actual_dec,
+            cost_optimized_dec,
+            savings_dec,
         )
         .await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
-    Ok(Json(summaries))
+    let time_analysis_json = serde_json::to_value(&time_summaries)
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    
+    let distance_analysis_json = serde_json::to_value(&distance_summaries)
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+
+    let response = crate::models::AnalysisResponse {
+        total_trips,
+        total_cost: total_cost_actual,
+        time_based_savings: time_savings,
+        distance_based_savings: distance_savings,
+        time_analysis: time_analysis_json,
+        distance_analysis: distance_analysis_json,
+    };
+
+    Ok(Json(response))
 }
 
 pub async fn history(
