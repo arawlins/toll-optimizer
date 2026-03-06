@@ -39,6 +39,86 @@ export function Dashboard() {
     return (Number(trip.toll_charge) || 0) + (Number(trip.trip_toll_charge) || 0) + (Number(trip.camera_charge) || 0);
   };
 
+  const renderTripsTable = (trips: any[], title?: string) => {
+    if (trips.length === 0) return null;
+
+    const firstTrip = trips[0];
+
+    return (
+      <div className="space-y-2">
+        {title && <h4 className="px-4 text-[10px] font-bold text-gray-400 uppercase tracking-widest">{title}</h4>}
+        <div className="overflow-hidden rounded-xl border border-gray-200 shadow-sm">
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200 text-xs">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-4 py-2.5 text-left text-gray-500 font-bold uppercase tracking-wider">Date</th>
+                  <th className="px-4 py-2.5 text-left text-gray-500 font-bold uppercase tracking-wider">Time</th>
+                  <th className="px-4 py-2.5 text-left text-gray-500 font-bold uppercase tracking-wider">Entry/Exit</th>
+                  <th className="px-4 py-2.5 text-left text-gray-500 font-bold uppercase tracking-wider">Cost</th>
+                  {viewMode === 'time' && (
+                    <>
+                      <th className="px-4 py-2.5 text-left text-gray-500 font-bold uppercase tracking-wider">
+                        Before {firstTrip.prev_timeslot_target || ''}
+                      </th>
+                      <th className="px-4 py-2.5 text-left text-gray-500 font-bold uppercase tracking-wider">
+                        After {firstTrip.next_timeslot_target || ''}
+                      </th>
+                    </>
+                  )}
+                  {viewMode === 'distance' && (
+                    <th className="px-4 py-2.5 text-left text-gray-500 font-bold uppercase tracking-wider">
+                      Suggested Cost
+                    </th>
+                  )}
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-100">
+                {trips.map((ts: any, tIdx: number) => {
+                  const actualCost = getTripCost(ts.trip);
+                  return (
+                    <tr key={tIdx} className="hover:bg-blue-50/30 transition-colors">
+                      <td className="px-4 py-2.5 whitespace-nowrap font-medium">{ts.trip?.date_of_trip}</td>
+                      <td className="px-4 py-2.5 whitespace-nowrap">{ts.trip?.entry_time}</td>
+                      <td className="px-4 py-2.5 whitespace-nowrap max-w-[150px] truncate font-medium text-gray-600" title={`${ts.trip?.entry_point} → ${ts.trip?.exit_point}`}>
+                        {ts.trip?.entry_point} → {ts.trip?.exit_point}
+                      </td>
+                      <td className="px-4 py-2.5 whitespace-nowrap font-bold text-gray-900">${actualCost.toFixed(2)}</td>
+                      {viewMode === 'time' && (
+                        <>
+                          <td className={clsx(
+                            "px-4 py-2.5 whitespace-nowrap font-medium",
+                            ts.total_cost_previous_timeslot !== null && ts.total_cost_previous_timeslot < actualCost - 0.005 ? "text-green-600 font-bold" : "text-gray-400"
+                          )}>
+                            {ts.total_cost_previous_timeslot !== null ? `$${Number(ts.total_cost_previous_timeslot).toFixed(2)}` : '-'}
+                          </td>
+                          <td className={clsx(
+                            "px-4 py-2.5 whitespace-nowrap font-medium",
+                            ts.total_cost_next_timeslot !== null && ts.total_cost_next_timeslot < actualCost - 0.005 ? "text-green-600 font-bold" : "text-gray-400"
+                          )}>
+                            {ts.total_cost_next_timeslot !== null ? `$${Number(ts.total_cost_next_timeslot).toFixed(2)}` : '-'}
+                          </td>
+                        </>
+                      )}
+                      {viewMode === 'distance' && (
+                        <td className={clsx(
+                          "px-4 py-2.5 whitespace-nowrap font-medium",
+                          ts.optimized_cost !== null && ts.optimized_cost < actualCost - 0.005 ? "text-green-600 font-bold" : "text-gray-400"
+                        )}>
+                          {ts.optimized_cost !== null ? `$${Number(ts.optimized_cost).toFixed(2)}` : '-'}
+                        </td>
+                      )}
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div className="min-h-screen bg-gray-50 text-gray-900">
       {/* Header */}
@@ -202,73 +282,18 @@ export function Dashboard() {
                                 )}
 
                                 {isExpanded && (
-                                  <div className="mt-4 mb-4 overflow-hidden rounded-xl border border-gray-200 shadow-sm animate-in zoom-in-95 duration-200">
-                                    <div className="overflow-x-auto">
-                                      <table className="min-w-full divide-y divide-gray-200 text-xs">
-                                        <thead className="bg-gray-50">
-                                          <tr>
-                                            <th className="px-4 py-2.5 text-left text-gray-500 font-bold uppercase tracking-wider">Date</th>
-                                            <th className="px-4 py-2.5 text-left text-gray-500 font-bold uppercase tracking-wider">Time</th>
-                                            <th className="px-4 py-2.5 text-left text-gray-500 font-bold uppercase tracking-wider">Entry/Exit</th>
-                                            <th className="px-4 py-2.5 text-left text-gray-500 font-bold uppercase tracking-wider">Cost</th>
-                                            {viewMode === 'time' && (
-                                              <>
-                                                <th className="px-4 py-2.5 text-left text-gray-500 font-bold uppercase tracking-wider">
-                                                  Before {centroid.trips?.[0]?.prev_timeslot_target || ''}
-                                                </th>
-                                                <th className="px-4 py-2.5 text-left text-gray-500 font-bold uppercase tracking-wider">
-                                                  After {centroid.trips?.[0]?.next_timeslot_target || ''}
-                                                </th>
-                                              </>
-                                            )}
-                                            {viewMode === 'distance' && (
-                                              <th className="px-4 py-2.5 text-left text-gray-500 font-bold uppercase tracking-wider">
-                                                Suggested Cost
-                                              </th>
-                                            )}
-                                          </tr>
-                                        </thead>
-                                        <tbody className="bg-white divide-y divide-gray-100">
-                                          {(centroid.trips || []).map((ts: any, tIdx: number) => {
-                                            const actualCost = getTripCost(ts.trip);
-                                            return (
-                                              <tr key={tIdx} className="hover:bg-blue-50/30 transition-colors">
-                                                <td className="px-4 py-2.5 whitespace-nowrap font-medium">{ts.trip?.date_of_trip}</td>
-                                                <td className="px-4 py-2.5 whitespace-nowrap">{ts.trip?.entry_time}</td>
-                                                <td className="px-4 py-2.5 whitespace-nowrap max-w-[150px] truncate font-medium text-gray-600" title={`${ts.trip?.entry_point} → ${ts.trip?.exit_point}`}>
-                                                  {ts.trip?.entry_point} → {ts.trip?.exit_point}
-                                                </td>
-                                                <td className="px-4 py-2.5 whitespace-nowrap font-bold text-gray-900">${actualCost.toFixed(2)}</td>
-                                                {viewMode === 'time' && (
-                                                  <>
-                                                    <td className={clsx(
-                                                      "px-4 py-2.5 whitespace-nowrap font-medium",
-                                                      ts.total_cost_previous_timeslot !== null && ts.total_cost_previous_timeslot < actualCost - 0.005 ? "text-green-600 font-bold" : "text-gray-400"
-                                                    )}>
-                                                      {ts.total_cost_previous_timeslot !== null ? `$${Number(ts.total_cost_previous_timeslot).toFixed(2)}` : '-'}
-                                                    </td>
-                                                    <td className={clsx(
-                                                      "px-4 py-2.5 whitespace-nowrap font-medium",
-                                                      ts.total_cost_next_timeslot !== null && ts.total_cost_next_timeslot < actualCost - 0.005 ? "text-green-600 font-bold" : "text-gray-400"
-                                                    )}>
-                                                      {ts.total_cost_next_timeslot !== null ? `$${Number(ts.total_cost_next_timeslot).toFixed(2)}` : '-'}
-                                                    </td>
-                                                  </>
-                                                )}
-                                                {viewMode === 'distance' && (
-                                                  <td className={clsx(
-                                                    "px-4 py-2.5 whitespace-nowrap font-medium",
-                                                    ts.optimized_cost !== null && ts.optimized_cost < actualCost - 0.005 ? "text-green-600 font-bold" : "text-gray-400"
-                                                  )}>
-                                                    {ts.optimized_cost !== null ? `$${Number(ts.optimized_cost).toFixed(2)}` : '-'}
-                                                  </td>
-                                                )}
-                                              </tr>
-                                            );
-                                          })}
-                                        </tbody>
-                                      </table>
-                                    </div>
+                                  <div className="mt-4 space-y-4 animate-in zoom-in-95 duration-200">
+                                    {(() => {
+                                      const weekdayTrips = (centroid.trips || []).filter((ts: any) => ts.trip?.day_type === 'Weekday');
+                                      const weekendTrips = (centroid.trips || []).filter((ts: any) => ts.trip?.day_type === 'Weekend' || ts.trip?.day_type === 'Holiday');
+                                      
+                                      return (
+                                        <>
+                                          {renderTripsTable(weekdayTrips, "Weekday Trips")}
+                                          {renderTripsTable(weekendTrips, "Weekend/Holiday Trips")}
+                                        </>
+                                      );
+                                    })()}
                                   </div>
                                 )}
 
