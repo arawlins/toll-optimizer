@@ -1,4 +1,5 @@
 use axum::{
+    middleware,
     routing::{get, post},
     Router,
 };
@@ -34,7 +35,8 @@ async fn main() {
         .route("/auth/login", post(handlers::auth::login))
         .route("/api/analyze", post(handlers::analyze::analyze))
         .route("/api/history", get(handlers::analyze::history))
-        .route("/metrics", get(|| async move { metric_handle.render() }))
+        .route("/metrics", get(|| async move { metric_handle.render() })
+            .route_layer(middleware::from_fn(auth::basic_auth)))
         .layer(TraceLayer::new_for_http())
         .layer(prometheus_layer)
         .layer(CorsLayer::permissive())

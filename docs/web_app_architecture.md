@@ -76,7 +76,7 @@ Minimalist design to support privacy and performance.
 A "Hybrid" approach combining standard metrics with structured logs.
 *   **Metrics (Prometheus)**: `axum-prometheus` will expose a `/metrics` endpoint.
     *   Tracks: Request latency, error rates, active connections.
-    *   Integration: Can be scraped by a Prometheus instance.
+    *   Integration: Can be scraped by a Prometheus instance. Requires **Basic Authentication** (configured via `METRICS_USERNAME` and `METRICS_PASSWORD` env vars).
 *   **Structured Logging**: `tracing-subscriber` configured for JSON output to `stdout`.
     *   All handlers instrumented with `#[tracing::instrument]`.
     *   Logs will include request IDs, user IDs, and duration for debugging.

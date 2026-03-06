@@ -10,6 +10,34 @@ use uuid::Uuid;
 
 pub mod extractor;
 
+use axum::{
+    extract::Request,
+    middleware::Next,
+    response::Response,
+    http::{header, StatusCode},
+};
+use axum_extra::{
+    headers::{authorization::Basic, Authorization},
+    TypedHeader,
+};
+
+pub async fn basic_auth(
+    auth: Option<TypedHeader<Authorization<Basic>>>,
+    req: Request,
+    next: Next,
+) -> Result<Response, StatusCode> {
+    let username = env::var("METRICS_USERNAME").unwrap_or_else(|_| "admin".to_string());
+    let password = env::var("METRICS_PASSWORD").unwrap_or_else(|_| "secret".to_string());
+
+    if let Some(TypedHeader(Authorization(basic))) = auth {
+        if basic.username() == username && basic.password() == password {
+            return Ok(next.run(req).await);
+        }
+    }
+
+    Err(StatusCode::UNAUTHORIZED)
+}
+
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Claims {
     pub sub: Uuid, // Subject (User ID)

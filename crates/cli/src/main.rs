@@ -16,7 +16,7 @@ fn main() -> io::Result<()> {
         //.filter(|path| path.extension().map_or(false, |ext| ext == "csv"))
         .filter(|path| {
             path.file_name().and_then(|s| s.to_str())
-                == Some("2025-08-28 - 573522284 Statement.csv")
+                == Some("2025-12-28 - 573522284 Statement.csv")
         })
         .collect();
 
@@ -224,8 +224,14 @@ fn main() -> io::Result<()> {
         for centroid_data in &summary.centroids {
             println!(
                 "    {} -> {} (Avg: {:.2} km):",
-                centroid_data.representative_entry.as_deref().unwrap_or("Unknown"),
-                centroid_data.representative_exit.as_deref().unwrap_or("Unknown"),
+                centroid_data
+                    .representative_entry
+                    .as_deref()
+                    .unwrap_or("Unknown"),
+                centroid_data
+                    .representative_exit
+                    .as_deref()
+                    .unwrap_or("Unknown"),
                 centroid_data.average_distance
             );
             println!(
