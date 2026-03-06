@@ -223,8 +223,10 @@ fn main() -> io::Result<()> {
 
         for centroid_data in &summary.centroids {
             println!(
-                "    Trips near {:.2} km (Avg: {:.2} km):",
-                centroid_data.centroid_distance, centroid_data.average_distance
+                "    {} -> {} (Avg: {:.2} km):",
+                centroid_data.representative_entry.as_deref().unwrap_or("Unknown"),
+                centroid_data.representative_exit.as_deref().unwrap_or("Unknown"),
+                centroid_data.average_distance
             );
             println!(
                 "      Total Toll Charge: ${:.2}",

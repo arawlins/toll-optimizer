@@ -1,10 +1,10 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { endpoints } from '../lib/api';
-import type { AnalysisResponse, AnalysisResult } from '../lib/api';
+import type { AnalysisResponse } from '../lib/api';
 import { UploadDropzone } from '../components/UploadDropzone';
 import { useAuthStore } from '../store';
-import { LogOut, History, TrendingDown, Clock, MapPin, ChevronDown, ChevronUp } from 'lucide-react';
+import { LogOut, History, TrendingDown, Clock, MapPin, ChevronDown, ChevronUp, Route } from 'lucide-react';
 import clsx from 'clsx';
 
 export function Dashboard() {
@@ -171,11 +171,18 @@ export function Dashboard() {
                               <div key={centroidId} className="bg-gray-50/50 rounded-xl p-4 border border-gray-100 hover:bg-gray-50 transition-colors">
                                 <div className="flex flex-wrap justify-between items-center gap-3 mb-3">
                                   <div className="flex items-center gap-2">
-                                    <div className="bg-blue-100 p-1.5 rounded-lg">
-                                      <Clock className="w-4 h-4 text-blue-600" />
+                                    <div className={clsx("p-1.5 rounded-lg", viewMode === 'time' ? "bg-blue-100" : "bg-purple-100")}>
+                                      {viewMode === 'time' ? (
+                                        <Clock className="w-4 h-4 text-blue-600" />
+                                      ) : (
+                                        <Route className="w-4 h-4 text-purple-600" />
+                                      )}
                                     </div>
                                     <p className="font-bold text-gray-800">
-                                      {viewMode === 'time' ? `Trips near ${centroid.centroid_time}` : `${centroid.centroid_distance.toFixed(1)} km Cluster`}
+                                      {viewMode === 'time' 
+                                        ? `Trips near ${centroid.centroid_time}` 
+                                        : `${centroid.representative_entry || 'Entry'} -> ${centroid.representative_exit || 'Exit'}`
+                                      }
                                     </p>
                                   </div>
                                   <button
@@ -214,6 +221,11 @@ export function Dashboard() {
                                                 </th>
                                               </>
                                             )}
+                                            {viewMode === 'distance' && (
+                                              <th className="px-4 py-2.5 text-left text-gray-500 font-bold uppercase tracking-wider">
+                                                Suggested Cost
+                                              </th>
+                                            )}
                                           </tr>
                                         </thead>
                                         <tbody className="bg-white divide-y divide-gray-100">
@@ -242,6 +254,14 @@ export function Dashboard() {
                                                       {ts.total_cost_next_timeslot !== null ? `$${Number(ts.total_cost_next_timeslot).toFixed(2)}` : '-'}
                                                     </td>
                                                   </>
+                                                )}
+                                                {viewMode === 'distance' && (
+                                                  <td className={clsx(
+                                                    "px-4 py-2.5 whitespace-nowrap font-medium",
+                                                    ts.optimized_cost !== null && ts.optimized_cost < actualCost - 0.005 ? "text-green-600 font-bold" : "text-gray-400"
+                                                  )}>
+                                                    {ts.optimized_cost !== null ? `$${Number(ts.optimized_cost).toFixed(2)}` : '-'}
+                                                  </td>
                                                 )}
                                               </tr>
                                             );

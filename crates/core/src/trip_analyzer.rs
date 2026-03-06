@@ -515,6 +515,8 @@ pub struct CentroidDataByDistance<'a> {
     pub total_toll_charge: f64,
     pub total_optimized_savings: f64,
     pub optimization_advice: Option<String>,
+    pub representative_entry: Option<String>,
+    pub representative_exit: Option<String>,
 }
 
 #[derive(Debug, Serialize)]
@@ -836,11 +838,6 @@ pub fn analyze_trips_by_time<'a>(
                                 let mut prev_c = None;
                                 let mut next_c = None;
                                 let timeslots_len = trip.get_timeslot_count().unwrap_or(0);
-
-                                let mut savings: f64 = 0.0;
-
-                                let timeslots_len = trip.get_timeslot_count().unwrap_or(0);
-
                                 let mut savings: f64 = 0.0;
 
                                 if timeslot_idx > 0 {
@@ -1209,13 +1206,13 @@ pub fn analyze_trips_by_distance<'a>(
                                         };
 
                                         let change_type = if strategy.contains("Entry") {
-                                            "Move Entry to"
+                                            "Enter on"
                                         } else {
-                                            "Move Exit to"
+                                            "Exit on"
                                         };
 
                                         optimization_note = Some(format!(
-                                            "{} {} (Save ${:.2})",
+                                            "{} {} to save some $$$ (Save ${:.2})",
                                             change_type,
                                             new_point_name,
                                             current_total - new_total
@@ -1252,29 +1249,34 @@ pub fn analyze_trips_by_distance<'a>(
                     };
 
                     let mut advice_map = HashMap::new();
+                    let mut entry_counts = HashMap::new();
+                    let mut exit_counts = HashMap::new();
+
                     for ts in &cluster_trips {
                         if let Some(note) = &ts.optimization_note {
                             *advice_map.entry(note.clone()).or_insert(0) += 1;
                         }
+                        *entry_counts.entry(ts.trip.entry_point.clone()).or_insert(0) += 1;
+                        *exit_counts.entry(ts.trip.exit_point.clone()).or_insert(0) += 1;
                     }
                     
+                    let representative_entry = entry_counts.into_iter().max_by_key(|&(_, count)| count).map(|(name, _)| name);
+                    let representative_exit = exit_counts.into_iter().max_by_key(|&(_, count)| count).map(|(name, _)| name);
+
                     let mut optimization_advice = None;
                     if !advice_map.is_empty() {
-                        let mut best_advice = String::new();
-                        let mut max_count = 0;
-                        for (advice, count) in advice_map {
-                            if count > max_count {
-                                max_count = count;
-                                best_advice = advice;
+                        let mut unique_advice: Vec<String> = advice_map.keys().map(|a| {
+                            if let Some(idx) = a.find(" (Save") {
+                                a[..idx].to_string()
+                            } else {
+                                a.clone()
                             }
-                        }
-                        if !best_advice.is_empty() {
-                             // strip the (Save $...) part for the summary if it exists
-                             if let Some(idx) = best_advice.find(" (Save") {
-                                 optimization_advice = Some(best_advice[..idx].to_string());
-                             } else {
-                                 optimization_advice = Some(best_advice);
-                             }
+                        }).collect();
+                        unique_advice.sort();
+                        unique_advice.dedup();
+                        
+                        if !unique_advice.is_empty() {
+                            optimization_advice = Some(unique_advice.join(" and "));
                         }
                     }
 
@@ -1285,6 +1287,8 @@ pub fn analyze_trips_by_distance<'a>(
                         total_toll_charge,
                         total_optimized_savings,
                         optimization_advice,
+                        representative_entry,
+                        representative_exit,
                     };
                     centroid_data_list.push(centroid_data);
                 }

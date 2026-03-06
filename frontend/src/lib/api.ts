@@ -41,6 +41,17 @@ export interface AnalysisResult {
   centroids: any[];
 }
 
+export interface CentroidDataByDistance {
+  centroid_distance: number;
+  trips: any[];
+  average_distance: number;
+  total_toll_charge: number;
+  total_optimized_savings: number;
+  optimization_advice: string | null;
+  representative_entry: string | null;
+  representative_exit: string | null;
+}
+
 export interface AnalysisResponse {
   total_trips: number;
   total_cost: number;
