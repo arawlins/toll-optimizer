@@ -1278,17 +1278,19 @@ pub fn analyze_trips_by_distance<'a>(
                     let mut optimization_advice = None;
                     if !advice_map.is_empty() {
                         let mut unique_advice: Vec<String> = advice_map.keys().map(|a| {
-                            if let Some(idx) = a.find(" (Save") {
-                                a[..idx].to_string()
+                            let s = if let Some(idx) = a.find(" (Save") {
+                                &a[..idx]
                             } else {
-                                a.clone()
-                            }
+                                a
+                            };
+                            // Strip " to save some $$$" if present to avoid repetition in the joined string
+                            s.replace(" to save some $$$", "")
                         }).collect();
                         unique_advice.sort();
                         unique_advice.dedup();
                         
                         if !unique_advice.is_empty() {
-                            optimization_advice = Some(unique_advice.join(" and "));
+                            optimization_advice = Some(format!("{} to save some $$$", unique_advice.join(" and ")));
                         }
                     }
 
