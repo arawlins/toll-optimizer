@@ -480,6 +480,8 @@ pub struct TripSummary<'a> {
     pub total_cost_next_timeslot: Option<f64>,
     pub optimized_cost: Option<f64>,
     pub optimized_saved: Option<f64>,
+    pub optimized_entry: Option<String>,
+    pub optimized_exit: Option<String>,
     pub optimization_note: Option<String>,
     pub prev_timeslot_target: Option<String>,
     pub next_timeslot_target: Option<String>,
@@ -949,6 +951,8 @@ pub fn analyze_trips_by_time<'a>(
                                 total_cost_next_timeslot: next_cost_opt,
                                 optimized_cost,
                                 optimized_saved,
+                                optimized_entry: None,
+                                optimized_exit: None,
                                 optimization_note: None,
                                 prev_timeslot_target: prev_target_opt,
                                 next_timeslot_target: next_target_opt,
@@ -968,6 +972,8 @@ pub fn analyze_trips_by_time<'a>(
                                 total_cost_next_timeslot: None,
                                 optimized_cost: None,
                                 optimized_saved: None,
+                                optimized_entry: None,
+                                optimized_exit: None,
                                 optimization_note: None,
                                 prev_timeslot_target: None,
                                 next_timeslot_target: None,
@@ -1096,7 +1102,7 @@ pub fn analyze_trips_by_distance<'a>(
 
                         if let Some(idx) = best_idx {
                             // Enforce strict 2.0km radius
-                            if min_diff <= 2.0 {
+                            if min_diff <= 5.0 {
                                 if let Some(bucket) = clusters_buckets.get_mut(&idx) {
                                     bucket.push(trip);
                                 }
@@ -1125,6 +1131,8 @@ pub fn analyze_trips_by_distance<'a>(
 
                         let mut optimized_cost = None;
                         let mut optimized_saved = None;
+                        let mut optimized_entry = None;
+                        let mut optimized_exit = None;
                         let mut optimization_note = None;
 
                         if let (Some(start_idx), Some(end_idx), Some(timeslot_idx)) = (
@@ -1199,6 +1207,8 @@ pub fn analyze_trips_by_distance<'a>(
                                     if new_total < current_total {
                                         optimized_cost = Some(new_total);
                                         optimized_saved = Some(current_total - new_total);
+                                        optimized_entry = Some(ACCESS_POINTS[new_start_idx].to_string());
+                                        optimized_exit = Some(ACCESS_POINTS[new_end_idx].to_string());
                                         let new_point_name = if new_start_idx != start_idx {
                                             ACCESS_POINTS[new_start_idx]
                                         } else {
@@ -1231,6 +1241,8 @@ pub fn analyze_trips_by_distance<'a>(
                             total_cost_next_timeslot: None,
                             optimized_cost,
                             optimized_saved,
+                            optimized_entry,
+                            optimized_exit,
                             optimization_note,
                             prev_timeslot_target: None,
                             next_timeslot_target: None,

@@ -56,6 +56,11 @@ export function Dashboard() {
                   <th className="px-4 py-2.5 text-left text-gray-500 font-bold uppercase tracking-wider">Time</th>
                   <th className="px-4 py-2.5 text-left text-gray-500 font-bold uppercase tracking-wider">Entry/Exit</th>
                   <th className="px-4 py-2.5 text-left text-gray-500 font-bold uppercase tracking-wider">Cost</th>
+                  {viewMode === 'distance' && (
+                    <th className="px-4 py-2.5 text-left text-gray-500 font-bold uppercase tracking-wider">
+                      Suggested Trip
+                    </th>
+                  )}
                   {viewMode === 'time' && (
                     <>
                       <th className="px-4 py-2.5 text-left text-gray-500 font-bold uppercase tracking-wider">
@@ -84,6 +89,14 @@ export function Dashboard() {
                         {ts.trip?.entry_point} → {ts.trip?.exit_point}
                       </td>
                       <td className="px-4 py-2.5 whitespace-nowrap font-bold text-gray-900">${actualCost.toFixed(2)}</td>
+                      {viewMode === 'distance' && (
+                        <td className={clsx(
+                          "px-4 py-2.5 whitespace-nowrap max-w-[150px] truncate font-medium",
+                          ts.optimized_entry ? "text-blue-600" : "text-gray-400"
+                        )} title={ts.optimized_entry ? `${ts.optimized_entry} → ${ts.optimized_exit}` : ''}>
+                          {ts.optimized_entry ? `${ts.optimized_entry} → ${ts.optimized_exit}` : ' - '}
+                        </td>
+                      )}
                       {viewMode === 'time' && (
                         <>
                           <td className={clsx(
