@@ -2568,6 +2568,7 @@ version = "0.1.0"
 dependencies = [
  "serde",
  "simple-datetime-rs",
+ "tracing",
 ]
 
 [[package]]

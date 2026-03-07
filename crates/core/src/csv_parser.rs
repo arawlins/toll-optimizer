@@ -39,15 +39,33 @@ where
             let entry_index = ACCESS_POINTS.iter().position(|&r| r == record.entry_point);
             let exit_index = ACCESS_POINTS.iter().position(|&r| r == record.exit_point);
 
-            if let (Some(entry_idx), Some(exit_idx)) = (entry_index, exit_index) {
-                record.direction = Some(if exit_idx > entry_idx {
-                    Direction::Eastbound
-                } else {
-                    Direction::Westbound
-                });
+            match (entry_index, exit_index) {
+                (Some(entry_idx), Some(exit_idx)) => {
+                    record.direction = Some(if exit_idx > entry_idx {
+                        Direction::Eastbound
+                    } else {
+                        Direction::Westbound
+                    });
 
-                let plate = record.transponder_plate.clone();
-                trips_by_transponder.entry(plate).or_default().push(record);
+                    let plate = record.transponder_plate.clone();
+                    trips_by_transponder.entry(plate).or_default().push(record);
+                }
+                (None, _) | (_, None) => {
+                    if entry_index.is_none() {
+                        tracing::warn!(
+                            entry_point = %record.entry_point,
+                            plate = %record.transponder_plate,
+                            "Unknown entry point found during CSV parsing"
+                        );
+                    }
+                    if exit_index.is_none() {
+                        tracing::warn!(
+                            exit_point = %record.exit_point,
+                            plate = %record.transponder_plate,
+                            "Unknown exit point found during CSV parsing"
+                        );
+                    }
+                }
             }
         }
     }

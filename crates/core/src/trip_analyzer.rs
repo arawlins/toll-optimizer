@@ -928,21 +928,30 @@ pub fn analyze_trips_by_time<'a>(
                                 (None, None, None, None, None)
                             };
 
-                            let (optimized_cost, optimized_saved) = if let (Some(pc), Some(nc)) = (prev_cost_opt, next_cost_opt) {
-                                if pc < total_cost && pc <= nc {
-                                    (Some(pc), Some(total_cost - pc))
-                                } else if nc < total_cost {
-                                    (Some(nc), Some(total_cost - nc))
+                            let (optimized_cost, optimized_saved) =
+                                if let (Some(pc), Some(nc)) = (prev_cost_opt, next_cost_opt) {
+                                    if pc < total_cost && pc <= nc {
+                                        (Some(pc), Some(total_cost - pc))
+                                    } else if nc < total_cost {
+                                        (Some(nc), Some(total_cost - nc))
+                                    } else {
+                                        (None, None)
+                                    }
+                                } else if let Some(pc) = prev_cost_opt {
+                                    if pc < total_cost {
+                                        (Some(pc), Some(total_cost - pc))
+                                    } else {
+                                        (None, None)
+                                    }
+                                } else if let Some(nc) = next_cost_opt {
+                                    if nc < total_cost {
+                                        (Some(nc), Some(total_cost - nc))
+                                    } else {
+                                        (None, None)
+                                    }
                                 } else {
                                     (None, None)
-                                }
-                            } else if let Some(pc) = prev_cost_opt {
-                                if pc < total_cost { (Some(pc), Some(total_cost - pc)) } else { (None, None) }
-                            } else if let Some(nc) = next_cost_opt {
-                                if nc < total_cost { (Some(nc), Some(total_cost - nc)) } else { (None, None) }
-                            } else {
-                                (None, None)
-                            };
+                                };
 
                             trip_summaries.push(TripSummary {
                                 trip,
@@ -988,14 +997,18 @@ pub fn analyze_trips_by_time<'a>(
                             if let Some(saved) = ts.optimized_saved {
                                 if saved > 0.01 {
                                     if let Some(prev) = ts.total_cost_previous_timeslot {
-                                        if (ts.trip.get_total_recorded_cost() - prev).abs() < 0.001 || ts.optimized_cost == Some(prev) {
+                                        if (ts.trip.get_total_recorded_cost() - prev).abs() < 0.001
+                                            || ts.optimized_cost == Some(prev)
+                                        {
                                             if let Some(target) = &ts.prev_timeslot_target {
                                                 targets.push(format!("before {}", target));
                                             }
                                         }
                                     }
                                     if let Some(next) = ts.total_cost_next_timeslot {
-                                         if (ts.trip.get_total_recorded_cost() - next).abs() < 0.001 || ts.optimized_cost == Some(next) {
+                                        if (ts.trip.get_total_recorded_cost() - next).abs() < 0.001
+                                            || ts.optimized_cost == Some(next)
+                                        {
                                             if let Some(target) = &ts.next_timeslot_target {
                                                 targets.push(format!("after {}", target));
                                             }
@@ -1007,7 +1020,10 @@ pub fn analyze_trips_by_time<'a>(
                         if !targets.is_empty() {
                             targets.sort();
                             targets.dedup();
-                            optimization_advice = Some(format!("Try leaving {} to save some $$$", targets.join(" or ")));
+                            optimization_advice = Some(format!(
+                                "Try leaving {} to save some $$$",
+                                targets.join(" or ")
+                            ));
                         }
                     }
 
@@ -1101,7 +1117,7 @@ pub fn analyze_trips_by_distance<'a>(
                         }
 
                         if let Some(idx) = best_idx {
-                            // Enforce strict 2.0km radius
+                            // Enforce strict 5.0km radius
                             if min_diff <= 5.0 {
                                 if let Some(bucket) = clusters_buckets.get_mut(&idx) {
                                     bucket.push(trip);
@@ -1207,8 +1223,10 @@ pub fn analyze_trips_by_distance<'a>(
                                     if new_total < current_total {
                                         optimized_cost = Some(new_total);
                                         optimized_saved = Some(current_total - new_total);
-                                        optimized_entry = Some(ACCESS_POINTS[new_start_idx].to_string());
-                                        optimized_exit = Some(ACCESS_POINTS[new_end_idx].to_string());
+                                        optimized_entry =
+                                            Some(ACCESS_POINTS[new_start_idx].to_string());
+                                        optimized_exit =
+                                            Some(ACCESS_POINTS[new_end_idx].to_string());
                                         let new_point_name = if new_start_idx != start_idx {
                                             ACCESS_POINTS[new_start_idx]
                                         } else {
@@ -1271,26 +1289,36 @@ pub fn analyze_trips_by_distance<'a>(
                         *entry_counts.entry(ts.trip.entry_point.clone()).or_insert(0) += 1;
                         *exit_counts.entry(ts.trip.exit_point.clone()).or_insert(0) += 1;
                     }
-                    
-                    let representative_entry = entry_counts.into_iter().max_by_key(|&(_, count)| count).map(|(name, _)| name);
-                    let representative_exit = exit_counts.into_iter().max_by_key(|&(_, count)| count).map(|(name, _)| name);
+
+                    let representative_entry = entry_counts
+                        .into_iter()
+                        .max_by_key(|&(_, count)| count)
+                        .map(|(name, _)| name);
+                    let representative_exit = exit_counts
+                        .into_iter()
+                        .max_by_key(|&(_, count)| count)
+                        .map(|(name, _)| name);
 
                     let mut optimization_advice = None;
                     if !advice_map.is_empty() {
-                        let mut unique_advice: Vec<String> = advice_map.keys().map(|a| {
-                            let s = if let Some(idx) = a.find(" (Save") {
-                                &a[..idx]
-                            } else {
-                                a
-                            };
-                            // Strip " to save some $$$" if present to avoid repetition in the joined string
-                            s.replace(" to save some $$$", "")
-                        }).collect();
+                        let mut unique_advice: Vec<String> = advice_map
+                            .keys()
+                            .map(|a| {
+                                let s = if let Some(idx) = a.find(" (Save") {
+                                    &a[..idx]
+                                } else {
+                                    a
+                                };
+                                // Strip " to save some $$$" if present to avoid repetition in the joined string
+                                s.replace(" to save some $$$", "")
+                            })
+                            .collect();
                         unique_advice.sort();
                         unique_advice.dedup();
-                        
+
                         if !unique_advice.is_empty() {
-                            optimization_advice = Some(format!("{} to save some $$$", unique_advice.join(" and ")));
+                            optimization_advice =
+                                Some(format!("{} to save some $$$", unique_advice.join(" and ")));
                         }
                     }
 
