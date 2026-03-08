@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { endpoints } from '../lib/api';
 import type { AnalysisResponse } from '../lib/api';
@@ -12,10 +12,18 @@ export function Dashboard() {
   const [analysis, setAnalysis] = useState<AnalysisResponse | null>(null);
   const [viewMode, setViewMode] = useState<'time' | 'distance'>('time');
   const [expandedCentroids, setExpandedCentroids] = useState<string[]>([]);
+  const [expandedTransponders, setExpandedTransponders] = useState<string[]>([]);
 
-  const toggleCentroid = (id: string) => {
+  const toggleCentroid = (id: string, e?: React.MouseEvent) => {
+    e?.stopPropagation();
     setExpandedCentroids(prev =>
       prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]
+    );
+  };
+
+  const toggleTransponder = (plate: string) => {
+    setExpandedTransponders(prev =>
+      prev.includes(plate) ? prev.filter(p => p !== plate) : [...prev, plate]
     );
   };
 
@@ -33,6 +41,33 @@ export function Dashboard() {
   };
 
   const currentAnalysis = analysis ? (viewMode === 'time' ? analysis.time_analysis : analysis.distance_analysis) : [];
+
+  const groupedAnalysis = (Array.isArray(currentAnalysis) ? currentAnalysis : []).reduce((acc: any, curr: any) => {
+    const plate = curr.transponder_plate;
+    if (!acc[plate]) {
+      acc[plate] = {
+        plate,
+        summaries: [],
+        totalSavings: 0,
+        totalCentroids: 0
+      };
+    }
+    acc[plate].summaries.push(curr);
+    const centroids = Array.isArray(curr.centroids) ? curr.centroids : [];
+    const savings = centroids.reduce((sum: number, c: any) => sum + (c.total_optimized_savings || 0), 0) || 0;
+    acc[plate].totalSavings += savings;
+
+    // Filter centroids consistently with the expanded view
+    const centroidsToCount = viewMode === 'time'
+      ? centroids.filter((c: any) => c.total_optimized_savings > 0.005)
+      : centroids;
+
+    // Only count centroids that actually contain trips
+    acc[plate].totalCentroids += centroidsToCount.filter((c: any) => Array.isArray(c.trips) && c.trips.length > 0).length;
+    return acc;
+  }, {});
+
+  const transponders = Object.values(groupedAnalysis);
 
   const getTripCost = (trip: any) => {
     if (!trip) return 0;
@@ -221,111 +256,151 @@ export function Dashboard() {
                 </div>
               </div>
 
-              <div className="space-y-6">
-                {currentAnalysis.map((summary, idx) => {
-                  const centroidsToDisplay = viewMode === 'time'
-                    ? (summary.centroids || []).filter((c: any) => c.total_optimized_savings > 0.005)
-                    : (summary.centroids || []);
-
-                  const hasSavings = centroidsToDisplay.length > 0;
+                            <div className="space-y-6">
+                {(transponders as any[]).map((transponder) => {
+                  const isTransponderExpanded = expandedTransponders.includes(transponder.plate);
 
                   return (
-                    <div key={`${idx}-${summary.transponder_plate}`} className="border border-gray-100 rounded-2xl p-5 bg-white shadow-sm hover:border-blue-200 transition-all group">
-                      <div className="flex justify-between items-start mb-5">
-                        <div>
-                          <div className="flex items-center gap-2 mb-1">
-                            <h3 className="font-bold text-lg text-gray-900">
-                              {summary.transponder_plate}
-                            </h3>
-                            <span className="px-2 py-0.5 bg-gray-100 text-gray-600 text-[10px] font-bold rounded uppercase tracking-widest">
-                              Transponder
-                            </span>
+                    <div key={transponder.plate} className="border border-gray-100 rounded-2xl bg-white shadow-sm hover:border-blue-200 transition-all overflow-hidden">
+                      {/* Transponder Header (Collapsible) */}
+                      <button 
+                        onClick={() => toggleTransponder(transponder.plate)}
+                        className="w-full text-left p-5 flex justify-between items-center hover:bg-gray-50 transition-colors"
+                      >
+                        <div className="flex items-center gap-4">
+                          <div className="bg-blue-100 p-2 rounded-xl">
+                            <Route className="w-5 h-5 text-blue-600" />
                           </div>
-                          <p className="text-sm text-gray-500 flex items-center gap-1.5 font-medium">
-                            <MapPin className="w-4 h-4 text-gray-400" /> {summary.direction}
-                          </p>
+                          <div>
+                            <div className="flex items-center gap-2 mb-0.5">
+                              <h3 className="font-bold text-lg text-gray-900">{transponder.plate}</h3>
+                              <span className="px-2 py-0.5 bg-gray-100 text-gray-600 text-[10px] font-bold rounded uppercase tracking-widest">
+                                Transponder
+                              </span>
+                            </div>
+                            <p className="text-xs text-gray-500 font-medium">
+                              {transponder.totalCentroids} common {viewMode === 'time' ? 'times' : 'distances'} found
+                            </p>
+                          </div>
                         </div>
-                      </div>
-
-                      {!hasSavings && viewMode === 'time' ? (
-                        <div className="py-6 text-center bg-green-50/50 rounded-xl border border-green-100/50">
-                          <p className="text-green-700 font-bold flex items-center justify-center gap-2">
-                            <TrendingDown className="w-5 h-5" />
-                            Hurray! You're already travelling at the optimal time!
-                          </p>
+                        
+                        <div className="flex items-center gap-6">
+                          <div className="text-right">
+                            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-0.5">Potential Savings</p>
+                            <p className={clsx("text-lg font-black", transponder.totalSavings > 0.005 ? "text-green-600" : "text-gray-400")}>
+                              ${Number(transponder.totalSavings).toFixed(2)}
+                            </p>
+                          </div>
+                          <div className="p-2 bg-gray-100 rounded-full text-gray-400 group-hover:bg-blue-100 group-hover:text-blue-600 transition-all">
+                            {isTransponderExpanded ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
+                          </div>
                         </div>
-                      ) : (
-                        <div className="grid grid-cols-1 gap-4">
-                          {centroidsToDisplay.map((centroid: any, cIdx: number) => {
-                            const centroidId = `${idx}-${cIdx}-${viewMode}-${summary.transponder_plate}`;
-                            const isExpanded = expandedCentroids.includes(centroidId);
+                      </button>
 
-                            return (
-                              <div key={centroidId} className="bg-gray-50/50 rounded-xl p-4 border border-gray-100 hover:bg-gray-50 transition-colors">
-                                <div className="flex flex-wrap justify-between items-center gap-3 mb-3">
-                                  <div className="flex items-center gap-2">
-                                    <div className={clsx("p-1.5 rounded-lg", viewMode === 'time' ? "bg-blue-100" : "bg-purple-100")}>
-                                      {viewMode === 'time' ? (
-                                        <Clock className="w-4 h-4 text-blue-600" />
-                                      ) : (
-                                        <Route className="w-4 h-4 text-purple-600" />
-                                      )}
+                      {isTransponderExpanded && (
+                        <div className="p-5 pt-0 border-t border-gray-50 animate-in slide-in-from-top-2 duration-200">
+                          <div className="grid grid-cols-1 gap-8 mt-6">
+                            {transponder.summaries.map((summary: any) => {
+                              const centroidsToDisplay = viewMode === 'time'
+                                ? (summary.centroids || []).filter((c: any) => c.total_optimized_savings > 0.005)
+                                : (summary.centroids || []);
+
+                              const hasSavings = centroidsToDisplay.length > 0;
+
+                              return (
+                                <div key={`${transponder.plate}-${summary.direction}`} className="space-y-4">
+                                  <div className="flex items-center gap-2 pb-2 border-b border-gray-100">
+                                    <MapPin className="w-4 h-4 text-blue-500" />
+                                    <h4 className="font-bold text-gray-800 uppercase text-xs tracking-wider">
+                                      {summary.direction} Trips
+                                    </h4>
+                                  </div>
+
+                                  {!hasSavings && viewMode === 'time' ? (
+                                    <div className="py-4 px-5 text-center bg-green-50/50 rounded-xl border border-green-100/50">
+                                      <p className="text-green-700 text-sm font-bold flex items-center justify-center gap-2">
+                                        <TrendingDown className="w-4 h-4" />
+                                        Optimal travel times detected for this direction!
+                                      </p>
                                     </div>
-                                    <p className="font-bold text-gray-800">
-                                      {viewMode === 'time' 
-                                        ? `Trips near ${centroid.centroid_time}` 
-                                        : `${centroid.representative_entry || 'Entry'} -> ${centroid.representative_exit || 'Exit'}`
-                                      }
-                                    </p>
-                                  </div>
-                                  <button
-                                    onClick={() => toggleCentroid(centroidId)}
-                                    className="flex items-center gap-1.5 text-xs bg-white px-3 py-1.5 rounded-lg border border-gray-200 text-blue-600 hover:bg-blue-50 hover:border-blue-200 transition-all font-bold shadow-sm"
-                                  >
-                                    {centroid.trips?.length || 0} trips 
-                                    {isExpanded ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
-                                  </button>
+                                  ) : (
+                                    <div className="grid grid-cols-1 gap-4">
+                                      {centroidsToDisplay.map((centroid: any, cIdx: number) => {
+                                        const centroidId = `${transponder.plate}-${summary.direction}-${cIdx}-${viewMode}`;
+                                        const isExpanded = expandedCentroids.includes(centroidId);
+
+                                        return (
+                                          <div key={centroidId} className="bg-gray-50/50 rounded-xl p-4 border border-gray-100 hover:bg-gray-50 transition-colors">
+                                            <div className="flex flex-wrap justify-between items-center gap-3 mb-3">
+                                              <div className="flex items-center gap-2">
+                                                <div className={clsx("p-1.5 rounded-lg", viewMode === 'time' ? "bg-blue-100" : "bg-purple-100")}>
+                                                  {viewMode === 'time' ? (
+                                                    <Clock className="w-4 h-4 text-blue-600" />
+                                                  ) : (
+                                                    <Route className="w-4 h-4 text-purple-600" />
+                                                  )}
+                                                </div>
+                                                <p className="font-bold text-gray-800 text-sm">
+                                                  {viewMode === 'time' 
+                                                    ? `Trips near ${centroid.centroid_time}` 
+                                                    : `${centroid.representative_entry || 'Entry'} -> ${centroid.representative_exit || 'Exit'}`
+                                                  }
+                                                </p>
+                                              </div>
+                                              <button
+                                                onClick={(e) => toggleCentroid(centroidId, e)}
+                                                className="flex items-center gap-1.5 text-xs bg-white px-3 py-1.5 rounded-lg border border-gray-200 text-blue-600 hover:bg-blue-50 hover:border-blue-200 transition-all font-bold shadow-sm"
+                                              >
+                                                {centroid.trips?.length || 0} trips 
+                                                {isExpanded ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+                                              </button>
+                                            </div>
+
+                                            {centroid.optimization_advice && (
+                                              <div className="mb-4 p-3 bg-green-100/50 rounded-xl text-xs text-green-800 border border-green-200/50 font-bold flex items-start gap-2">
+                                                <TrendingDown className="w-4 h-4 flex-shrink-0" />
+                                                <span>{centroid.optimization_advice}</span>
+                                              </div>
+                                            )}
+
+                                            {isExpanded && (
+                                              <div className="mt-4 space-y-4 animate-in zoom-in-95 duration-200">
+                                                {(() => {
+                                                  const weekdayTrips = (centroid.trips || []).filter((ts: any) => ts.trip?.day_type === 'Weekday');
+                                                  const weekendTrips = (centroid.trips || []).filter((ts: any) => ts.trip?.day_type === 'Weekend' || ts.trip?.day_type === 'Holiday');
+                                                  
+                                                  return (
+                                                    <>
+                                                      {renderTripsTable(weekdayTrips, "Weekday Trips")}
+                                                      {renderTripsTable(weekendTrips, "Weekend/Holiday Trips")}
+                                                    </>
+                                                  );
+                                                })()}
+                                              </div>
+                                            )}
+
+                                            <div className="flex justify-between items-center mt-3 pt-3 border-t border-gray-200/60">
+                                              <span className="text-[10px] text-gray-500 font-medium">
+                                                {viewMode === 'time'
+                                                  ? `Average entry time: ${centroid.average_entry_time}`
+                                                  : `Average distance: ${Number(centroid.average_distance).toFixed(2)} km`}
+                                              </span>
+                                              <div className="flex items-center gap-1.5">
+                                                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-tight">Potential</span>
+                                                <span className="text-sm font-black text-green-600">
+                                                  Save ${Number(centroid.total_optimized_savings).toFixed(2)}
+                                                </span>
+                                              </div>
+                                            </div>
+                                          </div>
+                                        );
+                                      })}
+                                    </div>
+                                  )}
                                 </div>
-
-                                {centroid.optimization_advice && (
-                                  <div className="mb-4 p-3 bg-green-100/50 rounded-xl text-sm text-green-800 border border-green-200/50 font-bold flex items-start gap-2">
-                                    <TrendingDown className="w-4 h-4 mt-0.5 flex-shrink-0" />
-                                    <span>{centroid.optimization_advice}</span>
-                                  </div>
-                                )}
-
-                                {isExpanded && (
-                                  <div className="mt-4 space-y-4 animate-in zoom-in-95 duration-200">
-                                    {(() => {
-                                      const weekdayTrips = (centroid.trips || []).filter((ts: any) => ts.trip?.day_type === 'Weekday');
-                                      const weekendTrips = (centroid.trips || []).filter((ts: any) => ts.trip?.day_type === 'Weekend' || ts.trip?.day_type === 'Holiday');
-                                      
-                                      return (
-                                        <>
-                                          {renderTripsTable(weekdayTrips, "Weekday Trips")}
-                                          {renderTripsTable(weekendTrips, "Weekend/Holiday Trips")}
-                                        </>
-                                      );
-                                    })()}
-                                  </div>
-                                )}
-
-                                <div className="flex justify-between items-center mt-3 pt-3 border-t border-gray-200/60">
-                                  <span className="text-xs text-gray-500 font-medium">
-                                    {viewMode === 'time'
-                                      ? `Average entry time: ${centroid.average_entry_time}`
-                                      : `Average distance: ${Number(centroid.average_distance).toFixed(2)} km`}
-                                  </span>
-                                  <div className="flex items-center gap-1.5">
-                                    <span className="text-xs font-bold text-gray-400 uppercase tracking-tight">Potential</span>
-                                    <span className="text-sm font-black text-green-600">
-                                      Save ${Number(centroid.total_optimized_savings).toFixed(2)}
-                                    </span>
-                                  </div>
-                                </div>
-                              </div>
-                            );
-                          })}
+                              );
+                            })}
+                          </div>
                         </div>
                       )}
                     </div>

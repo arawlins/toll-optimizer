@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import { UploadCloud, Loader2 } from 'lucide-react';
 import { endpoints } from '../lib/api';
 import clsx from 'clsx';
