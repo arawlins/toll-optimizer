@@ -4,31 +4,23 @@ use std::path::Path;
 use toll_optimizer_core::{DayType, Direction, TripRecord, csv_parser, trip_analyzer};
 
 fn main() -> io::Result<()> {
-    let csv_dir = Path::new("../../csv");
-    if !csv_dir.exists() {
-        eprintln!("Directory 'csv' not found.");
+    let args: Vec<String> = std::env::args().collect();
+    if args.len() < 2 {
+        eprintln!("Usage: {} <csv_file_path>", args[0]);
         return Ok(());
     }
 
-    let mut entries: Vec<_> = fs::read_dir(csv_dir)?
-        .filter_map(|res| res.ok())
-        .map(|dir_entry| dir_entry.path())
-        //.filter(|path| path.extension().map_or(false, |ext| ext == "csv"))
-        .filter(|path| {
-            path.file_name().and_then(|s| s.to_str())
-                == Some("2025-12-28 - 573522284 Statement.csv")
-        })
-        .collect();
+    let csv_path = Path::new(&args[1]);
+    if !csv_path.exists() {
+        eprintln!("File '{}' not found.", args[1]);
+        return Ok(());
+    }
 
-    entries.sort();
-
+    let file = fs::File::open(csv_path)?;
+    let reader = io::BufReader::new(file);
     let mut all_lines = Vec::new();
-    for path in entries {
-        let file = fs::File::open(&path)?;
-        let reader = io::BufReader::new(file);
-        for line in reader.lines() {
-            all_lines.push(line?);
-        }
+    for line in reader.lines() {
+        all_lines.push(line?);
     }
 
     let results = csv_parser::parse_trips(all_lines);
