@@ -15,7 +15,7 @@ uuid = { version = "1.0", features = ["serde", "v4"] }
 chrono = { version = "0.4", features = ["serde"] }
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter", "json"] }
-tower-http = { version = "0.5", features = ["trace", "cors", "auth"] }
+tower-http = { version = "0.5", features = ["trace", "cors", "auth", "fs"] }
 argon2 = "0.5"
 jsonwebtoken = "9.2"
 axum-extra = { version = "0.9", features = ["typed-header"] }

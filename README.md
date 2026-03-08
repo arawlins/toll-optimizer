@@ -16,43 +16,53 @@ Toll Optimizer is a high-performance Rust-based system designed to analyze 407 E
 - **Docker**: For the PostgreSQL database.
 - **PostgreSQL Client** (optional): For manual schema inspection.
 
-## Quick Start
+## Quick Start (Production / Docker)
+
+The easiest way to run the full application is using Docker Compose.
+
+### 1. Setup Environment
+Copy `env.txt` to `.env` in the root directory and set the values.
+
+### 2. Start the System
+```bash
+docker-compose up --build -d
+```
+The application will automatically:
+- Start a PostgreSQL database.
+- Run database migrations.
+- Build the React frontend.
+- Start the Axum API serving both the backend and frontend.
+
+### 2. Access the Dashboard
+Open [http://localhost:3000](http://localhost:3000) in your browser.
+
+---
+
+## Development Setup
+
+If you want to run the components separately for development:
 
 ### 1. Start the Database
-The application requires PostgreSQL. Use the provided Docker Compose configuration:
 ```bash
-docker-compose up -d
+docker-compose up db -d
 ```
 
 ### 2. Configure Environment
-Create a `.env` file in the root directory (or `crates/api`):
-```env
-DATABASE_URL=postgres://admin:password@localhost:5433/toll_optimizer
-JWT_SECRET=your_super_secret_key
-RUST_LOG=info
-METRICS_USERNAME=admin
-METRICS_PASSWORD=secret
-```
+Copy `env.txt` to `.env` in the root directory (or `crates/api`) and set the values.
 
-### 3. Initialize the Schema
-Run the initial migration (ensure the DB is up first):
-```bash
-docker exec -i toll_optimizer_db psql -U admin -d toll_optimizer < crates/api/migrations/20260126000000_init_schema.sql
-```
-
-### 4. Start the Backend API
+### 3. Start the Backend API
 ```bash
 cargo run -p toll-optimizer-api
 ```
 The API will be available at `http://localhost:3000`.
 
-### 5. Start the Frontend
+### 4. Start the Frontend
 ```bash
 cd frontend
 npm install
 npm run dev
 ```
-Open [http://localhost:5173](http://localhost:5173) in your browser.
+Open [http://localhost:5173](http://localhost:5173) in your browser. Note: In dev mode, the frontend connects to `http://localhost:3000` via Vite's proxy or environment configuration.
 
 ## Using the CLI Tool
 If you prefer to analyze local files without a database:
@@ -75,7 +85,7 @@ cargo run -p toll-optimizer-cli -- csv/"2025-12-28 - 573522284 Statement.csv"
 - **Structured Logging**: All backend logs are output in **JSON** format to `stdout`. Use `jq` for human-readable local debugging.
 - **Prometheus Metrics**: Exposes a `/metrics` endpoint on port `3000`.
     - **Access**: Requires Basic Authentication (configured via `METRICS_USERNAME` and `METRICS_PASSWORD`).
-    - **Command**: `curl -u admin:secret http://localhost:3000/metrics`
+    - **Command**: `curl -u <METRICS_USERNAME>:<METRICS_PASSWORD> http://localhost:3000/metrics`
 
 ## License
 MIT
