@@ -4,31 +4,22 @@ use std::io::Write;
 use std::path::Path;
 use std::process::Command;
 
-/// Helper function to run a single test case in isolation.
-///
-/// * `test_id`: A unique identifier for the test (used for temp dir name).
-/// * `csv_line`: The specific CSV data line to test.
-/// * `expected_snippets`: A list of strings that MUST appear in the output.
 fn run_single_trip_test(test_id: &str, csv_line: &str, expected_snippets: &[&str]) {
-    // 1. Binary path (Assuming 'cargo test' has already built the binary)
+    // 1. Binary path
     let manifest_dir = env::var("CARGO_MANIFEST_DIR").unwrap();
     let bin_path = Path::new(&manifest_dir).join("../../target/debug/toll-optimizer-cli");
 
-    // 2. Setup UNIQUE temp dir for this test case to avoid parallel collisions
+    // 2. Setup UNIQUE temp dir
     let temp_dir_name = format!("toll-optimizer-test-{}", test_id);
     let temp_dir = env::temp_dir().join(temp_dir_name);
     
-    // Clean start
     if temp_dir.exists() {
         fs::remove_dir_all(&temp_dir).expect("Failed to clean up old temp dir");
     }
     fs::create_dir_all(&temp_dir).expect("Failed to create temp dir");
 
-    let csv_dir = temp_dir.join("csv");
-    fs::create_dir(&csv_dir).expect("Failed to create csv dir");
-
-    // 3. Create CSV with the REQUIRED filename expected by main.rs
-    let csv_file_path = csv_dir.join("2025-08-28 - 573522284 Statement.csv");
+    // 3. Create CSV
+    let csv_file_path = temp_dir.join("test_statement.csv");
     let mut file = fs::File::create(&csv_file_path).expect("Failed to create CSV file");
 
     let header = r#"NOTE: Test Pricing
@@ -39,9 +30,9 @@ Name: Test User
     let content = format!("{}{}\n", header, csv_line);
     file.write_all(content.as_bytes()).expect("Failed to write CSV");
 
-    // 4. Run binary
+    // 4. Run binary with file path as argument
     let output = Command::new(&bin_path)
-        .current_dir(&temp_dir)
+        .arg(&csv_file_path)
         .output()
         .expect("Failed to run binary");
 

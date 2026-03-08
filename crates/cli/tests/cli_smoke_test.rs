@@ -45,7 +45,7 @@ Name: Test User
 
     // 6. Execute the binary from the temp directory
     let output = Command::new(&bin_path)
-        .current_dir(&temp_dir) // IMPORTANT: Run from the temp dir so it finds 'csv/'
+        .arg(&csv_file_path)
         .output()
         .expect("Failed to execute binary");
 

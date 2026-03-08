@@ -1,53 +1,51 @@
 # Toll Optimizer: Web Application Architecture
 
 ## 1. Overview
-The goal is to transform the `toll-optimizer` CLI tool into a distributed web application. The system will allow users to upload toll statement CSVs, receive an optimization analysis in real-time, and track their historical savings.
+The `toll-optimizer` web application transforms the core analysis logic into a distributed system. It allows users to:
+-   Securely upload toll statement CSVs.
+-   Receive real-time optimization analysis (time-based and distance-based).
+-   Track and visualize historical savings over time.
+-   Manage their personal account with JWT authentication.
 
 ## 2. Technology Stack
 
 ### Backend (Rust)
-*   **Web Framework**: `axum` (Modular, async-first, Tokio ecosystem).
-*   **Database Client**: `sqlx` (Async, compile-time SQL verification).
-*   **Async Runtime**: `tokio`.
-*   **Auth**: `argon2` (Password hashing) and `jsonwebtoken` (JWT for session management).
-*   **Serialization**: `serde` (JSON).
-*   **Observability**: `axum-prometheus` (Metrics), `tracing`, `tracing-subscriber` (Structured JSON Logging).
+-   **Web Framework**: `axum` (Modular, async-first, Tokio ecosystem).
+-   **Database Client**: `sqlx` (Async, compile-time SQL verification).
+-   **Async Runtime**: `tokio`.
+-   **Auth**: `argon2` (Password hashing) and `jsonwebtoken` (JWT for session management).
+-   **Serialization**: `serde` (JSON).
+-   **Observability**: `axum-prometheus` (Metrics), `tracing`, `tracing-subscriber` (Structured JSON Logging).
 
 ### Database (PostgreSQL)
-*   Standard relational storage for user accounts and historical summary metadata.
-*   Minimal state strategy: Individual trip records are **not** persisted.
+-   Standard relational storage for user accounts and historical summary metadata.
+-   Minimal state strategy: Individual trip records are **not** persisted.
 
 ### Frontend (React)
-*   **Build Tool**: `Vite` with `TypeScript`.
-*   **State/Data Fetching**: `React Query` (TanStack Query).
-*   **Styling**: `Tailwind CSS` + `shadcn/ui`.
-*   **Charts**: `Recharts` for visualizing savings and trip clusters.
+-   **Build Tool**: `Vite` with `TypeScript`.
+-   **State/Data Fetching**: `React Query` (TanStack Query).
+-   **Styling**: `Tailwind CSS` + `shadcn/ui`.
+-   **Charts**: `Recharts` for visualizing savings and trip clusters.
 
 ---
 
 ## 3. System Architecture
 
 ### Cargo Workspace Structure
-To share logic between the CLI and the Web API, the project will be refactored into a workspace:
+The project uses a standard Rust workspace:
 
 ```text
 toll-optimizer/
 ├── Cargo.toml (Workspace Root)
 ├── crates/
 │   ├── core/           # Shared logic (lib)
-│   │   ├── src/lib.rs
-│   │   ├── parser.rs   # Generic stream parsing
-│   │   ├── analyzer.rs # Pure calculation logic
-│   │   └── models.rs   # Shared data structures
-│   ├── cli/            # Refactored CLI tool (bin)
+│   ├── cli/            # Local command-line tool (bin)
 │   └── api/            # Axum REST API (bin)
 ├── frontend/           # React SPA
-└── docker/             # Dockerfiles and config
+└── docker-compose.yml  # Orchestration
 ```
 
 ### Database Schema
-Minimalist design to support privacy and performance.
-
 #### Table: `users`
 | Column | Type | Constraints |
 | :--- | :--- | :--- |
@@ -73,53 +71,38 @@ Minimalist design to support privacy and performance.
 ## 4. API Design
 
 ### Observability & Monitoring
-A "Hybrid" approach combining standard metrics with structured logs.
-*   **Metrics (Prometheus)**: `axum-prometheus` will expose a `/metrics` endpoint.
-    *   Tracks: Request latency, error rates, active connections.
-    *   Integration: Can be scraped by a Prometheus instance. Requires **Basic Authentication** (configured via `METRICS_USERNAME` and `METRICS_PASSWORD` env vars).
-*   **Structured Logging**: `tracing-subscriber` configured for JSON output to `stdout`.
-    *   All handlers instrumented with `#[tracing::instrument]`.
-    *   Logs will include request IDs, user IDs, and duration for debugging.
-    *   No complex OTLP infrastructure required.
+A hybrid strategy combining metrics and structured logs.
+-   **Metrics (Prometheus)**: `axum-prometheus` exposes a `/metrics` endpoint on port `3000`.
+    -   Requires **Basic Authentication** (via `METRICS_USERNAME` and `METRICS_PASSWORD`).
+-   **Structured Logging**: `tracing-subscriber` outputs **JSON** to `stdout`.
+    -   All handlers instrumented with `#[tracing::instrument]`.
+    -   Logs include request IDs, user IDs, and durations.
 
 ### Authentication
-*   `POST /auth/register`: Create user.
-*   `POST /auth/login`: Returns JWT and user profile.
+-   `POST /auth/register`: User registration.
+-   `POST /auth/login`: Authentication, returns JWT and user profile.
 
 ### Analysis & History
-All endpoints below require a valid `Authorization: Bearer <token>` header.
+Endpoints below require `Authorization: Bearer <token>`.
 
-*   **`GET /api/history`**: Returns a list of `upload_summaries` for the authenticated user.
-*   **`POST /api/analyze`**:
-    *   Accepts `multipart/form-data` (CSV file).
-    *   Server parses CSV using `core` library in-memory.
-    *   Performs K-means clustering and pricing optimization.
-    *   Saves a summary row to `upload_summaries`.
-    *   Returns full detailed JSON analysis (detailed trips, clusters, and savings).
-
----
-
-## 5. Deployment Strategy (Docker/Linux)
-
-### Containerization
-*   **Multi-stage Dockerfile**:
-    1.  `rust:bookworm` for compiling the backend binaries.
-    2.  `node:20` for building the React frontend.
-    3.  `debian:bookworm-slim` for the final runtime image.
-*   The Rust binary will serve the static React files from the `/dist` directory.
-
-### Orchestration
-*   `docker-compose.yml` defining:
-    *   `app`: The integrated Rust/React container.
-    *   `db`: Official PostgreSQL image with persistent volume.
+-   **`GET /api/history`**: Returns `upload_summaries` for the user.
+-   **`POST /api/analyze`**:
+    -   Accepts `multipart/form-data` (CSV file).
+    -   Processes CSV in-memory using `core` library.
+    -   Performs K-means clustering and pricing optimization.
+    -   Returns detailed JSON analysis:
+        -   Detailed trips (with suggested entry/exit).
+        -   Trip clusters (time and distance).
+        -   Potential savings.
 
 ---
 
-## 6. Implementation Phases
+## 5. Deployment Strategy (Docker)
 
-1.  **Phase 1 (Workspace & Core)**: Extract `src/` logic into `crates/core`. Refactor parser to handle `BufRead` instead of just local files.
-2.  **Phase 2 (Database Setup)**: Initialize `sqlx` migrations and schema.
-3.  **Phase 3 (Backend API)**: Implement Axum routes, JWT middleware, and the `/analyze` endpoint using the `core` library.
-4.  **Phase 4 (Frontend Scaffold)**: Create Vite project, set up API clients, and implement the Auth flow.
-5.  **Phase 5 (Analysis UI)**: Build the upload dashboard and visualization charts for the analysis results.
-6.  **Phase 6 (Production)**: Configure Docker and test the deployment.
+-   **Backend Container**: Multi-stage `rust:bookworm` -> `debian:bookworm-slim`.
+-   **Database Container**: `postgres:16-alpine`.
+-   **Frontend Service**: Served via the Axum backend or dedicated web server.
+-   **Orchestration**: Managed via `docker-compose.yml`.
+
+## 6. Implementation Status
+All core modules (Core, CLI, API, Frontend) are fully implemented. The system is production-ready with structured logging, metrics protection, and a transponder-centric UI dashboard.

@@ -26,6 +26,8 @@ The AI should act as an expert Rust developer specializing in high-performance, 
 -   Sample CSV files are in the `csv/` directory.
 -   Code examples are in `examples/`.
 -   Performance benchmarks are in `benches/`.
+-   Update documentation using docs-agent.md as a guideline
+-   Update tests using test-agent.md as a guideline
 
 ## 5. Coding Standards
 

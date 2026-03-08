@@ -367,6 +367,14 @@ pub fn parse_time_to_minutes(time: &str) -> Option<u32> {
     let minute: u32 = time_parts[1].parse().ok()?;
     let period = parts[1];
 
+    if hour == 0 || hour > 12 || minute >= 60 {
+        return None;
+    }
+
+    if period != "AM" && period != "PM" {
+        return None;
+    }
+
     let mut total_minutes = (hour % 12) * 60 + minute;
     if period == "PM" {
         total_minutes += 12 * 60;
