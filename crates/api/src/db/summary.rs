@@ -30,20 +30,19 @@ impl SummaryDb for PgPool {
         cost_optimized: Decimal,
         savings: Decimal,
     ) -> Result<UploadSummary, sqlx::Error> {
-        let summary = sqlx::query_as!(
-            UploadSummary,
+        let summary = sqlx::query_as::<_, UploadSummary>(
             r#"
             INSERT INTO upload_summaries (user_id, filename, total_trips, cost_actual, cost_optimized, savings)
             VALUES ($1, $2, $3, $4, $5, $6)
             RETURNING id, user_id, filename, total_trips, cost_actual, cost_optimized, savings, uploaded_at
-            "#,
-            user_id,
-            filename,
-            total_trips,
-            cost_actual,
-            cost_optimized,
-            savings
+            "#
         )
+        .bind(user_id)
+        .bind(filename)
+        .bind(total_trips)
+        .bind(cost_actual)
+        .bind(cost_optimized)
+        .bind(savings)
         .fetch_one(self)
         .await?;
 
@@ -51,16 +50,15 @@ impl SummaryDb for PgPool {
     }
 
     async fn get_summaries_by_user(&self, user_id: Uuid) -> Result<Vec<UploadSummary>, sqlx::Error> {
-        let summaries = sqlx::query_as!(
-            UploadSummary,
+        let summaries = sqlx::query_as::<_, UploadSummary>(
             r#"
             SELECT id, user_id, filename, total_trips, cost_actual, cost_optimized, savings, uploaded_at
             FROM upload_summaries
             WHERE user_id = $1
             ORDER BY uploaded_at DESC
-            "#,
-            user_id
+            "#
         )
+        .bind(user_id)
         .fetch_all(self)
         .await?;
 

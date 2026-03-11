@@ -42,6 +42,8 @@ pub struct Claims {
 
 pub struct Auth;
 
+
+
 impl Auth {
     pub fn hash_password(password: &str) -> Result<String, argon2::password_hash::Error> {
         let salt = SaltString::generate(&mut OsRng);

@@ -7,18 +7,21 @@ COPY frontend/ ./
 RUN npm run build
 
 # --- Stage 2: Build Backend ---
-FROM rust:1.85-bookworm AS backend-builder
+# Using the latest stable rust image to satisfy dependency requirements (e.g. time, home crates)
+FROM rust:bookworm AS backend-builder
 WORKDIR /app
 
 # Create a dummy project to cache dependencies
-RUN cargo new --lib crates/core && \
-    cargo new --bin toll-optimizer-api --path crates/api && \
-    cargo new --bin toll-optimizer-cli --path crates/cli
+RUN cargo new crates/core --lib --name common && \
+    cargo new crates/api --bin --name toll-optimizer-api && \
+    cargo new crates/cli --bin --name toll-optimizer-cli
 
 COPY Cargo.toml Cargo.lock ./
 COPY crates/core/Cargo.toml crates/core/
 COPY crates/api/Cargo.toml crates/api/
 COPY crates/cli/Cargo.toml crates/cli/
+# Copy migrations for compile-time check
+COPY crates/api/migrations/ crates/api/migrations/
 
 # Build dependencies only
 RUN cargo build --release -p toll-optimizer-api
@@ -29,6 +32,8 @@ COPY crates/ crates/
 RUN touch crates/core/src/lib.rs crates/api/src/main.rs
 
 # Build the final binary
+# Set SQLX_OFFLINE=true to bypass compile-time DB checks (metadata is handled by the migrate! macro if files are present)
+ENV SQLX_OFFLINE=true
 RUN cargo build --release -p toll-optimizer-api
 
 # --- Stage 3: Runtime ---

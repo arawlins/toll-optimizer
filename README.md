@@ -34,7 +34,18 @@ The application will automatically:
 - Start the Axum API serving both the backend and frontend.
 
 ### 2. Access the Dashboard
-Open [http://localhost:3000](http://localhost:3000) in your browser.
+- **Toll Optimizer UI**: [http://localhost:3000](http://localhost:3000)
+- **Prometheus Metrics**: [http://localhost:9090](http://localhost:9090)
+
+---
+
+## Monitoring & Observability
+
+- **Prometheus**: Automatically scrapes metrics from the API every 15s. You can query `axum_http_requests_total` or `http_request_duration_seconds` in the Prometheus UI.
+- **Structured Logs**: View structured JSON logs via Docker:
+  ```bash
+  docker-compose logs -f app | jq
+  ```
 
 ---
 
