@@ -207,7 +207,7 @@ export function Dashboard() {
             <div className="p-6 border-b border-gray-100 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
               <div className="flex items-center gap-2">
                 <TrendingDown className="w-6 h-6 text-green-600" />
-                <h2 className="text-xl font-bold">Optimization Analysis</h2>
+                <h2 className="text-xl font-bold">Usage Analysis</h2>
               </div>
 
               <div className="flex bg-gray-100 p-1 rounded-xl">
