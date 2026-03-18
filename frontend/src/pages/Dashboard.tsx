@@ -4,7 +4,7 @@ import { endpoints } from '../lib/api';
 import type { AnalysisResponse } from '../lib/api';
 import { UploadDropzone } from '../components/UploadDropzone';
 import { useAuthStore } from '../store';
-import { LogOut, History, TrendingDown, Clock, MapPin, ChevronDown, ChevronUp, Route } from 'lucide-react';
+import { LogOut, History as HistoryIcon, TrendingDown, Clock, MapPin, ChevronDown, ChevronUp, Route } from 'lucide-react';
 import clsx from 'clsx';
 
 export function Dashboard() {
@@ -27,7 +27,7 @@ export function Dashboard() {
     );
   };
 
-  const { data: history, refetch: refetchHistory } = useQuery({
+  const { data: historyData, refetch: refetchHistory } = useQuery({
     queryKey: ['history'],
     queryFn: async () => {
       const res = await endpoints.history();
@@ -415,7 +415,7 @@ export function Dashboard() {
         <section className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
           <div className="p-6 border-b border-gray-100">
             <div className="flex items-center gap-2">
-              <History className="w-6 h-6 text-blue-600" />
+              <HistoryIcon className="w-6 h-6 text-blue-600" />
               <h2 className="text-xl font-bold">Upload History</h2>
             </div>
           </div>
@@ -433,7 +433,7 @@ export function Dashboard() {
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-100">
-                {history?.map((item) => {
+                {Array.isArray(historyData) && historyData.map((item) => {
                   const savingsPercent = item.cost_actual > 0
                     ? (item.savings / item.cost_actual) * 100
                     : 0;
@@ -461,7 +461,7 @@ export function Dashboard() {
                     </tr>
                   );
                 })}
-                {(!history || history.length === 0) && (
+                {(!Array.isArray(historyData) || historyData.length === 0) && (
                   <tr>
                     <td colSpan={6} className="px-6 py-12 text-center text-sm text-gray-400 font-medium">
                       No history found. Upload your first statement to get started!
