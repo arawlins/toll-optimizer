@@ -39,12 +39,11 @@ services:
     ports:
       - "9090:9090"
     volumes:
-      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml.template
+      - ./monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml.template
       - prometheus_data:/prometheus
     environment:
       - METRICS_USERNAME=${METRICS_USERNAME}
       - METRICS_PASSWORD=${METRICS_PASSWORD}
-    # Use sed for simple substitution since envsubst is not in the official prometheus image
     entrypoint:
       - "/bin/sh"
       - "-c"
@@ -53,7 +52,51 @@ services:
         /bin/prometheus --config.file=/etc/prometheus/prometheus.yml --storage.tsdb.path=/prometheus"
     depends_on:
       - app
+      - alertmanager
+
+  alertmanager:
+    image: prom/alertmanager:latest
+    container_name: toll_optimizer_alertmanager
+    ports:
+      - "9093:9093"
+    volumes:
+      - ./monitoring/alertmanager/alertmanager.yml:/etc/alertmanager/alertmanager.yml
+    command: --config.file=/etc/alertmanager/alertmanager.yml
+
+  loki:
+    image: grafana/loki:latest
+    container_name: toll_optimizer_loki
+    ports:
+      - "3100:3100"
+    volumes:
+      - ./monitoring/loki/loki-config.yml:/etc/loki/local-config.yaml
+      - ./monitoring/loki/rules:/tmp/loki/rules
+    command: -config.file=/etc/loki/local-config.yaml
+
+  promtail:
+    image: grafana/promtail:latest
+    container_name: toll_optimizer_promtail
+    volumes:
+      - ./monitoring/promtail/promtail-config.yml:/etc/promtail/config.yml
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+    command: -config.file=/etc/promtail/config.yml
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: toll_optimizer_grafana
+    ports:
+      - "3001:3000"
+    volumes:
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning
+      - grafana_data:/var/lib/grafana
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD:-admin}
+    depends_on:
+      - prometheus
+      - loki
 
 volumes:
   postgres_data:
   prometheus_data:
+  grafana_data:

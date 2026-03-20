@@ -1,7 +1,7 @@
 use std::fs;
 use std::io::{self, BufRead};
 use std::path::Path;
-use toll_optimizer_core::{DayType, Direction, TripRecord, csv_parser, trip_analyzer};
+use toll_optimizer_core::{DayType, csv_parser, trip_analyzer};
 
 fn main() -> io::Result<()> {
     let args: Vec<String> = std::env::args().collect();

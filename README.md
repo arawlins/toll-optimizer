@@ -35,17 +35,32 @@ The application will automatically:
 
 ### 2. Access the Dashboard
 - **Toll Optimizer UI**: [http://localhost:3000](http://localhost:3000)
+- **Grafana Dashboard**: [http://localhost:3001](http://localhost:3001) (Default: `admin` / `admin`)
 - **Prometheus Metrics**: [http://localhost:9090](http://localhost:9090)
+- **Alertmanager**: [http://localhost:9093](http://localhost:9093)
 
 ---
 
 ## Monitoring & Observability
 
-- **Prometheus**: Automatically scrapes metrics from the API every 15s. You can query `axum_http_requests_total` or `http_request_duration_seconds` in the Prometheus UI.
-- **Structured Logs**: View structured JSON logs via Docker:
-  ```bash
-  docker-compose logs -f app | jq
-  ```
+The system includes a full monitoring stack (Loki stack) for metrics, logs, and alerting:
+
+- **Grafana**: The central dashboard for visualizing metrics and logs. Pre-configured with Prometheus and Loki datasources.
+- **Prometheus**: Automatically scrapes quantitative metrics from the API every 15s.
+- **Loki**: Aggregates structured JSON logs from all containers.
+- **Promtail**: Automatically discovers and ships Docker container logs to Loki.
+- **Alertmanager**: Handles alerts triggered by Prometheus metrics or Loki log patterns.
+
+### Querying Logs in Grafana
+1. Open Grafana at [http://localhost:3001](http://localhost:3001).
+2. Go to **Explore**.
+3. Select **Loki** as the datasource.
+4. Use LogQL to filter logs, e.g., `{container="toll_optimizer_app"}`.
+
+### Alerting
+Alerts are configured for:
+- **High Error Rates**: Triggered when "ERROR" appears frequently in logs.
+- **Unknown Entry/Exit Points**: Triggered when the CSV parser encounters unrecognized locations, including the specific point name in the alert description.
 
 ---
 
@@ -91,12 +106,6 @@ cargo run -p toll-optimizer-cli -- csv/"2025-12-28 - 573522284 Statement.csv"
 - **Distance-Based Analysis**: Suggests alternate entry or exit points that could lower your toll for the same route.
 - **Savings Persistence**: Automatically saves the best optimization strategy (Time or Distance) to your account history.
 - **Interactive Dashboard**: Grouped analysis by **transponder**, collapsible cards, and detailed trip tables with suggested route mappings.
-
-## Monitoring & Logging
-- **Structured Logging**: All backend logs are output in **JSON** format to `stdout`. Use `jq` for human-readable local debugging.
-- **Prometheus Metrics**: Exposes a `/metrics` endpoint on port `3000`.
-    - **Access**: Requires Basic Authentication (configured via `METRICS_USERNAME` and `METRICS_PASSWORD`).
-    - **Command**: `curl -u <METRICS_USERNAME>:<METRICS_PASSWORD> http://localhost:3000/metrics`
 
 ## License
 MIT
