@@ -57,30 +57,44 @@ services:
   alertmanager:
     image: prom/alertmanager:latest
     container_name: toll_optimizer_alertmanager
+    restart: always
     ports:
       - "9093:9093"
     volumes:
-      - ./monitoring/alertmanager/alertmanager.yml:/etc/alertmanager/alertmanager.yml
-    command: --config.file=/etc/alertmanager/alertmanager.yml
+      - ./monitoring/alertmanager/alertmanager.yml:/etc/alertmanager/alertmanager.yml.template
+    environment:
+      - SLACK_WEBHOOK_URL=${SLACK_WEBHOOK_URL}
+    entrypoint:
+      - "/bin/sh"
+      - "-c"
+      - |
+        sed -e "s|__SLACK_WEBHOOK_URL__|$$SLACK_WEBHOOK_URL|g" /etc/alertmanager/alertmanager.yml.template > /etc/alertmanager/alertmanager.yml && \
+        /bin/alertmanager --config.file=/etc/alertmanager/alertmanager.yml --storage.path=/alertmanager --log.level=info
 
   loki:
     image: grafana/loki:latest
     container_name: toll_optimizer_loki
+    user: root
+    restart: always
     ports:
       - "3100:3100"
     volumes:
       - ./monitoring/loki/loki-config.yml:/etc/loki/local-config.yaml
-      - ./monitoring/loki/rules:/tmp/loki/rules
+      - ./monitoring/loki/rules:/loki/rules
+      - loki_data:/loki
     command: -config.file=/etc/loki/local-config.yaml
 
   promtail:
     image: grafana/promtail:latest
     container_name: toll_optimizer_promtail
+    restart: always
     volumes:
       - ./monitoring/promtail/promtail-config.yml:/etc/promtail/config.yml
       - /var/run/docker.sock:/var/run/docker.sock
       - /var/lib/docker/containers:/var/lib/docker/containers:ro
     command: -config.file=/etc/promtail/config.yml
+    depends_on:
+      - loki
 
   grafana:
     image: grafana/grafana:latest
@@ -100,3 +114,4 @@ volumes:
   postgres_data:
   prometheus_data:
   grafana_data:
+  loki_data:
