@@ -43,6 +43,7 @@ async fn main() {
 
     let app = Router::new()
         .route("/health", get(|| async { "OK" }))
+        .layer(axum::extract::DefaultBodyLimit::max(10 * 1024 * 1024)) // 10MB limit
         .route("/auth/register", post(handlers::auth::register))
         .route("/auth/login", post(handlers::auth::login))
         .route("/api/analyze", post(handlers::analyze::analyze))

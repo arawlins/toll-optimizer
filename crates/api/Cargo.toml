@@ -25,6 +25,6 @@ axum-prometheus = "0.6"
 
 [dev-dependencies]
 tempfile = "3.10"
-reqwest = { version = "0.12", features = ["blocking", "json"] }
+reqwest = { version = "0.12", features = ["blocking", "json", "multipart"] }
 serde_json = "1.0"
 uuid = { version = "1.0", features = ["v4"] }

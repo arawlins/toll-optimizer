@@ -22,19 +22,29 @@ pub async fn analyze(
     while let Some(field) = multipart
         .next_field()
         .await
-        .map_err(|e| (StatusCode::BAD_REQUEST, e.to_string()))?
+        .map_err(|e| {
+            tracing::error!("Multipart error: {:?}", e);
+            (StatusCode::BAD_REQUEST, format!("Multipart error: {}", e))
+        })?
     {
         let name = field.name().unwrap_or("").to_string();
         if name == "file" {
             if let Some(fname) = field.file_name() {
-                filename = fname.to_string();
+                // Truncate to 255 to match DB schema
+                filename = fname.chars().take(255).collect();
             }
             let data = field
                 .bytes()
                 .await
-                .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+                .map_err(|e| {
+                    tracing::error!("Error reading field bytes: {:?}", e);
+                    (StatusCode::INTERNAL_SERVER_ERROR, format!("Error reading bytes: {}", e))
+                })?;
             file_content = String::from_utf8(data.to_vec())
-                .map_err(|_| (StatusCode::BAD_REQUEST, "File is not valid UTF-8".to_string()))?;
+                .map_err(|e| {
+                    tracing::error!("UTF-8 conversion error: {:?}", e);
+                    (StatusCode::BAD_REQUEST, "File is not valid UTF-8".to_string())
+                })?;
         }
     }
 
@@ -93,7 +103,10 @@ pub async fn analyze(
             savings_dec,
         )
         .await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+        .map_err(|e| {
+            tracing::error!("Database error creating summary: {:?}", e);
+            (StatusCode::INTERNAL_SERVER_ERROR, format!("Database error: {}", e))
+        })?;
 
     let time_analysis_json = serde_json::to_value(&time_summaries)
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
