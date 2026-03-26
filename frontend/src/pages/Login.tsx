@@ -23,7 +23,7 @@ export function Login() {
       const fn = isRegistering ? endpoints.register : endpoints.login;
       const res = await fn({ email, password });
       setAuth(res.data.token, res.data.user);
-      navigate('/');
+      navigate('/dashboard');
     } catch (err: any) {
       setError(err.response?.data || 'An error occurred');
     } finally {
