@@ -2,7 +2,8 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../store';
 import { endpoints } from '../lib/api';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Lock, TrendingDown } from 'lucide-react';
+import { Navbar } from '../components/Navbar';
 
 export function Login() {
   const [isRegistering, setIsRegistering] = useState(false);
@@ -32,91 +33,127 @@ export function Login() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
-      <div className="sm:mx-auto sm:w-full sm:max-w-md">
-        <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
-          {isRegistering ? 'Create your account' : 'Sign in to your account'}
-        </h2>
-      </div>
+    <div className="bg-slate-50 text-on-surface min-h-screen flex flex-col font-body">
+      {/* Top Navigation Bar */}
+      <Navbar />
 
-      <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
-        <div className="bg-white py-8 px-4 shadow sm:rounded-lg sm:px-10">
-          <form className="space-y-6" onSubmit={handleSubmit}>
-            <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700">
-                Email address
-              </label>
-              <div className="mt-1">
+      {/* Main Content */}
+      <main className="flex-grow flex items-center justify-center px-4 pt-20 pb-12">
+        <div className="w-full max-w-md">
+          <div className="bg-surface-container-lowest shadow-[0px_12px_32px_rgba(25,28,29,0.06)] rounded-xl p-8 md:p-10 border border-slate-100">
+            <div className="mb-10 text-center">
+              <div className="inline-flex items-center justify-center w-16 h-16 bg-surface-container-low rounded-full mb-6 text-primary">
+                <Lock className="w-8 h-8" />
+              </div>
+              <h1 className="text-2xl font-semibold tracking-tight text-on-surface mb-2 font-headline">
+                {isRegistering ? 'Create your account' : 'Sign in to your account'}
+              </h1>
+              <p className="text-on-surface-variant text-sm">
+                Access your optimization dashboard and toll reports.
+              </p>
+            </div>
+
+            <form className="space-y-6" onSubmit={handleSubmit}>
+              <div className="space-y-2">
+                <label className="block text-[0.6875rem] font-semibold uppercase tracking-widest text-on-surface-variant px-1" htmlFor="email">
+                  Email address
+                </label>
                 <input
                   id="email"
                   name="email"
                   type="email"
-                  autoComplete="email"
                   required
+                  placeholder="name@company.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                  className="w-full px-4 py-3 bg-surface-container-lowest border-0 border-b-2 border-transparent focus:ring-0 focus:border-primary transition-all text-on-surface placeholder:text-outline-variant/60 shadow-[inset_0_0_0_1px_rgba(115,118,133,0.1)] rounded-lg text-sm"
                 />
               </div>
-            </div>
 
-            <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-700">
-                Password
-              </label>
-              <div className="mt-1">
+              <div className="space-y-2">
+                <div className="flex justify-between items-center px-1">
+                  <label className="block text-[0.6875rem] font-semibold uppercase tracking-widest text-on-surface-variant" htmlFor="password">
+                    Password
+                  </label>
+                  {!isRegistering && (
+                    <a className="text-[0.6875rem] font-semibold text-primary hover:underline uppercase tracking-widest" href="#">Forgot?</a>
+                  )}
+                </div>
                 <input
                   id="password"
                   name="password"
                   type="password"
-                  autoComplete="current-password"
                   required
+                  placeholder="••••••••"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                  className="w-full px-4 py-3 bg-surface-container-lowest border-0 border-b-2 border-transparent focus:ring-0 focus:border-primary transition-all text-on-surface placeholder:text-outline-variant/60 shadow-[inset_0_0_0_1px_rgba(115,118,133,0.1)] rounded-lg text-sm"
                 />
               </div>
-            </div>
 
-            {error && (
-              <div className="text-red-600 text-sm">{error}</div>
-            )}
+              {error && (
+                <div className="bg-error-container text-error text-xs p-3 rounded-lg font-medium border border-error/10">
+                  {error}
+                </div>
+              )}
 
-            <div>
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
+                className="w-full bg-primary text-on-primary py-3.5 px-4 rounded-xl font-semibold text-sm tracking-wide shadow-sm hover:opacity-90 active:scale-[0.98] transition-all duration-200 flex items-center justify-center gap-2 disabled:opacity-50"
               >
-                {loading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                {loading && <Loader2 className="w-4 h-4 animate-spin" />}
                 {isRegistering ? 'Register' : 'Sign in'}
               </button>
-            </div>
-          </form>
 
-          <div className="mt-6">
-            <div className="relative">
-              <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-gray-300" />
+              <div className="relative py-2">
+                <div className="absolute inset-0 flex items-center">
+                  <div className="w-full border-t border-outline-variant/20"></div>
+                </div>
+                <div className="relative flex justify-center text-[0.6875rem] uppercase tracking-[0.2em] font-bold">
+                  <span className="bg-surface-container-lowest px-4 text-outline">Or</span>
+                </div>
               </div>
-              <div className="relative flex justify-center text-sm">
-                <span className="px-2 bg-white text-gray-500">
-                  Or
-                </span>
-              </div>
-            </div>
 
-            <div className="mt-6 grid grid-cols-1 gap-3">
               <button
+                type="button"
                 onClick={() => setIsRegistering(!isRegistering)}
-                className="w-full inline-flex justify-center py-2 px-4 border border-gray-300 rounded-md shadow-sm bg-white text-sm font-medium text-gray-500 hover:bg-gray-50"
+                className="w-full bg-white border border-outline-variant/40 text-on-surface py-3.5 px-4 rounded-xl font-semibold text-sm tracking-wide hover:bg-surface-container-low transition-colors duration-200"
               >
                 {isRegistering ? 'Sign in existing account' : 'Create new account'}
               </button>
+            </form>
+
+            <div className="mt-8 pt-8 border-t border-outline-variant/10 text-center">
+              <p className="text-xs text-on-surface-variant leading-relaxed">
+                By signing in, you agree to our 
+                <a className="text-primary hover:underline font-medium mx-1" href="#">Terms of Service</a> and 
+                <a className="text-primary hover:underline font-medium mx-1" href="#">Privacy Policy</a>.
+              </p>
             </div>
           </div>
+          
+          {/* Background Decoration */}
+          <div className="fixed -bottom-24 -left-24 w-96 h-96 bg-primary/5 rounded-full blur-3xl -z-10"></div>
+          <div className="fixed -top-24 -right-24 w-96 h-96 bg-tertiary/5 rounded-full blur-3xl -z-10"></div>
         </div>
-      </div>
+      </main>
+
+      {/* Footer */}
+      <footer className="bg-slate-50 w-full py-8 mt-auto border-t border-slate-100">
+        <div className="flex flex-col md:flex-row justify-between items-center px-8 max-w-7xl mx-auto gap-4">
+          <div className="flex items-center gap-2">
+            <TrendingDown className="text-primary w-5 h-5" />
+            <span className="font-headline font-bold text-slate-900">Toll Optimizer</span>
+          </div>
+          <div className="flex gap-8">
+            <a className="text-xs tracking-widest uppercase text-slate-400 hover:text-primary transition-colors font-medium" href="#">Privacy Policy</a>
+            <a className="text-xs tracking-widest uppercase text-slate-400 hover:text-primary transition-colors font-medium" href="#">Terms</a>
+            <a className="text-xs tracking-widest uppercase text-slate-400 hover:text-primary transition-colors font-medium" href="#">Security</a>
+          </div>
+          <p className="text-xs tracking-widest uppercase text-slate-400 font-medium">© {new Date().getFullYear()} Toll Optimizer</p>
+        </div>
+      </footer>
     </div>
   );
 }

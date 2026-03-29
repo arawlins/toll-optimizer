@@ -23,6 +23,7 @@ The `toll-optimizer` web application transforms the core analysis logic into a d
 -   **Loki**: Log aggregation and log-based alerting ([localhost:3100](http://localhost:3100)).
 -   **Promtail**: Log shipper (agent that ships Docker logs to Loki).
 -   **Alertmanager**: Alert routing to external services (Slack) ([localhost:9093](http://localhost:9093)).
+-   Read [monitoring.md](monitoring.md) for more information.
 
 ### Database (PostgreSQL)
 -   Standard relational storage for user accounts and historical summary metadata.

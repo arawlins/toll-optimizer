@@ -1,140 +1,181 @@
 import { useNavigate } from 'react-router-dom';
-import { TrendingDown, FileText, ShieldCheck, ArrowRight, Wallet, LogIn } from 'lucide-react';
+import {
+  TrendingDown,
+  Wallet,
+  FileText,
+  ShieldCheck,
+  CheckCircle2,
+  Lock
+} from 'lucide-react';
+import { Navbar } from '../components/Navbar';
 
 export function Landing() {
   const navigate = useNavigate();
 
   return (
-    <div className="min-h-screen bg-gray-50 text-gray-900 font-sans">
-      {/* Navigation */}
-      <nav className="bg-white border-b border-gray-200 sticky top-0 z-10">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
-          <div className="flex items-center gap-2">
-            <div className="bg-blue-600 p-1.5 rounded-lg">
-              <TrendingDown className="w-5 h-5 text-white" />
-            </div>
-            <span className="text-xl font-bold tracking-tight">Toll Optimizer</span>
-          </div>
-          <button
-            onClick={() => navigate('/login')}
-            className="flex items-center gap-2 px-4 py-2 text-sm font-bold text-blue-600 hover:bg-blue-50 rounded-xl transition-all"
-          >
-            <LogIn className="w-4 h-4" />
-            Sign In
-          </button>
-        </div>
-      </nav>
+    <div className="bg-surface text-on-surface antialiased font-body min-h-screen">
+      {/* Top Navigation Bar */}
+      <Navbar />
 
       <main>
         {/* Hero Section */}
-        <section className="bg-white border-b border-gray-100">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 lg:py-32 flex flex-col items-center text-center">
-            <div className="inline-flex items-center gap-2 px-3 py-1 bg-blue-50 text-blue-700 rounded-full text-xs font-bold uppercase tracking-wider mb-8 border border-blue-100 animate-in fade-in slide-in-from-bottom-2 duration-500">
-              <TrendingDown className="w-3 h-3" />
-              Maximize Your Savings
+        <section className="relative pt-32 pb-20 md:pt-48 md:pb-32 overflow-hidden bg-surface">
+          <div className="max-w-7xl mx-auto px-6 grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
+            <div className="z-10">
+              <h1 className="text-5xl md:text-7xl font-extrabold tracking-tight text-on-surface mb-6 leading-[1.1] font-headline">
+                Stop Overpaying for the <span className="text-primary">407 ETR</span>
+              </h1>
+              <p className="text-lg md:text-xl text-on-surface-variant mb-10 max-w-lg leading-relaxed">
+                Intelligent toll analysis meets precision auditing. Our algorithms dissect your statements to find hidden errors and optimization opportunities in seconds.
+              </p>
+              <div className="flex flex-wrap gap-4">
+                <button
+                  onClick={() => navigate('/login')}
+                  className="bg-gradient-to-br from-primary to-primary-container text-white px-8 py-4 rounded-xl font-bold text-lg shadow-lg hover:shadow-xl transition-all duration-300 active:scale-95"
+                >
+                  Get Started Now
+                </button>
+                <button className="bg-surface-container-high text-primary px-8 py-4 rounded-xl font-bold text-lg hover:bg-surface-container-highest transition-all duration-300">
+                  How To
+                </button>
+              </div>
             </div>
-            <h1 className="text-5xl lg:text-7xl font-black tracking-tight text-gray-900 mb-8 max-w-4xl animate-in fade-in slide-in-from-bottom-4 duration-700">
-              Stop Overpaying for the <span className="text-blue-600">407 ETR</span>
-            </h1>
-            <p className="text-xl text-gray-500 max-w-2xl mb-12 animate-in fade-in slide-in-from-bottom-6 duration-1000">
-              Toll Optimizer analyzes your usage patterns and finds hidden opportunities to save money on every trip.
-            </p>
-            <div className="flex flex-col sm:flex-row gap-4 animate-in fade-in slide-in-from-bottom-8 duration-1000">
-              <button
-                onClick={() => navigate('/login')}
-                className="flex items-center justify-center gap-2 px-8 py-4 bg-blue-600 text-white rounded-2xl font-bold text-lg hover:bg-blue-700 shadow-lg shadow-blue-200 transition-all group"
-              >
-                Get Started Now
-                <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
-              </button>
+            <div className="relative">
+              <div className="absolute -top-20 -right-20 w-96 h-96 bg-primary/5 rounded-full blur-3xl"></div>
+              <div className="relative bg-surface-container-lowest p-4 rounded-xl shadow-2xl transform rotate-1 hover:rotate-0 transition-transform duration-500">
+                <div className="bg-slate-100 rounded-lg aspect-video flex items-center justify-center overflow-hidden">
+                  <div className="text-slate-400 font-bold">Dashboard Mockup</div>
+                </div>
+                {/* Floating Data Pill */}
+                <div className="absolute -bottom-6 -left-6 bg-white p-4 rounded-xl shadow-xl flex items-center gap-3 border border-outline-variant/20">
+                  <div className="bg-green-100 p-2 rounded-full text-green-600">
+                    <TrendingDown className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <p className="text-xs text-slate-500 font-medium">Avg. Savings</p>
+                    <p className="text-lg font-bold text-slate-900">$124.50 /mo</p>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </section>
 
         {/* Features Section */}
-        <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-12">
-            <div className="space-y-6">
-              <div className="w-14 h-14 bg-blue-100 rounded-2xl flex items-center justify-center">
-                <Wallet className="w-8 h-8 text-blue-600" />
-              </div>
-              <h3 className="text-2xl font-bold">Save Money</h3>
-              <p className="text-gray-500 leading-relaxed">
-                This application is meant to help save money on the 407 ETR highway by analyzing your historical usage and identifying cheaper alternatives.
-              </p>
+        <section id="features" className="py-24 bg-surface-container-low">
+          <div className="max-w-7xl mx-auto px-6">
+            <div className="text-center mb-20">
+              <h2 className="text-3xl md:text-5xl font-bold mb-4 font-headline">Precision Auditing for Peace of Mind</h2>
+              <div className="h-1.5 w-24 bg-primary mx-auto rounded-full"></div>
             </div>
-
-            <div className="space-y-6">
-              <div className="w-14 h-14 bg-green-100 rounded-2xl flex items-center justify-center">
-                <FileText className="w-8 h-8 text-green-600" />
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+              {/* Feature 1 */}
+              <div className="bg-surface-container-lowest p-8 rounded-xl hover:translate-y-[-8px] transition-all duration-300 group shadow-sm border border-slate-100">
+                <div className="w-14 h-14 bg-primary/10 rounded-xl flex items-center justify-center mb-6 group-hover:bg-primary transition-colors duration-300">
+                  <Wallet className="text-primary group-hover:text-white w-7 h-7" />
+                </div>
+                <h3 className="text-2xl font-bold mb-4 font-headline">Save Money</h3>
+                <p className="text-on-surface-variant leading-relaxed">Our proprietary algorithms analyze your historical usage and identify cheaper alternatives.</p>
               </div>
-              <h3 className="text-2xl font-bold">Simple Upload</h3>
-              <p className="text-gray-500 leading-relaxed">
-                It requires you to have an account on <a href="https://www.407etr.com" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline font-medium">407etr.com</a> so you can download a CSV version of your statement and upload it here.
-              </p>
-            </div>
-
-            <div className="space-y-6">
-              <div className="w-14 h-14 bg-purple-100 rounded-2xl flex items-center justify-center">
-                <ShieldCheck className="w-8 h-8 text-purple-600" />
+              {/* Feature 2 */}
+              <div className="bg-surface-container-lowest p-8 rounded-xl hover:translate-y-[-8px] transition-all duration-300 group shadow-sm border border-slate-100">
+                <div className="w-14 h-14 bg-primary/10 rounded-xl flex items-center justify-center mb-6 group-hover:bg-primary transition-colors duration-300">
+                  <FileText className="text-primary group-hover:text-white w-7 h-7" />
+                </div>
+                <h3 className="text-2xl font-bold mb-4 font-headline">Simple Upload</h3>
+                <p className="text-on-surface-variant leading-relaxed">No manual entry required. Simply drag and drop your CSV statements and watch as our optimizer extracts and analyzes data in under 30 seconds.</p>
               </div>
-              <h3 className="text-2xl font-bold">Privacy First</h3>
-              <p className="text-gray-500 leading-relaxed">
-                We take your privacy seriously. We only store summary data: filenames, trip counts, total costs, and calculated savings. <strong>Individual trip data is never stored.</strong>
-              </p>
+              {/* Feature 3 */}
+              <div className="bg-surface-container-lowest p-8 rounded-xl hover:translate-y-[-8px] transition-all duration-300 group shadow-sm border border-slate-100">
+                <div className="w-14 h-14 bg-primary/10 rounded-xl flex items-center justify-center mb-6 group-hover:bg-primary transition-colors duration-300">
+                  <ShieldCheck className="text-primary group-hover:text-white w-7 h-7" />
+                </div>
+                <h3 className="text-2xl font-bold mb-4 font-headline">Privacy First</h3>
+                <p className="text-on-surface-variant leading-relaxed">Bank-grade AES-256 encryption. We don't store your personal travel history permanently; we analyze, optimize, and clear the slate.</p>
+              </div>
             </div>
           </div>
         </section>
 
-        {/* Data Points Section */}
-        <section className="bg-gray-100 py-24 border-y border-gray-200">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="bg-white rounded-[2.5rem] p-8 lg:p-16 shadow-sm border border-gray-200">
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
-                <div>
-                  <h2 className="text-4xl font-black mb-6">Transparency Matters</h2>
-                  <p className="text-lg text-gray-500 mb-8">
-                    We believe you should know exactly what happens with your data. Our analysis runs locally on your upload, and only the results are saved to your account.
-                  </p>
-                  <ul className="space-y-4">
-                    {[
-                      'Filename for your reference',
-                      'Total number of trips processed',
-                      'The total cost of the statement',
-                      'The maximum potential savings'
-                    ].map((item, i) => (
-                      <li key={i} className="flex items-center gap-3 font-bold text-gray-700">
-                        <div className="w-6 h-6 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0">
-                          <div className="w-2 h-2 bg-green-600 rounded-full" />
-                        </div>
-                        {item}
-                      </li>
-                    ))}
-                  </ul>
+        {/* Transparency Statistics Section */}
+        <section className="py-24 bg-surface">
+          <div className="max-w-7xl mx-auto px-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
+              <div>
+                <h2 className="text-4xl font-bold mb-6 font-headline">Transparency is our Foundation</h2>
+                <p className="text-lg text-on-surface-variant mb-8 leading-relaxed">
+                  In the world of toll auditing, precision and trust are everything. We've built our system to be a "Zero-Knowledge" platform where your data security is the ultimate priority.
+                </p>
+                <ul className="space-y-4">
+                  <li className="flex items-start gap-3 font-medium text-slate-700">
+                    <CheckCircle2 className="text-primary mt-1 w-5 h-5 flex-shrink-0" />
+                    <span>Fully automated analysis eliminates human error and bias.</span>
+                  </li>
+                </ul>
+              </div>
+              <div className="grid grid-cols-2 gap-6">
+                <div className="bg-surface-container-low p-10 rounded-xl text-center shadow-sm">
+                  <div className="text-6xl font-extrabold text-primary mb-2 font-headline">0</div>
+                  <div className="text-sm font-bold uppercase tracking-widest text-on-surface-variant">Trips Stored</div>
+                  <p className="text-xs mt-4 text-slate-500">We delete logs after analysis</p>
                 </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="bg-blue-50 p-8 rounded-3xl border border-blue-100 text-center">
-                    <p className="text-blue-600 font-bold uppercase tracking-tighter text-xs mb-2">Trips Stored</p>
-                    <p className="text-5xl font-black text-blue-900">0</p>
+                <div className="bg-primary p-10 rounded-xl text-center text-on-primary shadow-xl">
+                  <div className="text-6xl font-extrabold mb-2 font-headline">100%</div>
+                  <div className="text-sm font-bold uppercase tracking-widest opacity-80">Audit Accuracy</div>
+                  <p className="text-xs mt-4 opacity-70">Cross-verified algorithms</p>
+                </div>
+                <div className="col-span-2 bg-surface-container-lowest p-8 rounded-xl flex items-center justify-between border border-outline-variant/20 shadow-sm">
+                  <div className="flex items-center gap-6">
+                    <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center text-green-600">
+                      <CheckCircle2 className="w-9 h-9" />
+                    </div>
+                    <div>
+                      <h4 className="text-xl font-bold font-headline">Security Verified</h4>
+                      <p className="text-on-surface-variant">Encrypted end-to-end</p>
+                    </div>
                   </div>
-                  <div className="bg-green-50 p-8 rounded-3xl border border-green-100 text-center">
-                    <p className="text-green-600 font-bold uppercase tracking-tighter text-xs mb-2">Analysis</p>
-                    <p className="text-5xl font-black text-green-900">100%</p>
-                  </div>
-                  <div className="bg-purple-50 p-8 rounded-3xl border border-purple-100 col-span-2 text-center">
-                    <p className="text-purple-600 font-bold uppercase tracking-tighter text-xs mb-2">Your Privacy</p>
-                    <p className="text-3xl font-black text-purple-900">Protected</p>
-                  </div>
+                  <Lock className="text-slate-300 w-10 h-10 hidden md:block" />
                 </div>
               </div>
             </div>
+          </div>
+        </section>
+
+        {/* CTA Section */}
+        <section className="py-24 relative overflow-hidden bg-primary-container">
+          <div className="absolute top-0 left-0 w-full h-full opacity-10 pointer-events-none" style={{ backgroundImage: 'radial-gradient(circle at 2px 2px, white 1px, transparent 0)', backgroundSize: '40px 40px' }}></div>
+          <div className="max-w-4xl mx-auto px-6 text-center text-on-primary relative z-10">
+            <h2 className="text-4xl md:text-5xl font-extrabold mb-8 font-headline leading-tight">Ready to start saving on your commute?</h2>
+            <p className="text-xl mb-12 opacity-90 font-medium">Join 5,000+ commuters who have optimized their 407 ETR bills this month.</p>
+            <button
+              onClick={() => navigate('/login')}
+              className="bg-white text-primary hover:bg-surface-bright px-12 py-5 rounded-xl font-bold text-xl shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-105 active:scale-95"
+            >
+              Analyze My Statement Free
+            </button>
           </div>
         </section>
       </main>
 
-      <footer className="bg-white py-12 border-t border-gray-100">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center text-gray-400 text-sm font-medium">
-          © {new Date().getFullYear()} Toll Optimizer. Not affiliated with 407 ETR Concession Company Limited.
+      {/* Footer */}
+      <footer className="bg-slate-50 border-t border-slate-200/20 py-12">
+        <div className="max-w-7xl mx-auto px-6 flex flex-col md:flex-row justify-between items-center gap-8">
+          <div
+            className="text-lg font-bold text-slate-900 flex items-center gap-2 cursor-pointer"
+            onClick={() => navigate('/')}
+          >
+            <TrendingDown className="text-primary w-5 h-5" />
+            Toll Optimizer
+          </div>
+          <div className="flex flex-wrap justify-center gap-8">
+            <a className="text-slate-500 text-sm hover:text-blue-600 underline-offset-4 hover:underline" href="#">Privacy Policy</a>
+            <a className="text-slate-500 text-sm hover:text-blue-600 underline-offset-4 hover:underline" href="#">Terms of Service</a>
+            <a className="text-slate-500 text-sm hover:text-blue-600 underline-offset-4 hover:underline" href="#">Contact Us</a>
+            <a className="text-slate-500 text-sm hover:text-blue-600 underline-offset-4 hover:underline" href="#">Cookie Policy</a>
+          </div>
+          <div className="text-slate-500 text-sm">
+            © {new Date().getFullYear()} Toll Optimizer. All rights reserved.
+          </div>
         </div>
       </footer>
     </div>

@@ -3,12 +3,13 @@ import { useQuery } from '@tanstack/react-query';
 import { endpoints } from '../lib/api';
 import type { AnalysisResponse } from '../lib/api';
 import { UploadDropzone } from '../components/UploadDropzone';
-import { useAuthStore } from '../store';
-import { LogOut, History as HistoryIcon, TrendingDown, Clock, MapPin, ChevronDown, ChevronUp, Route } from 'lucide-react';
+
+import { History as HistoryIcon, TrendingDown, Clock, MapPin, ChevronDown, ChevronUp, Route } from 'lucide-react';
+import { Navbar } from '../components/Navbar';
 import clsx from 'clsx';
 
 export function Dashboard() {
-  const { user, logout } = useAuthStore();
+
   const [analysis, setAnalysis] = useState<AnalysisResponse | null>(null);
   const [viewMode, setViewMode] = useState<'time' | 'distance'>('time');
   const [expandedCentroids, setExpandedCentroids] = useState<string[]>([]);
@@ -170,26 +171,7 @@ export function Dashboard() {
   return (
     <div className="min-h-screen bg-gray-50 text-gray-900">
       {/* Header */}
-      <header className="bg-white shadow-sm sticky top-0 z-10">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
-          <div className="flex items-center gap-2">
-            <div className="bg-blue-600 p-1.5 rounded-lg">
-              <TrendingDown className="w-5 h-5 text-white" />
-            </div>
-            <h1 className="text-xl font-bold tracking-tight">Toll Optimizer</h1>
-          </div>
-          <div className="flex items-center gap-4">
-            <span className="text-sm text-gray-600 hidden sm:inline">{user?.email}</span>
-            <button
-              onClick={logout}
-              className="p-2 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-full transition-all"
-              title="Logout"
-            >
-              <LogOut className="w-5 h-5" />
-            </button>
-          </div>
-        </div>
-      </header>
+      <Navbar />
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
 
