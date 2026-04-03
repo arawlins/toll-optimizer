@@ -25,19 +25,24 @@ async fn main() {
         .json()
         .init();
 
-    let db_url = env::var("DATABASE_URL").expect("DATABASE_URL must be set");
+    let db_url = env::var("DATABASE_URL").expect("DATABASE_URL environment variable is missing. This is required to connect to PostgreSQL.");
+    let max_connections = env::var("DATABASE_MAX_CONNECTIONS")
+        .unwrap_or_else(|_| "5".to_string())
+        .parse::<u32>()
+        .unwrap_or(5);
+
     let pool = PgPoolOptions::new()
-        .max_connections(5)
+        .max_connections(max_connections)
         .acquire_timeout(std::time::Duration::from_secs(30))
         .connect(&db_url)
         .await
-        .expect("Failed to connect to DB");
+        .expect("Failed to connect to PostgreSQL. Please check your connection string and ensure the database is running.");
 
     // Run database migrations
     sqlx::migrate!("./migrations")
         .run(&pool)
         .await
-        .expect("Failed to run database migrations");
+        .expect("Failed to run database migrations. Please check if the user has enough privileges or if the database is accessible.");
 
     let (prometheus_layer, metric_handle) = PrometheusMetricLayer::pair();
 

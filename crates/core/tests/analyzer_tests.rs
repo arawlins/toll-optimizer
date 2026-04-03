@@ -13,7 +13,7 @@ fn test_time_based_optimization_savings() {
         "\"TEST_PLATE\",\"Light vehicle\",\"28 Aug 25\",\"7:30 AM\",\"QEW\",\"Appleby\",\"10.0\",\"10.00\",\"0.00\",\"0.00\"".to_string(),
     ];
 
-    let parsed = csv_parser::parse_trips(csv_lines);
+    let parsed = csv_parser::parse_trips(csv_lines.join("\n").as_bytes());
     let analysis = trip_analyzer::analyze_trips_by_time(&parsed);
 
     assert_eq!(analysis.len(), 1);
@@ -35,7 +35,7 @@ fn test_distance_based_optimization_savings() {
         "\"TEST_PLATE\",\"Light vehicle\",\"28 Aug 25\",\"10:00 AM\",\"QEW\",\"Trafalgar\",\"10.0\",\"5.00\",\"0.00\",\"0.00\"".to_string(),
     ];
 
-    let parsed = csv_parser::parse_trips(csv_lines);
+    let parsed = csv_parser::parse_trips(csv_lines.join("\n").as_bytes());
     let analysis = trip_analyzer::analyze_trips_by_distance(&parsed);
 
     assert_eq!(analysis.len(), 1);
@@ -55,7 +55,7 @@ fn test_multiple_transponders_grouping() {
         "\"PLATE_B\",\"Light vehicle\",\"28 Aug 25\",\"11:00 AM\",\"QEW\",\"Trafalgar\",\"10.0\",\"5.00\",\"0.00\",\"0.00\"".to_string(),
     ];
 
-    let parsed = csv_parser::parse_trips(csv_lines);
+    let parsed = csv_parser::parse_trips(csv_lines.join("\n").as_bytes());
     let analysis_time = trip_analyzer::analyze_trips_by_time(&parsed);
 
     // Should have 2 summaries (one per transponder since direction is same)

@@ -1,25 +1,31 @@
 use crate::trip_analyzer::{Direction, TripRecord};
-use crate::{ACCESS_POINT_SYNONYMS, ACCESS_POINTS, OLD_ACCESSS_POINTS};
+use crate::{ACCESS_POINT_SYNONYMS, ACCESS_POINTS, OLD_ACCESS_POINTS};
 use std::collections::HashMap;
 
-pub fn parse_trips<I>(lines: I) -> Vec<((String, Direction), Vec<TripRecord>)>
-where
-    I: IntoIterator<Item = String>,
-{
+pub fn parse_trips<R: std::io::Read>(reader: R) -> Vec<((String, Direction), Vec<TripRecord>)> {
     let mut trips_by_transponder: HashMap<String, Vec<TripRecord>> = HashMap::new();
     let mut header_found = false;
 
-    for line in lines {
+    let mut csv_reader = csv::ReaderBuilder::new()
+        .has_headers(false)
+        .from_reader(reader);
+
+    for result in csv_reader.records() {
+        let csv_record = match result {
+            Ok(r) => r,
+            Err(_) => continue,
+        };
+
         if !header_found {
-            if line.contains("Transponder/Plate Number") {
+            if csv_record.iter().any(|field| field.contains("Transponder/Plate Number")) {
                 header_found = true;
             }
             continue;
         }
 
-        if let Some(mut record) = TripRecord::from_csv_line(&line) {
-            if OLD_ACCESSS_POINTS.contains(&record.entry_point.as_str())
-                || OLD_ACCESSS_POINTS.contains(&record.exit_point.as_str())
+        if let Some(mut record) = TripRecord::from_csv_record(&csv_record) {
+            if OLD_ACCESS_POINTS.contains(&record.entry_point.as_str())
+                || OLD_ACCESS_POINTS.contains(&record.exit_point.as_str())
             {
                 continue;
             }

@@ -17,13 +17,8 @@ fn main() -> io::Result<()> {
     }
 
     let file = fs::File::open(csv_path)?;
-    let reader = io::BufReader::new(file);
-    let mut all_lines = Vec::new();
-    for line in reader.lines() {
-        all_lines.push(line?);
-    }
 
-    let results = csv_parser::parse_trips(all_lines);
+    let results = csv_parser::parse_trips(file);
 
     let summaries = trip_analyzer::analyze_trips_by_time(&results);
 

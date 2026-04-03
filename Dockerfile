@@ -32,7 +32,9 @@ COPY crates/ crates/
 RUN touch crates/core/src/lib.rs crates/api/src/main.rs
 
 # Build the final binary
-# Set SQLX_OFFLINE=true to bypass compile-time DB checks (metadata is handled by the migrate! macro if files are present)
+# Set SQLX_OFFLINE=true to bypass compile-time DB checks.
+# KNOWN GAP: This project uses sqlx::query_as instead of the query! macros, so compile-time 
+# verification is not utilized. SQLX_OFFLINE=true simply suppresses build errors.
 ENV SQLX_OFFLINE=true
 RUN cargo build --release -p toll-optimizer-api
 

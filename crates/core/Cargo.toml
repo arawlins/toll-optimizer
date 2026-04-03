@@ -7,3 +7,5 @@ edition = "2024"
 simple-datetime-rs = "0.2.3"
 serde = { version = "1.0", features = ["derive"] }
 tracing = "0.1"
+csv = "1.4.0"
+serde_json = "1.0.149"

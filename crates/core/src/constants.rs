@@ -1,4 +1,4 @@
-pub const OLD_ACCESSS_POINTS: [&str; 9] = [
+pub const OLD_ACCESS_POINTS: [&str; 9] = [
     "LakeRidg",
     "LakeRidge",
     "Baldwin",

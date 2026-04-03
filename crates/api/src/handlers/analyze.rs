@@ -13,7 +13,7 @@ use crate::{auth::Claims, db::summary::SummaryDb, models::UploadSummary};
 
 pub async fn analyze(
     State(pool): State<PgPool>,
-    _claims: Claims,
+    claims: Claims,
     mut multipart: Multipart,
 ) -> Result<impl IntoResponse, (StatusCode, String)> {
     let mut filename = "unknown.csv".to_string();
@@ -51,8 +51,7 @@ pub async fn analyze(
     }
 
     // Parse trips
-    let lines = file_content.lines().map(|s| s.to_string());
-    let parsed_results = csv_parser::parse_trips(lines);
+    let parsed_results = csv_parser::parse_trips(file_content.as_bytes());
 
     // Analyze trips
     let time_summaries = trip_analyzer::analyze_trips_by_time(&parsed_results);
@@ -93,7 +92,7 @@ pub async fn analyze(
     // Save to DB
     let _summary = pool
         .create_summary(
-            _claims.sub,
+            claims.sub,
             &filename,
             total_trips as i32,
             cost_actual_dec,

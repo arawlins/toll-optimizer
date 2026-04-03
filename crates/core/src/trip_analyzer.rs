@@ -35,37 +35,30 @@ pub struct TripRecord {
 }
 
 impl TripRecord {
-    pub fn from_csv_line(line: &str) -> Option<Self> {
-        // The CSV format seems to be "value","value","value"...
-        // We can split by "," to separate fields.
-        // Note: This assumes that the values themselves do not contain ",".
-        // A robust CSV parser would be better, but we are sticking to the simple logic for now.
-
-        let parts: Vec<&str> = line.split("\",\"").collect();
-        if parts.len() < 10 {
+    pub fn from_csv_record(record: &csv::StringRecord) -> Option<Self> {
+        if record.len() < 10 {
             return None;
         }
 
-        // The first and last elements will still have a leading/trailing quote
-        let first = parts[0].trim_start_matches('"');
-        let last = parts[parts.len() - 1].trim_end_matches('"');
+        let first = record[0].trim_start_matches('"');
+        let last = record[record.len() - 1].trim_end_matches('"');
 
-        let entry_point = parts[4].to_string();
-        let exit_point = parts[5].to_string();
-        let date_of_trip = parts[2].to_string();
+        let entry_point = record[4].to_string();
+        let exit_point = record[5].to_string();
+        let date_of_trip = record[2].to_string();
 
         let day_type = classify_day(&date_of_trip);
 
         Some(TripRecord {
             transponder_plate: first.to_string(),
-            vehicle_class: parts[1].to_string(),
+            vehicle_class: record[1].to_string(),
             date_of_trip,
-            entry_time: parts[3].to_string(),
+            entry_time: record[3].to_string(),
             entry_point,
             exit_point,
-            distance_km: parts[6].to_string(),
-            toll_charge: parts[7].to_string(),
-            trip_toll_charge: parts[8].to_string(),
+            distance_km: record[6].to_string(),
+            toll_charge: record[7].to_string(),
+            trip_toll_charge: record[8].to_string(),
             camera_charge: last.to_string(),
             direction: None,
             day_type,
@@ -184,6 +177,9 @@ impl TripRecord {
                     total_distance += distance;
 
                     // For WB, use the zone of the entry point into the segment (higher index)
+                    if i + 1 >= ACCESS_POINTS.len() {
+                        return None;
+                    }
                     let ap_name = ACCESS_POINTS[i + 1];
                     let zone = WB_ZONES.iter().find(|&&(name, _)| name == ap_name)?.1 as usize;
 
@@ -317,6 +313,9 @@ impl TripRecord {
                 for i in end_idx..start_idx {
                     let distance = ACCESS_POINT_DISTANCES[i] as f64;
                     total_distance += distance;
+                    if i + 1 >= ACCESS_POINTS.len() {
+                        return None;
+                    }
                     let ap_name = ACCESS_POINTS[i + 1];
                     let zone = WB_ZONES.iter().find(|&&(name, _)| name == ap_name)?.1 as usize;
 
@@ -367,7 +366,7 @@ pub fn parse_time_to_minutes(time: &str) -> Option<u32> {
     let minute: u32 = time_parts[1].parse().ok()?;
     let period = parts[1];
 
-    if hour == 0 || hour > 12 || minute >= 60 {
+    if hour > 12 || minute >= 60 {
         return None;
     }
 
@@ -428,43 +427,25 @@ fn is_weekend(day: u32, month: u32, year: u32) -> bool {
     date.is_weekend()
 }
 
+#[derive(serde::Deserialize)]
+struct Holiday {
+    year: u32,
+    month: u32,
+    day: u32,
+}
+
+fn get_holidays() -> &'static std::collections::HashSet<(u32, u32, u32)> {
+    static HOLIDAYS: std::sync::OnceLock<std::collections::HashSet<(u32, u32, u32)>> =
+        std::sync::OnceLock::new();
+    HOLIDAYS.get_or_init(|| {
+        let json_str = include_str!("holidays.json");
+        let parsed: Vec<Holiday> = serde_json::from_str(json_str).expect("Valid holidays.json");
+        parsed.into_iter().map(|h| (h.year, h.month, h.day)).collect()
+    })
+}
+
 fn is_holiday(day: u32, month: u32, year: u32) -> bool {
-    match (year, month, day) {
-        // 2025 Holidays
-        (2025, 1, 1) => true,   // New Year's Day
-        (2025, 2, 17) => true,  // Family Day
-        (2025, 4, 18) => true,  // Good Friday
-        (2025, 5, 19) => true,  // Victoria Day
-        (2025, 7, 1) => true,   // Canada Day
-        (2025, 9, 1) => true,   // Labour Day
-        (2025, 10, 13) => true, // Thanksgiving
-        (2025, 12, 25) => true, // Christmas Day
-        (2025, 12, 26) => true, // Boxing Day
-
-        // 2024 Holidays
-        (2024, 1, 1) => true,   // New Year's Day
-        (2024, 2, 19) => true,  // Family Day
-        (2024, 3, 29) => true,  // Good Friday
-        (2024, 5, 20) => true,  // Victoria Day
-        (2024, 7, 1) => true,   // Canada Day
-        (2024, 9, 2) => true,   // Labour Day
-        (2024, 10, 14) => true, // Thanksgiving
-        (2024, 12, 25) => true, // Christmas Day
-        (2024, 12, 26) => true, // Boxing Day
-
-        // 2026 Holidays
-        (2026, 1, 1) => true,   // New Year's Day
-        (2026, 2, 16) => true,  // Family Day
-        (2026, 4, 3) => true,   // Good Friday
-        (2026, 5, 18) => true,  // Victoria Day
-        (2026, 7, 1) => true,   // Canada Day
-        (2026, 9, 7) => true,   // Labour Day
-        (2026, 10, 12) => true, // Thanksgiving
-        (2026, 12, 25) => true, // Christmas Day
-        (2026, 12, 26) => true, // Boxing Day
-
-        _ => false,
-    }
+    get_holidays().contains(&(year, month, day))
 }
 
 fn classify_day(date: &str) -> Option<DayType> {
