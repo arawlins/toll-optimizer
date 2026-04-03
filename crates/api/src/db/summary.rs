@@ -16,7 +16,8 @@ pub trait SummaryDb {
         savings: Decimal,
     ) -> Result<UploadSummary, sqlx::Error>;
 
-    async fn get_summaries_by_user(&self, user_id: Uuid) -> Result<Vec<UploadSummary>, sqlx::Error>;
+    async fn get_summaries_by_user(&self, user_id: Uuid)
+    -> Result<Vec<UploadSummary>, sqlx::Error>;
 }
 
 #[async_trait]
@@ -49,7 +50,10 @@ impl SummaryDb for PgPool {
         Ok(summary)
     }
 
-    async fn get_summaries_by_user(&self, user_id: Uuid) -> Result<Vec<UploadSummary>, sqlx::Error> {
+    async fn get_summaries_by_user(
+        &self,
+        user_id: Uuid,
+    ) -> Result<Vec<UploadSummary>, sqlx::Error> {
         let summaries = sqlx::query_as::<_, UploadSummary>(
             r#"
             SELECT id, user_id, filename, total_trips, cost_actual, cost_optimized, savings, uploaded_at

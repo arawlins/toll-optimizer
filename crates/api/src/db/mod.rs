@@ -1,4 +1,4 @@
-pub mod user;
 pub mod summary;
+pub mod user;
 
 pub use user::UserDb;

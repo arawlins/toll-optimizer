@@ -21,8 +21,8 @@ pub async fn basic_auth(
     req: Request,
     next: Next,
 ) -> Result<Response, StatusCode> {
-    let username = env::var("METRICS_USERNAME").unwrap_or_else(|_| "admin".to_string());
-    let password = env::var("METRICS_PASSWORD").unwrap_or_else(|_| "secret".to_string());
+    let username = env::var("METRICS_USERNAME").expect("METRICS_USERNAME must be set");
+    let password = env::var("METRICS_PASSWORD").expect("METRICS_PASSWORD must be set");
 
     if let Some(TypedHeader(Authorization(basic))) = auth {
         if basic.username() == username && basic.password() == password {
@@ -41,8 +41,6 @@ pub struct Claims {
 }
 
 pub struct Auth;
-
-
 
 impl Auth {
     pub fn hash_password(password: &str) -> Result<String, argon2::password_hash::Error> {

@@ -111,17 +111,30 @@ Endpoints below require `Authorization: Bearer <token>`.
 
 ---
 
-## 5. Deployment Strategy (Docker)
+---
+
+## 5. Security Considerations
+
+-   **HTTPS & Reverse Proxy**: The application is designed to be deployed behind a TLS-terminating reverse proxy. The default `docker-compose.yml` includes an auto-provisioning **Caddy** server to handle Let's Encrypt certificates automatically for VPS deployments.
+-   **User Enumeration**: The system prevents detailed enumeration by providing a generic "Invalid credentials" error on login. For registration, if a user already exists, it returns a generic "Registration failed" error to obscure precise email existence without breaking the seamless login-on-register UX pattern.
+-   **Rate Limiting**: To prevent brute force and DDoS attacks, authentication endpoints (`/auth/login` and `/auth/register`) are aggressively rate-limited (e.g., 5 requests per 10 seconds per IP).
+-   **CORS**: Cross-Origin Resource Sharing is strictly enforced based on the `FRONTEND_URL` environment variable.
+-   **Internal Logs**: Loki log aggregation and querying are intentionally restricted to internal Docker network access to prevent unauthorized log reading.
+
+---
+
+## 6. Deployment Strategy (Docker)
 
 -   **Backend Container**: Multi-stage `rust:bookworm` -> `debian:bookworm-slim`.
+-   **Reverse Proxy**: `caddy:2-alpine` for automated TLS termination and static routing.
 -   **Monitoring Stack**: `prom/prometheus`, `grafana/loki`, `grafana/promtail`, `prom/alertmanager`, and `grafana/grafana`.
 -   **Database Container**: `postgres:16-alpine`.
 -   **Frontend Service**: Built via `node:20` and served by the Axum backend.
 -   **Orchestration**: Managed via `docker-compose.yml`.
--   **Persistence**: Named volumes for `postgres_data`, `prometheus_data`, `grafana_data`, and `loki_data`.
+-   **Persistence**: Named volumes for `postgres_data`, `prometheus_data`, `grafana_data`, `loki_data`, `caddy_data`, and `caddy_config`.
 -   **Healthchecks**: The `db` container includes a healthcheck (`pg_isready`). `loki` and `promtail` use `restart: always` to ensure connectivity.
 
-## 6. Implementation Status
+## 7. Implementation Status
 All core modules (Core, CLI, API, Frontend) are fully implemented. The system is production-ready with:
 -   **Usage Analysis**: Transponder-centric dashboard with time and distance-based optimizations.
 -   **Full Observability Stack**: Metrics (Prometheus), Logs (Loki), and Alerting (Alertmanager).

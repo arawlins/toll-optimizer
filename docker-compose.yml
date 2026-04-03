@@ -76,8 +76,6 @@ services:
     container_name: toll_optimizer_loki
     user: root
     restart: always
-    ports:
-      - "3100:3100"
     volumes:
       - ./monitoring/loki/loki-config.yml:/etc/loki/local-config.yaml
       - ./monitoring/loki/rules:/loki/rules
@@ -110,8 +108,27 @@ services:
       - prometheus
       - loki
 
+  caddy:
+    image: caddy:2-alpine
+    container_name: toll_optimizer_caddy
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      - DOMAIN=${DOMAIN:-localhost}
+      - ACME_EMAIL=${ACME_EMAIL:-admin@localhost}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - app
+
 volumes:
   postgres_data:
   prometheus_data:
   grafana_data:
   loki_data:
+  caddy_data:
+  caddy_config:
