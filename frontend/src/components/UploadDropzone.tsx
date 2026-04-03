@@ -48,6 +48,11 @@ export function UploadDropzone({ onSuccess }: UploadDropzoneProps) {
       return;
     }
 
+    if (file.size > 10 * 1024 * 1024) {
+      setError('File size exceeds the 10MB limit.');
+      return;
+    }
+
     setIsUploading(true);
     try {
       const response = await endpoints.analyze(file);

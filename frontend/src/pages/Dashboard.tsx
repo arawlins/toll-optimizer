@@ -1,7 +1,16 @@
 import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { endpoints } from '../lib/api';
-import type { AnalysisResponse } from '../lib/api';
+import type { 
+  AnalysisResponse, 
+  TimeAnalysisResult, 
+  DistanceAnalysisResult, 
+  TimeCentroid, 
+  DistanceCentroid,
+  TimeTripSummary,
+  DistanceTripSummary,
+  TripRecord 
+} from '../lib/api';
 import { UploadDropzone } from '../components/UploadDropzone';
 
 import { History as HistoryIcon, TrendingDown, Clock, MapPin, ChevronDown, ChevronUp, Route } from 'lucide-react';
@@ -41,9 +50,16 @@ export function Dashboard() {
     refetchHistory();
   };
 
+  interface TransponderGroup {
+    plate: string;
+    summaries: (TimeAnalysisResult | DistanceAnalysisResult)[];
+    totalSavings: number;
+    totalCentroids: number;
+  }
+
   const currentAnalysis = analysis ? (viewMode === 'time' ? analysis.time_analysis : analysis.distance_analysis) : [];
 
-  const groupedAnalysis = (Array.isArray(currentAnalysis) ? currentAnalysis : []).reduce((acc: any, curr: any) => {
+  const groupedAnalysis = (Array.isArray(currentAnalysis) ? currentAnalysis : []).reduce((acc: Record<string, TransponderGroup>, curr: TimeAnalysisResult | DistanceAnalysisResult) => {
     const plate = curr.transponder_plate;
     if (!acc[plate]) {
       acc[plate] = {
@@ -55,30 +71,28 @@ export function Dashboard() {
     }
     acc[plate].summaries.push(curr);
     const centroids = Array.isArray(curr.centroids) ? curr.centroids : [];
-    const savings = centroids.reduce((sum: number, c: any) => sum + (c.total_optimized_savings || 0), 0) || 0;
+    const savings = centroids.reduce((sum: number, c: TimeCentroid | DistanceCentroid) => sum + (c.total_optimized_savings || 0), 0) || 0;
     acc[plate].totalSavings += savings;
 
-    // Filter centroids consistently with the expanded view
     const centroidsToCount = viewMode === 'time'
-      ? centroids.filter((c: any) => c.total_optimized_savings > 0.005)
+      ? (centroids as TimeCentroid[]).filter((c) => c.total_optimized_savings > 0.005)
       : centroids;
 
-    // Only count centroids that actually contain trips
-    acc[plate].totalCentroids += centroidsToCount.filter((c: any) => Array.isArray(c.trips) && c.trips.length > 0).length;
+    acc[plate].totalCentroids += centroidsToCount.filter((c: TimeCentroid | DistanceCentroid) => Array.isArray(c.trips) && c.trips.length > 0).length;
     return acc;
-  }, {});
+  }, {} as Record<string, TransponderGroup>);
 
-  const transponders = Object.values(groupedAnalysis);
+  const transponders: TransponderGroup[] = Object.values(groupedAnalysis);
 
-  const getTripCost = (trip: any) => {
+  const getTripCost = (trip: TripRecord | undefined) => {
     if (!trip) return 0;
     return (Number(trip.toll_charge) || 0) + (Number(trip.trip_toll_charge) || 0) + (Number(trip.camera_charge) || 0);
   };
 
-  const renderTripsTable = (trips: any[], title?: string) => {
+  const renderTripsTable = (trips: (TimeTripSummary | DistanceTripSummary)[], title?: string) => {
     if (trips.length === 0) return null;
 
-    const firstTrip = trips[0];
+    const firstTrip = trips[0] as TimeTripSummary;
 
     return (
       <div className="space-y-2">
@@ -115,46 +129,48 @@ export function Dashboard() {
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-100">
-                {trips.map((ts: any, tIdx: number) => {
-                  const actualCost = getTripCost(ts.trip);
+                {trips.map((summaryItem, tIdx: number) => {
+                  const actualCost = getTripCost(summaryItem.trip);
+                  const tsTime = summaryItem as TimeTripSummary;
+                  const tsDist = summaryItem as DistanceTripSummary;
                   return (
                     <tr key={tIdx} className="hover:bg-blue-50/30 transition-colors">
-                      <td className="px-4 py-2.5 whitespace-nowrap font-medium">{ts.trip?.date_of_trip}</td>
-                      <td className="px-4 py-2.5 whitespace-nowrap">{ts.trip?.entry_time}</td>
-                      <td className="px-4 py-2.5 whitespace-nowrap max-w-[150px] truncate font-medium text-gray-600" title={`${ts.trip?.entry_point} → ${ts.trip?.exit_point}`}>
-                        {ts.trip?.entry_point} → {ts.trip?.exit_point}
+                      <td className="px-4 py-2.5 whitespace-nowrap font-medium">{summaryItem.trip?.date_of_trip}</td>
+                      <td className="px-4 py-2.5 whitespace-nowrap">{summaryItem.trip?.entry_time}</td>
+                      <td className="px-4 py-2.5 whitespace-nowrap max-w-[150px] truncate font-medium text-gray-600" title={`${summaryItem.trip?.entry_point} → ${summaryItem.trip?.exit_point}`}>
+                        {summaryItem.trip?.entry_point} → {summaryItem.trip?.exit_point}
                       </td>
                       <td className="px-4 py-2.5 whitespace-nowrap font-bold text-gray-900">${actualCost.toFixed(2)}</td>
                       {viewMode === 'distance' && (
                         <td className={clsx(
                           "px-4 py-2.5 whitespace-nowrap max-w-[150px] truncate font-medium",
-                          ts.optimized_entry ? "text-blue-600" : "text-gray-400"
-                        )} title={ts.optimized_entry ? `${ts.optimized_entry} → ${ts.optimized_exit}` : ''}>
-                          {ts.optimized_entry ? `${ts.optimized_entry} → ${ts.optimized_exit}` : ' - '}
+                          tsDist.optimized_entry ? "text-blue-600" : "text-gray-400"
+                        )} title={tsDist.optimized_entry ? `${tsDist.optimized_entry} → ${tsDist.optimized_exit}` : ''}>
+                          {tsDist.optimized_entry ? `${tsDist.optimized_entry} → ${tsDist.optimized_exit}` : ' - '}
                         </td>
                       )}
                       {viewMode === 'time' && (
                         <>
                           <td className={clsx(
                             "px-4 py-2.5 whitespace-nowrap font-medium",
-                            ts.total_cost_previous_timeslot !== null && ts.total_cost_previous_timeslot < actualCost - 0.005 ? "text-green-600 font-bold" : "text-gray-400"
+                            tsTime.total_cost_previous_timeslot !== null && tsTime.total_cost_previous_timeslot < actualCost - 0.005 ? "text-green-600 font-bold" : "text-gray-400"
                           )}>
-                            {ts.total_cost_previous_timeslot !== null ? `$${Number(ts.total_cost_previous_timeslot).toFixed(2)}` : '-'}
+                            {tsTime.total_cost_previous_timeslot !== null ? `$${Number(tsTime.total_cost_previous_timeslot).toFixed(2)}` : '-'}
                           </td>
                           <td className={clsx(
                             "px-4 py-2.5 whitespace-nowrap font-medium",
-                            ts.total_cost_next_timeslot !== null && ts.total_cost_next_timeslot < actualCost - 0.005 ? "text-green-600 font-bold" : "text-gray-400"
+                            tsTime.total_cost_next_timeslot !== null && tsTime.total_cost_next_timeslot < actualCost - 0.005 ? "text-green-600 font-bold" : "text-gray-400"
                           )}>
-                            {ts.total_cost_next_timeslot !== null ? `$${Number(ts.total_cost_next_timeslot).toFixed(2)}` : '-'}
+                            {tsTime.total_cost_next_timeslot !== null ? `$${Number(tsTime.total_cost_next_timeslot).toFixed(2)}` : '-'}
                           </td>
                         </>
                       )}
                       {viewMode === 'distance' && (
                         <td className={clsx(
                           "px-4 py-2.5 whitespace-nowrap font-medium",
-                          ts.optimized_cost !== null && ts.optimized_cost < actualCost - 0.005 ? "text-green-600 font-bold" : "text-gray-400"
+                          tsDist.optimized_cost !== null && tsDist.optimized_cost < actualCost - 0.005 ? "text-green-600 font-bold" : "text-gray-400"
                         )}>
-                          {ts.optimized_cost !== null ? `$${Number(ts.optimized_cost).toFixed(2)}` : '-'}
+                          {tsDist.optimized_cost !== null ? `$${Number(tsDist.optimized_cost).toFixed(2)}` : '-'}
                         </td>
                       )}
                     </tr>
@@ -238,8 +254,8 @@ export function Dashboard() {
                 </div>
               </div>
 
-                            <div className="space-y-6">
-                {(transponders as any[]).map((transponder) => {
+              <div className="space-y-6">
+                {transponders.map((transponder) => {
                   const isTransponderExpanded = expandedTransponders.includes(transponder.plate);
 
                   return (
@@ -282,10 +298,10 @@ export function Dashboard() {
                       {isTransponderExpanded && (
                         <div className="p-5 pt-0 border-t border-gray-50 animate-in slide-in-from-top-2 duration-200">
                           <div className="grid grid-cols-1 gap-8 mt-6">
-                            {transponder.summaries.map((summary: any) => {
+                            {transponder.summaries.map((summary) => {
                               const centroidsToDisplay = viewMode === 'time'
-                                ? (summary.centroids || []).filter((c: any) => c.total_optimized_savings > 0.005)
-                                : (summary.centroids || []);
+                                ? (summary.centroids as TimeCentroid[] || []).filter(c => c.total_optimized_savings > 0.005)
+                                : (summary.centroids as DistanceCentroid[] || []);
 
                               const hasSavings = centroidsToDisplay.length > 0;
 
@@ -307,9 +323,12 @@ export function Dashboard() {
                                     </div>
                                   ) : (
                                     <div className="grid grid-cols-1 gap-4">
-                                      {centroidsToDisplay.map((centroid: any, cIdx: number) => {
+                                      {centroidsToDisplay.map((centroid, cIdx: number) => {
                                         const centroidId = `${transponder.plate}-${summary.direction}-${cIdx}-${viewMode}`;
                                         const isExpanded = expandedCentroids.includes(centroidId);
+                                        
+                                        const cTime = centroid as TimeCentroid;
+                                        const cDist = centroid as DistanceCentroid;
 
                                         return (
                                           <div key={centroidId} className="bg-gray-50/50 rounded-xl p-4 border border-gray-100 hover:bg-gray-50 transition-colors">
@@ -324,8 +343,8 @@ export function Dashboard() {
                                                 </div>
                                                 <p className="font-bold text-gray-800 text-sm">
                                                   {viewMode === 'time' 
-                                                    ? `Trips near ${centroid.centroid_time}` 
-                                                    : `${centroid.representative_entry || 'Entry'} -> ${centroid.representative_exit || 'Exit'}`
+                                                    ? `Trips near ${cTime.centroid_time}` 
+                                                    : `${cDist.representative_entry || 'Entry'} -> ${cDist.representative_exit || 'Exit'}`
                                                   }
                                                 </p>
                                               </div>
@@ -348,8 +367,9 @@ export function Dashboard() {
                                             {isExpanded && (
                                               <div className="mt-4 space-y-4 animate-in zoom-in-95 duration-200">
                                                 {(() => {
-                                                  const weekdayTrips = (centroid.trips || []).filter((ts: any) => ts.trip?.day_type === 'Weekday');
-                                                  const weekendTrips = (centroid.trips || []).filter((ts: any) => ts.trip?.day_type === 'Weekend' || ts.trip?.day_type === 'Holiday');
+                                                  const tripsArray = centroid.trips as (TimeTripSummary|DistanceTripSummary)[];
+                                                  const weekdayTrips = tripsArray.filter((ts) => ts.trip?.day_type === 'Weekday');
+                                                  const weekendTrips = tripsArray.filter((ts) => ts.trip?.day_type === 'Weekend' || ts.trip?.day_type === 'Holiday');
                                                   
                                                   return (
                                                     <>
@@ -364,8 +384,8 @@ export function Dashboard() {
                                             <div className="flex justify-between items-center mt-3 pt-3 border-t border-gray-200/60">
                                               <span className="text-[10px] text-gray-500 font-medium">
                                                 {viewMode === 'time'
-                                                  ? `Average entry time: ${centroid.average_entry_time}`
-                                                  : `Average distance: ${Number(centroid.average_distance).toFixed(2)} km`}
+                                                  ? `Average entry time: ${cTime.average_entry_time}`
+                                                  : `Average distance: ${Number(cDist.average_distance).toFixed(2)} km`}
                                               </span>
                                               <div className="flex items-center gap-1.5">
                                                 <span className="text-[10px] font-bold text-gray-400 uppercase tracking-tight">Potential</span>

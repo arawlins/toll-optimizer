@@ -1,7 +1,11 @@
 import axios from 'axios';
 
+if (!import.meta.env.VITE_API_URL) {
+  throw new Error("VITE_API_URL environment variable is not set.");
+}
+
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:3000',
+  baseURL: import.meta.env.VITE_API_URL,
 });
 
 // Add auth interceptor
@@ -33,23 +37,59 @@ export interface UploadSummary {
   uploaded_at: string;
 }
 
-// NOTE: This should match the JSON structure returned by the Rust API's `analyze` handler
-// For now we type it loosely as `any` or a partial interface until we finalize the Rust JSON structure
-export interface AnalysisResult {
-  transponder_plate: string;
-  direction: string;
-  centroids: any[];
+export interface TripRecord {
+  date_of_trip: string;
+  entry_time: string;
+  entry_point: string;
+  exit_point: string;
+  day_type: string;
+  toll_charge?: string | number;
+  trip_toll_charge?: string | number;
+  camera_charge?: string | number;
 }
 
-export interface CentroidDataByDistance {
-  centroid_distance: number;
-  trips: any[];
-  average_distance: number;
-  total_toll_charge: number;
+export interface TimeTripSummary {
+  trip: TripRecord;
+  total_cost_previous_timeslot: number | null;
+  total_cost_next_timeslot: number | null;
+  prev_timeslot_target: string | null;
+  next_timeslot_target: string | null;
+}
+
+export interface DistanceTripSummary {
+  trip: TripRecord;
+  optimized_entry: string | null;
+  optimized_exit: string | null;
+  optimized_cost: number | null;
+}
+
+export interface TimeCentroid {
+  centroid_time: string;
+  average_entry_time: string;
   total_optimized_savings: number;
   optimization_advice: string | null;
+  trips: TimeTripSummary[];
+}
+
+export interface DistanceCentroid {
   representative_entry: string | null;
   representative_exit: string | null;
+  average_distance: number;
+  total_optimized_savings: number;
+  optimization_advice: string | null;
+  trips: DistanceTripSummary[];
+}
+
+export interface TimeAnalysisResult {
+  transponder_plate: string;
+  direction: string;
+  centroids: TimeCentroid[];
+}
+
+export interface DistanceAnalysisResult {
+  transponder_plate: string;
+  direction: string;
+  centroids: DistanceCentroid[];
 }
 
 export interface AnalysisResponse {
@@ -57,8 +97,8 @@ export interface AnalysisResponse {
   total_cost: number;
   time_based_savings: number;
   distance_based_savings: number;
-  time_analysis: AnalysisResult[];
-  distance_analysis: AnalysisResult[];
+  time_analysis: TimeAnalysisResult[];
+  distance_analysis: DistanceAnalysisResult[];
 }
 
 export const endpoints = {
