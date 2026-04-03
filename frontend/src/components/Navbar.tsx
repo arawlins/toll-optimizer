@@ -21,9 +21,14 @@ export function Navbar() {
           </div>
           
           {!user && (
-            <div className="hidden md:flex gap-6">
+            <div className="hidden md:flex gap-6 items-center">
               <a className="font-manrope text-sm font-medium tracking-tight text-slate-500 hover:text-primary transition-colors duration-200" href="/#features">Features</a>
-              <a className="font-manrope text-sm font-medium tracking-tight text-slate-500 hover:text-primary transition-colors duration-200" href="/#howto">How To</a>
+              <button 
+                className={`font-manrope text-sm font-medium tracking-tight transition-colors duration-200 ${location.pathname === '/how-to' ? 'text-primary border-b-2 border-primary pb-1' : 'text-slate-500 hover:text-primary'}`}
+                onClick={() => navigate('/how-to')}
+              >
+                How To
+              </button>
               <a className="font-manrope text-sm font-medium tracking-tight text-slate-500 hover:text-primary transition-colors duration-200" href="/#pricing">Pricing</a>
               <a className="font-manrope text-sm font-medium tracking-tight text-slate-500 hover:text-primary transition-colors duration-200" href="/#about">About</a>
             </div>

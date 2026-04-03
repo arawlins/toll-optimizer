@@ -3,6 +3,7 @@ import { BrowserRouter, Route, Routes } from 'react-router-dom';
 import { Login } from './pages/Login';
 import { Dashboard } from './pages/Dashboard';
 import { Landing } from './pages/Landing';
+import { HowTo } from './pages/HowTo';
 import { AuthGuard } from './components/AuthGuard';
 
 const queryClient = new QueryClient();
@@ -14,6 +15,7 @@ function App() {
         <Routes>
           <Route path="/" element={<Landing />} />
           <Route path="/login" element={<Login />} />
+          <Route path="/how-to" element={<HowTo />} />
           <Route
             path="/dashboard"
             element={

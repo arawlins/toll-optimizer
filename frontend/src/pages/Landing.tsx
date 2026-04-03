@@ -35,7 +35,10 @@ export function Landing() {
                 >
                   Get Started Now
                 </button>
-                <button className="bg-surface-container-high text-primary px-8 py-4 rounded-xl font-bold text-lg hover:bg-surface-container-highest transition-all duration-300">
+                <button 
+                  onClick={() => navigate('/how-to')}
+                  className="bg-surface-container-high text-primary px-8 py-4 rounded-xl font-bold text-lg hover:bg-surface-container-highest transition-all duration-300"
+                >
                   How To
                 </button>
               </div>
