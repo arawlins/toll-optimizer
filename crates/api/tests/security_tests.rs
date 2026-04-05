@@ -4,6 +4,9 @@ use std::io::ErrorKind;
 use std::net::TcpStream;
 use std::process::{Child, Command, Stdio};
 use std::time::{Duration, Instant};
+use jsonwebtoken::{EncodingKey, Header, encode};
+use std::time::{SystemTime, UNIX_EPOCH};
+use uuid::Uuid;
 
 struct KillOnDrop(Child);
 
@@ -165,6 +168,105 @@ fn test_security_large_file_handling() {
         "Expected success for 5MB file, got: {:?}",
         res.status()
     );
+}
+
+#[test]
+fn test_security_missing_auth_header() {
+    let (_guard, _) = setup_api();
+    let client = Client::new();
+
+    let res = client
+        .get("http://127.0.0.1:3000/api/history")
+        // Deliberately no bearer_auth
+        .send()
+        .expect("Failed to send request");
+
+    assert_eq!(res.status(), reqwest::StatusCode::UNAUTHORIZED);
+}
+
+#[test]
+fn test_security_tampered_jwt() {
+    let (_guard, token) = setup_api();
+    let client = Client::new();
+
+    // Tamper with the token by replacing the last character
+    let mut tampered_token = token.clone();
+    tampered_token.pop();
+    tampered_token.push('X');
+
+    let res = client
+        .get("http://127.0.0.1:3000/api/history")
+        .bearer_auth(&tampered_token)
+        .send()
+        .expect("Failed to send request");
+
+    assert_eq!(res.status(), reqwest::StatusCode::UNAUTHORIZED);
+}
+
+#[derive(serde::Serialize)]
+struct ForgedClaims {
+    pub sub: Uuid,
+    pub exp: usize,
+    pub iat: usize,
+}
+
+#[test]
+fn test_security_expired_jwt() {
+    dotenvy::dotenv().ok(); // Make sure environment is loaded in the test process
+    let (_guard, _) = setup_api();
+    let client = Client::new();
+
+    let secret = std::env::var("JWT_SECRET").unwrap_or_else(|_| "super-secret-key-for-jwt-signing-12345".to_string());
+    
+    // Create an expired claim
+    let now = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap()
+        .as_secs();
+        
+    let claims = ForgedClaims {
+        sub: Uuid::new_v4(),
+        iat: (now - 3600) as usize,
+        exp: (now - 1800) as usize, // Expired 30 minutes ago
+    };
+
+    let expired_token = encode(
+        &Header::default(),
+        &claims,
+        &EncodingKey::from_secret(secret.as_bytes()),
+    ).expect("Failed to encode forged JWT");
+
+    let res = client
+        .get("http://127.0.0.1:3000/api/history")
+        .bearer_auth(&expired_token)
+        .send()
+        .expect("Failed to send request");
+
+    assert_eq!(res.status(), reqwest::StatusCode::UNAUTHORIZED);
+}
+
+#[test]
+fn test_security_non_csv_content() {
+    let (_guard, token) = setup_api();
+    let client = Client::new();
+
+    // Send a valid text file but clearly not a CSV payload 
+    let form = multipart::Form::new().part(
+        "file",
+        multipart::Part::text("Not a csv. Just some ordinary text.\nLine 2\nLine 3").file_name("malicious.txt"),
+    );
+
+    let res = client
+        .post("http://127.0.0.1:3000/api/analyze")
+        .bearer_auth(&token)
+        .multipart(form)
+        .send()
+        .expect("Failed to send request");
+
+    // The API might accept empty/invalid rows or throw 400. In either case, it shouldn't be 500.
+    // Given the business logic, empty parsed CSV sets should probably return 400.
+    // If it returns 200 with 0 trips processed, that is also safely handled.
+    assert!(res.status().is_success() || res.status() == reqwest::StatusCode::BAD_REQUEST);
 }
 
 #[test]

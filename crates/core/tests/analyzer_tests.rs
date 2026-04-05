@@ -59,8 +59,95 @@ fn test_multiple_transponders_grouping() {
     let analysis_time = trip_analyzer::analyze_trips_by_time(&parsed);
 
     // Should have 2 summaries (one per transponder since direction is same)
+    // Should have 2 summaries (one per transponder since direction is same)
     assert_eq!(analysis_time.len(), 2);
     let plates: Vec<_> = analysis_time.iter().map(|s| &s.transponder_plate).collect();
     assert!(plates.contains(&&"PLATE_A".to_string()));
     assert!(plates.contains(&&"PLATE_B".to_string()));
+}
+
+#[test]
+fn test_weekday_vs_weekend_pricing() {
+    // 28 Aug 25 is a Thursday
+    let weekday_csv = vec![
+        "\"Transponder/Plate Number\",\"Vehicle Class\",\"Date of Trip\",\"Entry Time\",\"Entry Point\",\"Exit Point\",\"Distance (km)\",\"Toll Charge ($)\",\"Trip Toll Charge ($)\",\"Camera Charge ($)\"".to_string(),
+        "\"TEST_PLATE\",\"Light vehicle\",\"28 Aug 25\",\"10:00 AM\",\"QEW\",\"Trafalgar\",\"10.0\",\"0.00\",\"0.00\",\"0.00\"".to_string(),
+    ];
+    let weekday_parsed = csv_parser::parse_trips(weekday_csv.join("\n").as_bytes());
+    let weekday_trip = &weekday_parsed[0].1[0];
+    let (weekday_cost, _) = weekday_trip.calculate_cost().unwrap();
+
+    // 30 Aug 25 is a Saturday
+    let weekend_csv = vec![
+        "\"Transponder/Plate Number\",\"Vehicle Class\",\"Date of Trip\",\"Entry Time\",\"Entry Point\",\"Exit Point\",\"Distance (km)\",\"Toll Charge ($)\",\"Trip Toll Charge ($)\",\"Camera Charge ($)\"".to_string(),
+        "\"TEST_PLATE\",\"Light vehicle\",\"30 Aug 25\",\"10:00 AM\",\"QEW\",\"Trafalgar\",\"10.0\",\"0.00\",\"0.00\",\"0.00\"".to_string(),
+    ];
+    let weekend_parsed = csv_parser::parse_trips(weekend_csv.join("\n").as_bytes());
+    let weekend_trip = &weekend_parsed[0].1[0];
+    let (weekend_cost, _) = weekend_trip.calculate_cost().unwrap();
+
+    println!("Weekday: {}, Weekend: {}", weekday_cost, weekend_cost);
+    assert!(weekday_cost > weekend_cost, "Weekday base toll should be higher than weekend base toll");
+}
+
+#[test]
+fn test_year_boundary_pricing() {
+    // Same trip on 28 Aug 2025 vs 28 Aug 2026. Because 28 Aug 26 is a Friday, both are weekdays.
+    let year25_csv = vec![
+        "\"Transponder/Plate Number\",\"Vehicle Class\",\"Date of Trip\",\"Entry Time\",\"Entry Point\",\"Exit Point\",\"Distance (km)\",\"Toll Charge ($)\",\"Trip Toll Charge ($)\",\"Camera Charge ($)\"".to_string(),
+        "\"TEST_PLATE\",\"Light vehicle\",\"28 Aug 25\",\"10:00 AM\",\"QEW\",\"Hwy404\",\"10.0\",\"0.00\",\"0.00\",\"0.00\"".to_string(),
+    ];
+    let year25_parsed = csv_parser::parse_trips(year25_csv.join("\n").as_bytes());
+    let year25_trip = &year25_parsed[0].1[0];
+    let (cost_25, _) = year25_trip.calculate_cost().unwrap();
+
+    let year26_csv = vec![
+        "\"Transponder/Plate Number\",\"Vehicle Class\",\"Date of Trip\",\"Entry Time\",\"Entry Point\",\"Exit Point\",\"Distance (km)\",\"Toll Charge ($)\",\"Trip Toll Charge ($)\",\"Camera Charge ($)\"".to_string(),
+        "\"TEST_PLATE\",\"Light vehicle\",\"28 Aug 26\",\"10:00 AM\",\"QEW\",\"Hwy404\",\"10.0\",\"0.00\",\"0.00\",\"0.00\"".to_string(),
+    ];
+    let year26_parsed = csv_parser::parse_trips(year26_csv.join("\n").as_bytes());
+    let year26_trip = &year26_parsed[0].1[0];
+    let (cost_26, _) = year26_trip.calculate_cost_2026().unwrap();
+
+    println!("Cost 2025: {}, Cost 2026: {}", cost_25, cost_26);
+    assert!(cost_26 > cost_25, "2026 toll pricing should be higher than 2025 pricing");
+}
+
+#[test]
+fn test_holiday_classification() {
+    // 01 Jan 25 is a Wednesday, normally a weekday, but is a holiday.
+    let holiday_csv = vec![
+        "\"Transponder/Plate Number\",\"Vehicle Class\",\"Date of Trip\",\"Entry Time\",\"Entry Point\",\"Exit Point\",\"Distance (km)\",\"Toll Charge ($)\",\"Trip Toll Charge ($)\",\"Camera Charge ($)\"".to_string(),
+        "\"TEST_PLATE\",\"Light vehicle\",\"01 Jan 25\",\"10:00 AM\",\"QEW\",\"Trafalgar\",\"10.0\",\"0.00\",\"0.00\",\"0.00\"".to_string(),
+    ];
+    let holiday_parsed = csv_parser::parse_trips(holiday_csv.join("\n").as_bytes());
+    let holiday_trip = &holiday_parsed[0].1[0];
+    let (holiday_cost, _) = holiday_trip.calculate_cost().unwrap();
+
+    // Compare to weekend pricing
+    let weekend_csv = vec![
+        "\"Transponder/Plate Number\",\"Vehicle Class\",\"Date of Trip\",\"Entry Time\",\"Entry Point\",\"Exit Point\",\"Distance (km)\",\"Toll Charge ($)\",\"Trip Toll Charge ($)\",\"Camera Charge ($)\"".to_string(),
+        "\"TEST_PLATE\",\"Light vehicle\",\"04 Jan 25\",\"10:00 AM\",\"QEW\",\"Trafalgar\",\"10.0\",\"0.00\",\"0.00\",\"0.00\"".to_string(), // Saturday
+    ];
+    let weekend_parsed = csv_parser::parse_trips(weekend_csv.join("\n").as_bytes());
+    let weekend_trip = &weekend_parsed[0].1[0];
+    let (weekend_cost, _) = weekend_trip.calculate_cost().unwrap();
+
+    assert_eq!(holiday_cost, weekend_cost, "Holiday toll should match weekend toll calculation");
+}
+
+#[test]
+fn test_westbound_zone_boundary() {
+    // Westbound goes in reverse order. Exit at QEW (which is index 0 in ACCESS_POINTS?).
+    // Actually the access points might just be QEW -> Brock. Westbound is Brock -> QEW.
+    let wb_csv = vec![
+        "\"Transponder/Plate Number\",\"Vehicle Class\",\"Date of Trip\",\"Entry Time\",\"Entry Point\",\"Exit Point\",\"Distance (km)\",\"Toll Charge ($)\",\"Trip Toll Charge ($)\",\"Camera Charge ($)\"".to_string(),
+        // Valid westbound trip that ends exactly at QEW or starts exactly at Brock
+        "\"TEST_PLATE\",\"Light vehicle\",\"28 Aug 25\",\"10:00 AM\",\"Brock(Hwy7)\",\"QEW\",\"40.0\",\"0.00\",\"0.00\",\"0.00\"".to_string(),
+    ];
+    let wb_parsed = csv_parser::parse_trips(wb_csv.join("\n").as_bytes());
+    let wb_analysis = trip_analyzer::analyze_trips_by_distance(&wb_parsed);
+    
+    // Testing there was no panic, and that we have a result
+    assert_eq!(wb_analysis.len(), 1);
 }

@@ -37,7 +37,7 @@ fn test_application_runs_on_sample_csv() {
 
 Name: Test User
 
-"Transponder/Plate Number","Vehicle Class","Date of Trip","Entry Time","Entry Point","Exit Point","Distance (km)","Toll Charge ($)","Trip Toll Charge ($)","Camera Charge ($)""Transponder/Plate Number","Vehicle Class","Date of Trip","Entry Time","Entry Point","Exit Point","Distance (km)","Toll Charge ($)","Trip Toll Charge ($)","Camera Charge ($)"
+"Transponder/Plate Number","Vehicle Class","Date of Trip","Entry Time","Entry Point","Exit Point","Distance (km)","Toll Charge ($)","Trip Toll Charge ($)","Camera Charge ($)"
 "TEST_PLATE_001","Light vehicle","28 Aug 25","10:00 AM","QEW","Trafalgar","10.0","5.00","0.00","0.00"
 ""###;
     file.write_all(csv_content.as_bytes())

@@ -8,6 +8,7 @@ pub fn parse_trips<R: std::io::Read>(reader: R) -> Vec<((String, Direction), Vec
 
     let mut csv_reader = csv::ReaderBuilder::new()
         .has_headers(false)
+        .flexible(true)
         .from_reader(reader);
 
     for result in csv_reader.records() {
