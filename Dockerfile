@@ -42,8 +42,8 @@ RUN cargo build --release -p toll-optimizer-api
 FROM debian:bookworm-slim
 WORKDIR /app
 
-# Install runtime dependencies (SSL certificates for potential HTTPS requests)
-RUN apt-get update && apt-get install -y ca-certificates libssl3 && rm -rf /var/lib/apt/lists/*
+# Install runtime dependencies (SSL certificates for potential HTTPS requests, curl for healthchecks)
+RUN apt-get update && apt-get install -y ca-certificates libssl3 curl && rm -rf /var/lib/apt/lists/*
 
 # Copy binary from backend builder
 COPY --from=backend-builder /app/target/release/toll-optimizer-api /app/toll-optimizer-api
@@ -56,6 +56,13 @@ EXPOSE 3000
 
 # Set environment variables
 ENV RUST_LOG=info
+
+# Create and switch to non-root user
+RUN useradd -m -u 1000 appuser
+USER appuser
+
+# Add healthcheck to verify API is responding
+HEALTHCHECK CMD curl -f http://localhost:3000/health || exit 1
 
 # Run the binary
 CMD ["./toll-optimizer-api"]

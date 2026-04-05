@@ -33,26 +33,43 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
 
+  prometheus-config-init:
+    image: alpine:latest
+    container_name: toll_optimizer_prometheus_config_init
+    volumes:
+      - ./monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml.template
+      - prometheus_config:/etc/prometheus_generated
+    environment:
+      - METRICS_USERNAME=${METRICS_USERNAME}
+      - METRICS_PASSWORD=${METRICS_PASSWORD}
+    command: sh -c "apk add --no-cache gettext && envsubst < /etc/prometheus/prometheus.yml.template > /etc/prometheus_generated/prometheus.yml"
+
+  alertmanager-config-init:
+    image: alpine:latest
+    container_name: toll_optimizer_alertmanager_config_init
+    volumes:
+      - ./monitoring/alertmanager/alertmanager.yml:/etc/alertmanager/alertmanager.yml.template
+      - alertmanager_config:/etc/alertmanager_generated
+    environment:
+      - SLACK_WEBHOOK_URL=${SLACK_WEBHOOK_URL}
+    command: sh -c "apk add --no-cache gettext && envsubst < /etc/alertmanager/alertmanager.yml.template > /etc/alertmanager_generated/alertmanager.yml"
+
   prometheus:
     image: prom/prometheus:latest
     container_name: toll_optimizer_prometheus
     ports:
       - "9090:9090"
     volumes:
-      - ./monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml.template
+      - prometheus_config:/etc/prometheus
+      - ./monitoring/prometheus/rules:/etc/prometheus/rules
       - prometheus_data:/prometheus
-    environment:
-      - METRICS_USERNAME=${METRICS_USERNAME}
-      - METRICS_PASSWORD=${METRICS_PASSWORD}
-    entrypoint:
-      - "/bin/sh"
-      - "-c"
-      - |
-        sh -c "sed -e \"s/\$${METRICS_USERNAME}/$$METRICS_USERNAME/g\" -e \"s/\$${METRICS_PASSWORD}/$$METRICS_PASSWORD/g\" /etc/prometheus/prometheus.yml.template > /etc/prometheus/prometheus.yml && \
-        /bin/prometheus --config.file=/etc/prometheus/prometheus.yml --storage.tsdb.path=/prometheus"
     depends_on:
-      - app
-      - alertmanager
+      app:
+        condition: service_started
+      alertmanager:
+        condition: service_started
+      prometheus-config-init:
+        condition: service_completed_successfully
 
   alertmanager:
     image: prom/alertmanager:latest
@@ -61,15 +78,10 @@ services:
     ports:
       - "9093:9093"
     volumes:
-      - ./monitoring/alertmanager/alertmanager.yml:/etc/alertmanager/alertmanager.yml.template
-    environment:
-      - SLACK_WEBHOOK_URL=${SLACK_WEBHOOK_URL}
-    entrypoint:
-      - "/bin/sh"
-      - "-c"
-      - |
-        sed -e "s|__SLACK_WEBHOOK_URL__|$$SLACK_WEBHOOK_URL|g" /etc/alertmanager/alertmanager.yml.template > /etc/alertmanager/alertmanager.yml && \
-        /bin/alertmanager --config.file=/etc/alertmanager/alertmanager.yml --storage.path=/alertmanager --log.level=info
+      - alertmanager_config:/etc/alertmanager
+    depends_on:
+      alertmanager-config-init:
+        condition: service_completed_successfully
 
   loki:
     image: grafana/loki:latest
@@ -128,6 +140,8 @@ services:
 volumes:
   postgres_data:
   prometheus_data:
+  prometheus_config:
+  alertmanager_config:
   grafana_data:
   loki_data:
   caddy_data:

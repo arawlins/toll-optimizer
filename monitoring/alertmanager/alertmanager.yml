@@ -11,7 +11,7 @@ route:
 receivers:
 - name: 'slack-notifications'
   slack_configs:
-  - api_url: '__SLACK_WEBHOOK_URL__'
+  - api_url: '${SLACK_WEBHOOK_URL}'
     channel: '#alerts'
     send_resolved: true
     title: '[{{ .Status | toUpper }}] {{ .CommonAnnotations.summary }}'
