@@ -50,6 +50,10 @@ Returns the upload history for the authenticated user.
 **Headers:**
 *   `Authorization: Bearer <token>`
 
+**Query Parameters:**
+*   `limit` (optional): Maximum number of records to return (default: `20`).
+*   `offset` (optional): Number of records to skip (default: `0`).
+
 **Response (200 OK):**
 ```json
 [

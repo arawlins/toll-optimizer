@@ -1,15 +1,27 @@
 use axum::{
     Json,
-    extract::{Multipart, State},
+    extract::{Multipart, State, Query},
     http::StatusCode,
     response::IntoResponse,
 };
 use rust_decimal::Decimal;
 use rust_decimal::prelude::FromPrimitive;
+use serde::Deserialize;
 use sqlx::PgPool;
 use toll_optimizer_core::{csv_parser, trip_analyzer};
 
 use crate::{auth::Claims, db::summary::SummaryDb, models::UploadSummary};
+
+#[derive(Deserialize)]
+pub struct HistoryQuery {
+    #[serde(default = "default_limit")]
+    pub limit: i64,
+    #[serde(default = "default_offset")]
+    pub offset: i64,
+}
+
+fn default_limit() -> i64 { 20 }
+fn default_offset() -> i64 { 0 }
 
 pub async fn analyze(
     State(pool): State<PgPool>,
@@ -129,9 +141,10 @@ pub async fn analyze(
 pub async fn history(
     State(pool): State<PgPool>,
     claims: Claims,
+    Query(query): Query<HistoryQuery>,
 ) -> Result<Json<Vec<UploadSummary>>, (StatusCode, String)> {
     let summaries = pool
-        .get_summaries_by_user(claims.sub)
+        .get_summaries_by_user(claims.sub, query.limit, query.offset)
         .await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
