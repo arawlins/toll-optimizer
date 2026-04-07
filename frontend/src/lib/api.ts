@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-if (!import.meta.env.VITE_API_URL) {
+if (import.meta.env.VITE_API_URL === undefined) {
   throw new Error("VITE_API_URL environment variable is not set.");
 }
 
