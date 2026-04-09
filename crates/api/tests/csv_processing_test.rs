@@ -23,9 +23,15 @@ fn test_api_processes_csv_with_unknown_points() {
     assert!(status.success());
 
     // 2. Start the API
-    // Note: We assume DATABASE_URL is set in the environment or .env for this to work.
-    // In a real CI, we'd use a mock DB or a test container.
+    let mut db_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "postgres://admin:password@localhost:5433/toll_optimizer".to_string());
+    if db_url.contains("@localhost/") || db_url.contains("@127.0.0.1/") {
+        db_url = db_url.replace("@localhost/", "@localhost:5433/");
+        db_url = db_url.replace("@127.0.0.1/", "@127.0.0.1:5433/");
+    }
+
     let child = Command::new("../../target/debug/toll-optimizer-api")
+        .env("DATABASE_URL", db_url)
+        .env("PORT", "3005")
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
         .spawn()
@@ -38,7 +44,7 @@ fn test_api_processes_csv_with_unknown_points() {
     let timeout = Duration::from_secs(15);
     let mut ready = false;
     while start.elapsed() < timeout {
-        if TcpStream::connect("127.0.0.1:3000").is_ok() {
+        if TcpStream::connect("127.0.0.1:3005").is_ok() {
             ready = true;
             break;
         }

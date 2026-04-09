@@ -25,7 +25,15 @@ fn setup_api() -> (KillOnDrop, String) {
     assert!(status.success());
 
     // Start the process
+    let mut db_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "postgres://admin:password@localhost:5433/toll_optimizer".to_string());
+    if db_url.contains("@localhost/") || db_url.contains("@127.0.0.1/") {
+        db_url = db_url.replace("@localhost/", "@localhost:5433/");
+        db_url = db_url.replace("@127.0.0.1/", "@127.0.0.1:5433/");
+    }
+
     let child = Command::new("../../target/debug/toll-optimizer-api")
+        .env("DATABASE_URL", db_url)
+        .env("PORT", "3005")
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
         .spawn()
@@ -33,13 +41,13 @@ fn setup_api() -> (KillOnDrop, String) {
 
     let guard = KillOnDrop(child);
 
-    // Wait for the server to start (polling port 3000)
+    // Wait for the server to start (polling port 3005)
     let start = Instant::now();
     let timeout = Duration::from_secs(15);
     let mut success = false;
 
     while start.elapsed() < timeout {
-        match TcpStream::connect("127.0.0.1:3000") {
+        match TcpStream::connect("127.0.0.1:3005") {
             Ok(_) => {
                 success = true;
                 break;
@@ -56,14 +64,14 @@ fn setup_api() -> (KillOnDrop, String) {
 
     assert!(
         success,
-        "API did not start listening on port 3000 within timeout"
+        "API did not start listening on port 3005 within timeout"
     );
 
     // Register and login to get a token
     let client = Client::new();
     let email = format!("test_{}@example.com", uuid::Uuid::new_v4());
     client
-        .post("http://127.0.0.1:3000/auth/register")
+        .post("http://127.0.0.1:3005/auth/register")
         .json(&json!({
             "email": email,
             "password": "password123"
@@ -72,7 +80,7 @@ fn setup_api() -> (KillOnDrop, String) {
         .expect("Failed to register");
 
     let login_res = client
-        .post("http://127.0.0.1:3000/auth/login")
+        .post("http://127.0.0.1:3005/auth/login")
         .json(&json!({
             "email": email,
             "password": "password123"
@@ -101,7 +109,7 @@ fn test_security_xss_filename() {
     );
 
     let res = client
-        .post("http://127.0.0.1:3000/api/analyze")
+        .post("http://127.0.0.1:3005/api/analyze")
         .bearer_auth(&token)
         .multipart(form)
         .send()
@@ -111,7 +119,7 @@ fn test_security_xss_filename() {
 
     // Check history to see if it was saved correctly (it should be literal in the DB)
     let history_res = client
-        .get("http://127.0.0.1:3000/api/history")
+        .get("http://127.0.0.1:3005/api/history")
         .bearer_auth(&token)
         .send()
         .expect("Failed to get history");
@@ -134,7 +142,7 @@ fn test_security_binary_content_rejection() {
     );
 
     let res = client
-        .post("http://127.0.0.1:3000/api/analyze")
+        .post("http://127.0.0.1:3005/api/analyze")
         .bearer_auth(&token)
         .multipart(form)
         .send()
@@ -157,7 +165,7 @@ fn test_security_large_file_handling() {
     );
 
     let res = client
-        .post("http://127.0.0.1:3000/api/analyze")
+        .post("http://127.0.0.1:3005/api/analyze")
         .bearer_auth(&token)
         .multipart(form)
         .send()
@@ -176,7 +184,7 @@ fn test_security_missing_auth_header() {
     let client = Client::new();
 
     let res = client
-        .get("http://127.0.0.1:3000/api/history")
+        .get("http://127.0.0.1:3005/api/history")
         // Deliberately no bearer_auth
         .send()
         .expect("Failed to send request");
@@ -195,7 +203,7 @@ fn test_security_tampered_jwt() {
     tampered_token.push('X');
 
     let res = client
-        .get("http://127.0.0.1:3000/api/history")
+        .get("http://127.0.0.1:3005/api/history")
         .bearer_auth(&tampered_token)
         .send()
         .expect("Failed to send request");
@@ -237,7 +245,7 @@ fn test_security_expired_jwt() {
     ).expect("Failed to encode forged JWT");
 
     let res = client
-        .get("http://127.0.0.1:3000/api/history")
+        .get("http://127.0.0.1:3005/api/history")
         .bearer_auth(&expired_token)
         .send()
         .expect("Failed to send request");
@@ -257,7 +265,7 @@ fn test_security_non_csv_content() {
     );
 
     let res = client
-        .post("http://127.0.0.1:3000/api/analyze")
+        .post("http://127.0.0.1:3005/api/analyze")
         .bearer_auth(&token)
         .multipart(form)
         .send()
@@ -278,7 +286,7 @@ fn test_security_empty_file_handling() {
         multipart::Form::new().part("file", multipart::Part::text("").file_name("empty.csv"));
 
     let res = client
-        .post("http://127.0.0.1:3000/api/analyze")
+        .post("http://127.0.0.1:3005/api/analyze")
         .bearer_auth(&token)
         .multipart(form)
         .send()
@@ -286,4 +294,37 @@ fn test_security_empty_file_handling() {
 
     assert_eq!(res.status(), reqwest::StatusCode::BAD_REQUEST);
     assert!(res.text().unwrap().contains("No file provided"));
+}
+
+#[test]
+fn test_security_duplicate_email_registration() {
+    let (_guard, _) = setup_api();
+    let client = Client::new();
+    let email = format!("dup_{}@example.com", uuid::Uuid::new_v4());
+
+    // Register first time
+    let res1 = client
+        .post("http://127.0.0.1:3005/auth/register")
+        .json(&json!({
+            "email": email,
+            "password": "password123"
+        }))
+        .send()
+        .expect("Failed to register");
+
+    assert!(res1.status().is_success());
+
+    // Register second time with the same email
+    let res2 = client
+        .post("http://127.0.0.1:3005/auth/register")
+        .json(&json!({
+            "email": email,
+            "password": "password123"
+        }))
+        .send()
+        .expect("Failed to register duplicate");
+
+    assert_eq!(res2.status(), reqwest::StatusCode::BAD_REQUEST);
+    let err_msg = res2.text().unwrap();
+    assert!(err_msg.contains("Registration failed"));
 }

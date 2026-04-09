@@ -7,7 +7,7 @@ use dotenvy::dotenv;
 use sqlx::postgres::PgPoolOptions;
 use std::env;
 use std::net::SocketAddr;
-use tower_governor::{GovernorLayer, governor::GovernorConfigBuilder};
+use tower_governor::{GovernorLayer, governor::GovernorConfigBuilder, key_extractor::KeyExtractor, GovernorError};
 use tower_http::cors::CorsLayer;
 use tower_http::services::{ServeDir, ServeFile};
 use tower_http::trace::TraceLayer;
@@ -16,6 +16,16 @@ mod auth;
 mod db;
 mod handlers;
 mod models;
+
+#[derive(Debug, Clone, Copy, Default)]
+pub struct GlobalKeyExtractor;
+
+impl KeyExtractor for GlobalKeyExtractor {
+    type Key = ();
+    fn extract<B>(&self, _req: &axum::http::Request<B>) -> Result<Self::Key, GovernorError> {
+        Ok(())
+    }
+}
 
 #[tokio::main]
 async fn main() {
@@ -62,6 +72,7 @@ async fn main() {
 
     let governor_conf = std::sync::Arc::new(
         GovernorConfigBuilder::default()
+            .key_extractor(GlobalKeyExtractor)
             .per_second(2)
             .burst_size(5)
             .finish()
@@ -92,8 +103,17 @@ async fn main() {
         .layer(cors)
         .with_state(pool);
 
-    let addr = SocketAddr::from(([0, 0, 0, 0], 3000));
+    let port = env::var("PORT")
+        .unwrap_or_else(|_| "3000".to_string())
+        .parse::<u16>()
+        .unwrap_or(3000);
+    let addr = SocketAddr::from(([0, 0, 0, 0], port));
     tracing::info!("listening on {}", addr);
     let listener = tokio::net::TcpListener::bind(addr).await.unwrap();
-    axum::serve(listener, app).await.unwrap();
+    axum::serve(
+        listener,
+        app.into_make_service_with_connect_info::<SocketAddr>(),
+    )
+    .await
+    .unwrap();
 }

@@ -151,3 +151,25 @@ fn test_westbound_zone_boundary() {
     // Testing there was no panic, and that we have a result
     assert_eq!(wb_analysis.len(), 1);
 }
+
+#[test]
+fn test_midnight_trip_parsing() {
+    // 12:00 AM is midnight
+    let midnight_csv = vec![
+        "\"Transponder/Plate Number\",\"Vehicle Class\",\"Date of Trip\",\"Entry Time\",\"Entry Point\",\"Exit Point\",\"Distance (km)\",\"Toll Charge ($)\",\"Trip Toll Charge ($)\",\"Camera Charge ($)\"".to_string(),
+        "\"TEST_PLATE\",\"Light vehicle\",\"28 Aug 25\",\"12:00 AM\",\"QEW\",\"Trafalgar\",\"10.0\",\"0.00\",\"0.00\",\"0.00\"".to_string(),
+    ];
+    let midnight_parsed = csv_parser::parse_trips(midnight_csv.join("\n").as_bytes());
+    
+    // There should be 1 trip successfully parsed
+    assert_eq!(midnight_parsed.len(), 1, "Midnight trip was not parsed successfully");
+    assert_eq!(midnight_parsed[0].1.len(), 1);
+    
+    // Let's verify timeslot mapping
+    let analysis = trip_analyzer::analyze_trips_by_time(&midnight_parsed);
+    assert_eq!(analysis.len(), 1);
+    let summary = &analysis[0];
+    let centroid = &summary.centroids[0];
+    // In 2025, 12:00 AM slot is valid and the trip should be placed there
+    assert_eq!(centroid.centroid_time, "12:00 AM");
+}

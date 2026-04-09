@@ -22,7 +22,15 @@ fn setup_api() -> (KillOnDrop, String) {
     assert!(status.success());
 
     // Start the process
+    let mut db_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "postgres://admin:password@localhost:5433/toll_optimizer".to_string());
+    if db_url.contains("@localhost/") || db_url.contains("@127.0.0.1/") {
+        db_url = db_url.replace("@localhost/", "@localhost:5433/");
+        db_url = db_url.replace("@127.0.0.1/", "@127.0.0.1:5433/");
+    }
+
     let child = Command::new("../../target/debug/toll-optimizer-api")
+        .env("DATABASE_URL", db_url)
+        .env("PORT", "3005")
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
         .spawn()
@@ -36,7 +44,7 @@ fn setup_api() -> (KillOnDrop, String) {
     let mut success = false;
 
     while start.elapsed() < timeout {
-        match TcpStream::connect("127.0.0.1:3000") {
+        match TcpStream::connect("127.0.0.1:3005") {
             Ok(_) => {
                 success = true;
                 break;
@@ -60,7 +68,7 @@ fn setup_api() -> (KillOnDrop, String) {
     let client = Client::new();
     let email = format!("test_{}@example.com", uuid::Uuid::new_v4());
     client
-        .post("http://127.0.0.1:3000/auth/register")
+        .post("http://127.0.0.1:3005/auth/register")
         .json(&json!({
             "email": email,
             "password": "password123"
@@ -69,7 +77,7 @@ fn setup_api() -> (KillOnDrop, String) {
         .expect("Failed to register");
 
     let login_res = client
-        .post("http://127.0.0.1:3000/auth/login")
+        .post("http://127.0.0.1:3005/auth/login")
         .json(&json!({
             "email": email,
             "password": "password123"
@@ -100,7 +108,15 @@ fn test_api_starts_and_listens() {
     assert!(status.success());
 
     // Start the process
+    let mut db_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "postgres://admin:password@localhost:5433/toll_optimizer".to_string());
+    if db_url.contains("@localhost/") || db_url.contains("@127.0.0.1/") {
+        db_url = db_url.replace("@localhost/", "@localhost:5433/");
+        db_url = db_url.replace("@127.0.0.1/", "@127.0.0.1:5433/");
+    }
+
     let child = Command::new("../../target/debug/toll-optimizer-api")
+        .env("DATABASE_URL", db_url)
+        .env("PORT", "3005")
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
         .spawn()
@@ -114,7 +130,7 @@ fn test_api_starts_and_listens() {
     let mut success = false;
 
     while start.elapsed() < timeout {
-        match TcpStream::connect("127.0.0.1:3000") {
+        match TcpStream::connect("127.0.0.1:3005") {
             Ok(_) => {
                 success = true;
                 break;
@@ -145,7 +161,15 @@ fn test_registration_and_login() {
     assert!(status.success());
 
     // 2. Start the API
+    let mut db_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "postgres://admin:password@localhost:5433/toll_optimizer".to_string());
+    if db_url.contains("@localhost/") || db_url.contains("@127.0.0.1/") {
+        db_url = db_url.replace("@localhost/", "@localhost:5433/");
+        db_url = db_url.replace("@127.0.0.1/", "@127.0.0.1:5433/");
+    }
+
     let child = Command::new("../../target/debug/toll-optimizer-api")
+        .env("DATABASE_URL", db_url)
+        .env("PORT", "3005")
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
         .spawn()
@@ -155,10 +179,10 @@ fn test_registration_and_login() {
 
     // 3. Wait for the server to start
     let start = Instant::now();
-    let timeout = Duration::from_secs(10);
+    let timeout = Duration::from_secs(30);
     let mut ready = false;
     while start.elapsed() < timeout {
-        if TcpStream::connect("127.0.0.1:3000").is_ok() {
+        if TcpStream::connect("127.0.0.1:3005").is_ok() {
             ready = true;
             break;
         }
@@ -170,7 +194,7 @@ fn test_registration_and_login() {
     let client = reqwest::blocking::Client::new();
     let unique_email = format!("test_{}@example.com", uuid::Uuid::new_v4());
     let register_res = client
-        .post("http://127.0.0.1:3000/auth/register")
+        .post("http://127.0.0.1:3005/auth/register")
         .json(&serde_json::json!({
             "email": unique_email,
             "password": "password123"
@@ -186,7 +210,7 @@ fn test_registration_and_login() {
 
     // 5. Test /auth/login
     let login_res = client
-        .post("http://127.0.0.1:3000/auth/login")
+        .post("http://127.0.0.1:3005/auth/login")
         .json(&serde_json::json!({
             "email": unique_email,
             "password": "password123"
@@ -216,7 +240,7 @@ fn test_duplicate_email_registration() {
     
     // First registration should succeed
     let register_res1 = client
-        .post("http://127.0.0.1:3000/auth/register")
+        .post("http://127.0.0.1:3005/auth/register")
         .json(&json!({
             "email": email,
             "password": "password123"
@@ -228,7 +252,7 @@ fn test_duplicate_email_registration() {
 
     // Second registration with same email should fail (400 Bad Request usually, or some client error)
     let register_res2 = client
-        .post("http://127.0.0.1:3000/auth/register")
+        .post("http://127.0.0.1:3005/auth/register")
         .json(&json!({
             "email": email,
             "password": "password123"
@@ -247,7 +271,7 @@ fn test_get_summaries_isolation() {
     // Register User B and get token
     let email_b = format!("test_{}@example.com", uuid::Uuid::new_v4());
     client
-        .post("http://127.0.0.1:3000/auth/register")
+        .post("http://127.0.0.1:3005/auth/register")
         .json(&json!({
             "email": email_b,
             "password": "password123"
@@ -256,7 +280,7 @@ fn test_get_summaries_isolation() {
         .expect("Failed to register User B");
 
     let login_res_b = client
-        .post("http://127.0.0.1:3000/auth/login")
+        .post("http://127.0.0.1:3005/auth/login")
         .json(&json!({
             "email": email_b,
             "password": "password123"
@@ -272,7 +296,7 @@ fn test_get_summaries_isolation() {
         reqwest::blocking::multipart::Part::text("\"Transponder/Plate Number\",\"Vehicle Class\",\"Date of Trip\",\"Entry Time\",\"Entry Point\",\"Exit Point\",\"Distance (km)\",\"Toll Charge ($)\",\"Trip Toll Charge ($)\",\"Camera Charge ($)\"\n\"TAG123\",\"Light vehicle\",\"28 Aug 25\",\"10:00 AM\",\"QEW\",\"Trafalgar\",\"10.0\",\"0.00\",\"0.00\",\"0.00\"").file_name("file_a.csv"),
     );
 
-    client.post("http://127.0.0.1:3000/api/analyze").bearer_auth(&token_a).multipart(form_a).send().expect("User A upload failed");
+    client.post("http://127.0.0.1:3005/api/analyze").bearer_auth(&token_a).multipart(form_a).send().expect("User A upload failed");
 
     // User B uploads a file containing TAG888
     let form_b = reqwest::blocking::multipart::Form::new().part(
@@ -280,16 +304,16 @@ fn test_get_summaries_isolation() {
         reqwest::blocking::multipart::Part::text("\"Transponder/Plate Number\",\"Vehicle Class\",\"Date of Trip\",\"Entry Time\",\"Entry Point\",\"Exit Point\",\"Distance (km)\",\"Toll Charge ($)\",\"Trip Toll Charge ($)\",\"Camera Charge ($)\"\n\"TAG888\",\"Light vehicle\",\"28 Aug 25\",\"10:00 AM\",\"QEW\",\"Trafalgar\",\"10.0\",\"0.00\",\"0.00\",\"0.00\"").file_name("file_b.csv"),
     );
 
-    client.post("http://127.0.0.1:3000/api/analyze").bearer_auth(&token_b).multipart(form_b).send().expect("User B upload failed");
+    client.post("http://127.0.0.1:3005/api/analyze").bearer_auth(&token_b).multipart(form_b).send().expect("User B upload failed");
 
     // Check User A history
-    let history_a: serde_json::Value = client.get("http://127.0.0.1:3000/api/history").bearer_auth(&token_a).send().unwrap().json().unwrap();
+    let history_a: serde_json::Value = client.get("http://127.0.0.1:3005/api/history").bearer_auth(&token_a).send().unwrap().json().unwrap();
     let history_a_str = history_a.to_string();
     assert!(history_a_str.contains("file_a.csv"));
     assert!(!history_a_str.contains("file_b.csv"));
 
     // Check User B history
-    let history_b: serde_json::Value = client.get("http://127.0.0.1:3000/api/history").bearer_auth(&token_b).send().unwrap().json().unwrap();
+    let history_b: serde_json::Value = client.get("http://127.0.0.1:3005/api/history").bearer_auth(&token_b).send().unwrap().json().unwrap();
     let history_b_str = history_b.to_string();
     assert!(!history_b_str.contains("file_a.csv"));
     assert!(history_b_str.contains("file_b.csv"));
@@ -312,7 +336,7 @@ fn test_decimal_boundary() {
     );
 
     let res = client
-        .post("http://127.0.0.1:3000/api/analyze")
+        .post("http://127.0.0.1:3005/api/analyze")
         .bearer_auth(&token)
         .multipart(form)
         .send()
