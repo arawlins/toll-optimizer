@@ -69,9 +69,6 @@ export function Navbar() {
                   </button>
                 </>
               )}
-              {location.pathname === '/login' && (
-                <button className="text-sm font-medium text-slate-500 hover:text-primary transition-colors font-headline">Help</button>
-              )}
             </>
           )}
         </div>
