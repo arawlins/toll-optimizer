@@ -29,11 +29,28 @@ The monitoring stack consists of the following components:
 | **Grafana** | [http://localhost:3001](http://localhost:3001) | `admin` / `admin` (or `GRAFANA_PASSWORD`) |
 | **Prometheus** | [http://localhost:9090](http://localhost:9090) | N/A |
 | **Alertmanager** | [http://localhost:9093](http://localhost:9093) | N/A |
-| **Loki API** | [http://localhost:3100](http://localhost:3100) | N/A |
+| **Loki API** | [http://localhost:3100](http://localhost:3100) | `X-Scope-OrgID: fake` (Header required) |
 
 ---
 
-## 3. Log-Based Alerting (Loki)
+## 3. Loki Security & Multi-tenancy
+
+Loki is configured with `auth_enabled: true` to prevent unauthorized access. This enables multi-tenancy mode, which requires every request to include a tenant identifier.
+
+### Tenant Configuration
+-   **Default Tenant ID**: `fake`
+-   **Clients**: Both Promtail and Grafana are configured to use the `fake` tenant ID.
+-   **Ruler**: Alert rules are stored in a subdirectory matching the tenant ID (`monitoring/loki/rules/fake/`).
+
+### Interacting with secured Loki
+If querying Loki via `curl` or external tools, you MUST include the tenant header:
+```bash
+curl -H "X-Scope-OrgID: fake" http://localhost:3100/loki/api/v1/query...
+```
+
+---
+
+## 4. Log-Based Alerting (Loki)
 
 Alerts are defined in `monitoring/loki/rules/fake/rules.yml`.
 

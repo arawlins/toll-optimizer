@@ -257,27 +257,27 @@ The existing tests (`crates/api/tests/`, `crates/core/tests/`) cover happy paths
 
 ---
 
-## 10. Priority Action List
+## 10. Priority Action List (Implementation Status)
 
 **P1 — Fix before production deployment:**
-1. Implement rate limiting on `/auth/login` and `/auth/register`.
-2. Replace `CorsLayer::permissive()` with explicit allowed origins.
-4. Move JWT storage from `localStorage` to `HttpOnly` cookie.
-5. Fix the midnight time parsing bug (`hour == 0` rejection).
-6. Add bounds check to the westbound off-by-one risk.
-7. Replace the fragile CSV `split()` with the `csv` crate.
+1. [x] Implement rate limiting on `/auth/login` and `/auth/register`.
+2. [x] Replace `CorsLayer::permissive()` with explicit allowed origins.
+4. [ ] Move JWT storage from `localStorage` to `HttpOnly` cookie. (Currently in `sessionStorage`).
+5. [x] Fix the midnight time parsing bug (`hour == 0` rejection). Verified with tests.
+6. [x] Add bounds check to the westbound off-by-one risk.
+7. [x] Replace the fragile CSV `split()` with the `csv` crate.
 
 **P2 — Fix before public release:**
-8. Add pagination to `GET /api/history`.
-9. Increase `DECIMAL(10, 2)` to `DECIMAL(15, 2)` in the schema.
-10. Add `HEALTHCHECK` to `Dockerfile` and run as non-root user.
-11. Define Prometheus alert rules.
-12. Enable Loki authentication.
-13. Fix expired-token detection in `AuthGuard.tsx`.
-14. Generate `.sqlx` offline query cache or document the verification gap.
+8. [x] Add pagination to `GET /api/history`.
+9. [x] Increase `DECIMAL(10, 2)` to `DECIMAL(15, 2)` in the schema.
+10. [x] Add `HEALTHCHECK` to `Dockerfile` and run as non-root user.
+11. [x] Define Prometheus alert rules.
+12. [x] Enable Loki authentication.
+13. [x] Fix expired-token detection in `AuthGuard.tsx`.
+14. [x] Document SQLX verification gap.
 
 **P3 — Improve robustness:**
-15. Add test coverage for edge cases listed in Section 8.
-16. Define TypeScript interfaces for `AnalysisResponse`.
-17. Extend the holiday list beyond 2026 or make it configurable.
-18. Add database `CHECK` constraints for non-negative financial values.
+15. [x] Add test coverage for edge cases listed in Section 8 (Midnight, Duplicate Email, Isolation, etc).
+16. [x] Define TypeScript interfaces for `AnalysisResponse`.
+17. [x] Extend the holiday list beyond 2026 (Extended to 2028).
+18. [x] Add database `CHECK` constraints for non-negative financial values.

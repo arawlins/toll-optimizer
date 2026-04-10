@@ -101,6 +101,23 @@ cargo run -p toll-optimizer-cli -- <csv_file_path>
 cargo run -p toll-optimizer-cli -- csv/"2025-12-28 - 573522284 Statement.csv"
 ```
 
+## Running Tests
+
+The test suite includes unit tests, core logic tests, and full API integration tests.
+
+### Prerequisites
+Some API integration tests require a running database. Start it with:
+```bash
+docker-compose up db -d
+```
+
+### Execution
+Due to integration tests spawning API processes that bind to specific ports and share the database, tests must be run **sequentially**:
+
+```bash
+cargo test -- --test-threads=1
+```
+
 ## Features
 - **Time-Based Analysis**: Identifies trip clusters and calculates potential savings if you were to leave in a cheaper timeslot.
 - **Distance-Based Analysis**: Suggests alternate entry or exit points that could lower your toll for the same route.

@@ -42,6 +42,19 @@ Authenticates a user and returns a session token.
 
 ---
 
+## Security & Rate Limiting
+
+### Rate Limiting
+The `/auth` endpoints (`/register` and `/login`) are protected by a rate limiter to prevent brute-force attacks.
+-   **Limit**: 2 requests per second.
+-   **Burst**: Up to 5 requests.
+-   **Bypass**: Can be disabled by setting the environment variable `DISABLE_RATE_LIMIT=true` (recommended for development and CI only).
+
+### IP Extraction
+Rate limiting is based on the client's IP address. If running behind a proxy, ensure the `X-Forwarded-For` header is set correctly. The API uses a `GlobalKeyExtractor` as a fallback if connection info is unavailable.
+
+---
+
 ## Analysis & History
 
 ### `GET /api/history`
