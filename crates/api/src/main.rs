@@ -79,12 +79,15 @@ async fn main() {
             .unwrap(),
     );
 
-    let auth_routes = Router::new()
+    let mut auth_routes = Router::new()
         .route("/register", post(handlers::auth::register))
-        .route("/login", post(handlers::auth::login))
-        .layer(GovernorLayer {
+        .route("/login", post(handlers::auth::login));
+
+    if env::var("DISABLE_RATE_LIMIT").unwrap_or_default() != "true" {
+        auth_routes = auth_routes.layer(GovernorLayer {
             config: governor_conf,
         });
+    }
 
     let app = Router::new()
         .route("/health", get(|| async { "OK" }))

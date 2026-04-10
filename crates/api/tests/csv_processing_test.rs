@@ -32,6 +32,7 @@ fn test_api_processes_csv_with_unknown_points() {
     let child = Command::new("../../target/debug/toll-optimizer-api")
         .env("DATABASE_URL", db_url)
         .env("PORT", "3005")
+        .env("DISABLE_RATE_LIMIT", "true")
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
         .spawn()
