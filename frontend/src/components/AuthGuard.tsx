@@ -24,7 +24,7 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
   }, [isExpired, logout]);
 
   if (!token || isExpired) {
-    return <Navigate to="/login" replace />;
+    return <Navigate to="/" replace />;
   }
 
   return <>{children}</>;
