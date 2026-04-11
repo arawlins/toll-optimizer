@@ -15,6 +15,7 @@ import { UploadDropzone } from '../components/UploadDropzone';
 
 import { History as HistoryIcon, TrendingDown, Clock, MapPin, ChevronDown, ChevronUp, Route } from 'lucide-react';
 import { Navbar } from '../components/Navbar';
+import { Footer } from '../components/Footer';
 import clsx from 'clsx';
 
 export function Dashboard() {
@@ -475,6 +476,7 @@ export function Dashboard() {
           </div>
         </section>
       </main>
+      <Footer />
     </div>
   );
 }

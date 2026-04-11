@@ -4,6 +4,7 @@ import { Login } from './pages/Login';
 import { Dashboard } from './pages/Dashboard';
 import { Landing } from './pages/Landing';
 import { HowTo } from './pages/HowTo';
+import { PrivacyPolicy } from './pages/PrivacyPolicy';
 import { AuthGuard } from './components/AuthGuard';
 
 const queryClient = new QueryClient();
@@ -16,6 +17,7 @@ function App() {
           <Route path="/" element={<Landing />} />
           <Route path="/login" element={<Login />} />
           <Route path="/how-to" element={<HowTo />} />
+          <Route path="/privacy-policy" element={<PrivacyPolicy />} />
           <Route
             path="/dashboard"
             element={

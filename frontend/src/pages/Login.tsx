@@ -2,8 +2,9 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../store';
 import { endpoints } from '../lib/api';
-import { Loader2, Lock, TrendingDown } from 'lucide-react';
+import { Loader2, Lock } from 'lucide-react';
 import { Navbar } from '../components/Navbar';
+import { Footer } from '../components/Footer';
 
 export function Login() {
   const [isRegistering, setIsRegistering] = useState(false);
@@ -139,21 +140,7 @@ export function Login() {
         </div>
       </main>
 
-      {/* Footer */}
-      <footer className="bg-slate-50 w-full py-8 mt-auto border-t border-slate-100">
-        <div className="flex flex-col md:flex-row justify-between items-center px-8 max-w-7xl mx-auto gap-4">
-          <div className="flex items-center gap-2">
-            <TrendingDown className="text-primary w-5 h-5" />
-            <span className="font-headline font-bold text-slate-900">Toll Optimizer</span>
-          </div>
-          <div className="flex gap-8">
-            <a className="text-xs tracking-widest uppercase text-slate-400 hover:text-primary transition-colors font-medium" href="#">Privacy Policy</a>
-            <a className="text-xs tracking-widest uppercase text-slate-400 hover:text-primary transition-colors font-medium" href="#">Terms</a>
-            <a className="text-xs tracking-widest uppercase text-slate-400 hover:text-primary transition-colors font-medium" href="#">Security</a>
-          </div>
-          <p className="text-xs tracking-widest uppercase text-slate-400 font-medium">© {new Date().getFullYear()} Toll Optimizer</p>
-        </div>
-      </footer>
+      <Footer />
     </div>
   );
 }

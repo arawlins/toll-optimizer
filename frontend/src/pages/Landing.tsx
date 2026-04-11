@@ -1,4 +1,3 @@
-import { useNavigate } from 'react-router-dom';
 import {
   TrendingDown,
   Wallet,
@@ -8,6 +7,9 @@ import {
   Lock
 } from 'lucide-react';
 import { Navbar } from '../components/Navbar';
+import { Footer } from '../components/Footer';
+
+import { useNavigate } from 'react-router-dom';
 
 export function Landing() {
   const navigate = useNavigate();
@@ -160,27 +162,7 @@ export function Landing() {
         </section>
       </main>
 
-      {/* Footer */}
-      <footer className="bg-slate-50 border-t border-slate-200/20 py-12">
-        <div className="max-w-7xl mx-auto px-6 flex flex-col md:flex-row justify-between items-center gap-8">
-          <div
-            className="text-lg font-bold text-slate-900 flex items-center gap-2 cursor-pointer"
-            onClick={() => navigate('/')}
-          >
-            <TrendingDown className="text-primary w-5 h-5" />
-            Toll Optimizer
-          </div>
-          <div className="flex flex-wrap justify-center gap-8">
-            <a className="text-slate-500 text-sm hover:text-blue-600 underline-offset-4 hover:underline" href="#">Privacy Policy</a>
-            <a className="text-slate-500 text-sm hover:text-blue-600 underline-offset-4 hover:underline" href="#">Terms of Service</a>
-            <a className="text-slate-500 text-sm hover:text-blue-600 underline-offset-4 hover:underline" href="#">Contact Us</a>
-            <a className="text-slate-500 text-sm hover:text-blue-600 underline-offset-4 hover:underline" href="#">Cookie Policy</a>
-          </div>
-          <div className="text-slate-500 text-sm">
-            © {new Date().getFullYear()} Toll Optimizer. All rights reserved.
-          </div>
-        </div>
-      </footer>
+      <Footer />
     </div>
   );
 }
