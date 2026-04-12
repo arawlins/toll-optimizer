@@ -22,7 +22,12 @@ export function Footer() {
             Privacy Policy
           </button>
           <a className="text-slate-500 text-sm hover:text-blue-600 underline-offset-4 hover:underline transition-colors" href="#">Terms of Service</a>
-          <a className="text-slate-500 text-sm hover:text-blue-600 underline-offset-4 hover:underline transition-colors" href="#">Contact Us</a>
+          <button 
+            onClick={() => navigate('/contact-us')}
+            className="text-slate-500 text-sm hover:text-blue-600 underline-offset-4 hover:underline transition-colors"
+          >
+            Contact Us
+          </button>
           <a className="text-slate-500 text-sm hover:text-blue-600 underline-offset-4 hover:underline transition-colors" href="#">Cookie Policy</a>
         </div>
         <div className="text-slate-500 text-sm font-medium">

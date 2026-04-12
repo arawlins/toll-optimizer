@@ -5,6 +5,7 @@ import { Dashboard } from './pages/Dashboard';
 import { Landing } from './pages/Landing';
 import { HowTo } from './pages/HowTo';
 import { PrivacyPolicy } from './pages/PrivacyPolicy';
+import { ContactUs } from './pages/ContactUs';
 import { AuthGuard } from './components/AuthGuard';
 
 const queryClient = new QueryClient();
@@ -18,6 +19,7 @@ function App() {
           <Route path="/login" element={<Login />} />
           <Route path="/how-to" element={<HowTo />} />
           <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+          <Route path="/contact-us" element={<ContactUs />} />
           <Route
             path="/dashboard"
             element={

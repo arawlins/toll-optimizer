@@ -167,7 +167,7 @@ export function PrivacyPolicy() {
             Our security team is ready to provide the transparency you need.
           </p>
           <button 
-            onClick={() => navigate('/login')}
+            onClick={() => navigate('/contact-us')}
             className="bg-white text-blue-600 px-8 py-3.5 rounded-xl font-bold hover:bg-slate-50 transition-all flex items-center gap-2 mx-auto active:scale-95 shadow-lg"
           >
             Contact Us <ArrowRight className="w-5 h-5" />
