@@ -8,11 +8,31 @@ import {
 } from 'lucide-react';
 import { Navbar } from '../components/Navbar';
 import { Footer } from '../components/Footer';
+import { useState, useEffect } from 'react';
+import { endpoints, type PricingResponse } from '../lib/api';
+import { Clock } from 'lucide-react';
 
 import { useNavigate } from 'react-router-dom';
 
 export function Landing() {
   const navigate = useNavigate();
+  const [pricing, setPricing] = useState<PricingResponse | null>(null);
+
+  useEffect(() => {
+    const fetchPricing = async () => {
+      try {
+        const now = new Date();
+        const date = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+        const time = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+        
+        const response = await endpoints.pricing({ date, time });
+        setPricing(response.data);
+      } catch (error) {
+        console.error('Failed to fetch pricing:', error);
+      }
+    };
+    fetchPricing();
+  }, []);
 
   return (
     <div className="bg-surface text-on-surface antialiased font-body min-h-screen">
@@ -65,6 +85,64 @@ export function Landing() {
             </div>
           </div>
         </section>
+
+        {/* Live Pricing Section */}
+        {pricing && (
+          <section className="py-12 bg-white border-y border-outline-variant/20">
+            <div className="max-w-7xl mx-auto px-6">
+              <div className="bg-surface-container-lowest p-8 rounded-2xl shadow-sm border border-primary/20 relative overflow-hidden">
+                <div className="absolute top-0 right-0 w-64 h-64 bg-primary/5 rounded-full blur-3xl -mr-20 -mt-20"></div>
+                
+                <div className="relative z-10 flex flex-col md:flex-row items-center gap-8 justify-between">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-3 mb-4">
+                      <div className="bg-primary/10 p-3 rounded-full text-primary">
+                        <Clock className="w-6 h-6" />
+                      </div>
+                      <h2 className="text-2xl md:text-3xl font-bold font-headline">Heading out now?</h2>
+                    </div>
+                    <p className="text-xl font-medium text-slate-700 mb-2">
+                      Leave <span className="font-bold text-primary">{pricing.next.average_wb > pricing.current.average_wb ? `before ${pricing.next.timeslot}` : `after ${pricing.next.timeslot}`}</span> to save money
+                    </p>
+                    <p className="text-sm text-slate-500">Based on live 407 ETR average rates for {pricing.day_type}s.</p>
+                  </div>
+                  
+                  <div className="flex-1 w-full flex gap-4 md:gap-8 justify-end">
+                    <div className="bg-surface p-5 rounded-xl border border-slate-100 flex-1 max-w-[260px] shadow-sm">
+                      <p className="text-sm font-bold uppercase tracking-wider text-slate-400 mb-3 text-center">
+                        Current Timeslot
+                        <span className="block opacity-70">({pricing.current.timeslot})</span>
+                      </p>
+                      <div className="flex justify-between items-center mb-2">
+                        <span className="text-slate-600 font-medium">Eastbound</span>
+                        <span className="font-bold">{pricing.current.average_eb.toFixed(2)}¢/km</span>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-slate-600 font-medium">Westbound</span>
+                        <span className="font-bold">{pricing.current.average_wb.toFixed(2)}¢/km</span>
+                      </div>
+                    </div>
+                    
+                    <div className={`p-5 rounded-xl border flex-1 max-w-[260px] shadow-sm ${pricing.next.average_wb < pricing.current.average_wb ? 'bg-green-50 border-green-200' : 'bg-surface border-slate-100'}`}>
+                      <p className={`text-sm font-bold uppercase tracking-wider mb-3 text-center ${pricing.next.average_wb < pricing.current.average_wb ? 'text-green-600' : 'text-slate-400'}`}>
+                        Next Timeslot
+                        <span className="block opacity-70">({pricing.next.timeslot})</span>
+                      </p>
+                      <div className="flex justify-between items-center mb-2">
+                        <span className="text-slate-600 font-medium">Eastbound</span>
+                        <span className="font-bold">{pricing.next.average_eb.toFixed(2)}¢/km</span>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-slate-600 font-medium">Westbound</span>
+                        <span className="font-bold">{pricing.next.average_wb.toFixed(2)}¢/km</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
+        )}
 
         {/* Features Section */}
         <section id="features" className="py-24 bg-surface-container-low">

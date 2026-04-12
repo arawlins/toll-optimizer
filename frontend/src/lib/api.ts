@@ -101,7 +101,20 @@ export interface AnalysisResponse {
   distance_analysis: DistanceAnalysisResult[];
 }
 
+export interface TimeslotPrices {
+  timeslot: string;
+  average_wb: number;
+  average_eb: number;
+}
+
+export interface PricingResponse {
+  current: TimeslotPrices;
+  next: TimeslotPrices;
+  day_type: string;
+}
+
 export const endpoints = {
+  pricing: (data: { date: string; time: string }) => api.post<PricingResponse>('/api/pricing', data),
   login: (data: any) => api.post<AuthResponse>('/auth/login', data),
   register: (data: any) => api.post<AuthResponse>('/auth/register', data),
   history: () => api.get<UploadSummary[]>('/api/history'),
