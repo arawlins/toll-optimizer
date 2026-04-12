@@ -6,6 +6,8 @@ import { Landing } from './pages/Landing';
 import { HowTo } from './pages/HowTo';
 import { PrivacyPolicy } from './pages/PrivacyPolicy';
 import { ContactUs } from './pages/ContactUs';
+import { TermsOfService } from './pages/TermsOfService';
+import { CookiePolicy } from './pages/CookiePolicy';
 import { AuthGuard } from './components/AuthGuard';
 
 const queryClient = new QueryClient();
@@ -20,6 +22,8 @@ function App() {
           <Route path="/how-to" element={<HowTo />} />
           <Route path="/privacy-policy" element={<PrivacyPolicy />} />
           <Route path="/contact-us" element={<ContactUs />} />
+          <Route path="/terms-of-service" element={<TermsOfService />} />
+          <Route path="/cookie-policy" element={<CookiePolicy />} />
           <Route
             path="/dashboard"
             element={

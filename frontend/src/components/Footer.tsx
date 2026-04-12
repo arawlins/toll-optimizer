@@ -21,14 +21,24 @@ export function Footer() {
           >
             Privacy Policy
           </button>
-          <a className="text-slate-500 text-sm hover:text-blue-600 underline-offset-4 hover:underline transition-colors" href="#">Terms of Service</a>
+          <button 
+            onClick={() => navigate('/terms-of-service')}
+            className="text-slate-500 text-sm hover:text-blue-600 underline-offset-4 hover:underline transition-colors"
+          >
+            Terms of Service
+          </button>
           <button 
             onClick={() => navigate('/contact-us')}
             className="text-slate-500 text-sm hover:text-blue-600 underline-offset-4 hover:underline transition-colors"
           >
             Contact Us
           </button>
-          <a className="text-slate-500 text-sm hover:text-blue-600 underline-offset-4 hover:underline transition-colors" href="#">Cookie Policy</a>
+          <button 
+            onClick={() => navigate('/cookie-policy')}
+            className="text-slate-500 text-sm hover:text-blue-600 underline-offset-4 hover:underline transition-colors"
+          >
+            Cookie Policy
+          </button>
         </div>
         <div className="text-slate-500 text-sm font-medium">
           © {new Date().getFullYear()} Toll Optimizer. All rights reserved.

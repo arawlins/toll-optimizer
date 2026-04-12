@@ -94,6 +94,7 @@ async fn main() {
         .layer(axum::extract::DefaultBodyLimit::max(10 * 1024 * 1024)) // 10MB limit
         .nest("/auth", auth_routes)
         .route("/api/analyze", post(handlers::analyze::analyze))
+        .route("/api/pricing", post(handlers::pricing::get_current_and_next_prices))
         .route("/api/history", get(handlers::analyze::history))
         .route(
             "/metrics",

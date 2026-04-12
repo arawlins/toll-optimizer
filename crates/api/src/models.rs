@@ -50,3 +50,23 @@ pub struct AnalysisResponse {
     pub time_analysis: serde_json::Value,
     pub distance_analysis: serde_json::Value,
 }
+
+#[derive(Debug, Deserialize)]
+pub struct PricingRequest {
+    pub date: String, // YYYY-MM-DD
+    pub time: String, // HH:MM AM/PM or HH:MM:SS
+}
+
+#[derive(Debug, Serialize)]
+pub struct TimeslotPrices {
+    pub timeslot: String,
+    pub average_wb: f64,
+    pub average_eb: f64,
+}
+
+#[derive(Debug, Serialize)]
+pub struct PricingResponse {
+    pub current: TimeslotPrices,
+    pub next: TimeslotPrices,
+    pub day_type: String,
+}

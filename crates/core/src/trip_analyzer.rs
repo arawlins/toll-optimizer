@@ -393,7 +393,7 @@ pub fn format_minutes_to_time(minutes: u32) -> String {
     format!("{}:{:02} {}", hour_12, minute, period)
 }
 
-fn parse_date(date: &str) -> Option<(u32, u32, u32)> {
+pub fn parse_date(date: &str) -> Option<(u32, u32, u32)> {
     let parts: Vec<&str> = date.split_whitespace().collect();
     if parts.len() != 3 {
         return None;
@@ -422,7 +422,7 @@ fn parse_date(date: &str) -> Option<(u32, u32, u32)> {
     Some((day, month, year))
 }
 
-fn is_weekend(day: u32, month: u32, year: u32) -> bool {
+pub fn is_weekend(day: u32, month: u32, year: u32) -> bool {
     let date = Date::new(year as u64, month as u64, day as u64);
     date.is_weekend()
 }
@@ -444,11 +444,11 @@ fn get_holidays() -> &'static std::collections::HashSet<(u32, u32, u32)> {
     })
 }
 
-fn is_holiday(day: u32, month: u32, year: u32) -> bool {
+pub fn is_holiday(day: u32, month: u32, year: u32) -> bool {
     get_holidays().contains(&(year, month, day))
 }
 
-fn classify_day(date: &str) -> Option<DayType> {
+pub fn classify_day(date: &str) -> Option<DayType> {
     if let Some((day, month, year)) = parse_date(date) {
         if is_holiday(day, month, year) {
             return Some(DayType::Holiday);
