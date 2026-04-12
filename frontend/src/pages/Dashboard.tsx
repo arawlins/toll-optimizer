@@ -264,33 +264,33 @@ export function Dashboard() {
                       {/* Transponder Header (Collapsible) */}
                       <button 
                         onClick={() => toggleTransponder(transponder.plate)}
-                        className="w-full text-left p-5 flex justify-between items-center hover:bg-gray-50 transition-colors"
+                        className="w-full text-left p-4 sm:p-5 flex flex-wrap sm:flex-nowrap justify-between items-center gap-4 hover:bg-gray-50 transition-colors"
                       >
-                        <div className="flex items-center gap-4">
-                          <div className="bg-blue-100 p-2 rounded-xl">
+                        <div className="flex items-center gap-3 sm:gap-4 min-w-0">
+                          <div className="bg-blue-100 p-2 rounded-xl flex-shrink-0">
                             <Route className="w-5 h-5 text-blue-600" />
                           </div>
-                          <div>
-                            <div className="flex items-center gap-2 mb-0.5">
-                              <h3 className="font-bold text-lg text-gray-900">{transponder.plate}</h3>
-                              <span className="px-2 py-0.5 bg-gray-100 text-gray-600 text-[10px] font-bold rounded uppercase tracking-widest">
+                          <div className="min-w-0">
+                            <div className="flex items-center gap-2 mb-0.5 flex-wrap">
+                              <h3 className="font-bold text-lg text-gray-900 truncate">{transponder.plate}</h3>
+                              <span className="px-2 py-0.5 bg-gray-100 text-gray-600 text-[10px] font-bold rounded uppercase tracking-widest whitespace-nowrap">
                                 Transponder
                               </span>
                             </div>
-                            <p className="text-xs text-gray-500 font-medium">
+                            <p className="text-xs text-gray-500 font-medium truncate">
                               {transponder.totalCentroids} common {viewMode === 'time' ? 'times' : 'distances'} found
                             </p>
                           </div>
                         </div>
                         
-                        <div className="flex items-center gap-6">
+                        <div className="flex items-center gap-4 sm:gap-6 flex-shrink-0 ml-auto">
                           <div className="text-right">
                             <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-0.5">Potential Savings</p>
                             <p className={clsx("text-lg font-black", transponder.totalSavings > 0.005 ? "text-green-600" : "text-gray-400")}>
                               ${Number(transponder.totalSavings).toFixed(2)}
                             </p>
                           </div>
-                          <div className="p-2 bg-gray-100 rounded-full text-gray-400 group-hover:bg-blue-100 group-hover:text-blue-600 transition-all">
+                          <div className="p-2 bg-gray-100 rounded-full text-gray-400 group-hover:bg-blue-100 group-hover:text-blue-600 transition-all flex-shrink-0">
                             {isTransponderExpanded ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
                           </div>
                         </div>

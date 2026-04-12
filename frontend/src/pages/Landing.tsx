@@ -40,8 +40,66 @@ export function Landing() {
       <Navbar />
 
       <main>
+        {/* Live Pricing Section */}
+        {pricing && (
+          <section className="pt-24 pb-12 bg-white border-b border-outline-variant/20">
+            <div className="max-w-7xl mx-auto px-6">
+              <div className="bg-surface-container-lowest p-8 rounded-2xl shadow-sm border border-primary/20 relative overflow-hidden">
+                <div className="absolute top-0 right-0 w-64 h-64 bg-primary/5 rounded-full blur-3xl -mr-20 -mt-20"></div>
+                
+                <div className="relative z-10 flex flex-col md:flex-row items-center gap-8 justify-between">
+                  <div className="flex-1 w-full text-center md:text-left">
+                    <div className="flex items-center justify-center md:justify-start gap-3 mb-4">
+                      <div className="bg-primary/10 p-3 rounded-full text-primary">
+                        <Clock className="w-6 h-6" />
+                      </div>
+                      <h2 className="text-2xl md:text-3xl font-bold font-headline">Heading out now?</h2>
+                    </div>
+                    <p className="text-xl font-medium text-slate-700 mb-2">
+                      Leave <span className="font-bold text-primary">{pricing.next.average_wb > pricing.current.average_wb ? `before ${pricing.next.timeslot}` : `after ${pricing.next.timeslot}`}</span> to save money
+                    </p>
+                    <p className="text-sm text-slate-500">Based on live 407 ETR average rates for {pricing.day_type}s.</p>
+                  </div>
+                  
+                  <div className="flex-1 w-full flex flex-col sm:flex-row gap-4 md:gap-8 justify-center md:justify-end items-center">
+                    <div className="bg-surface p-5 rounded-xl border border-slate-100 w-full sm:max-w-[260px] shadow-sm">
+                      <p className="text-sm font-bold uppercase tracking-wider text-slate-400 mb-3 text-center">
+                        Current Timeslot
+                        <span className="block opacity-70">({pricing.current.timeslot})</span>
+                      </p>
+                      <div className="flex justify-between items-center mb-2">
+                        <span className="text-slate-600 font-medium">Eastbound</span>
+                        <span className="font-bold">{pricing.current.average_eb.toFixed(2)}¢/km</span>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-slate-600 font-medium">Westbound</span>
+                        <span className="font-bold">{pricing.current.average_wb.toFixed(2)}¢/km</span>
+                      </div>
+                    </div>
+                    
+                    <div className={`p-5 rounded-xl border w-full sm:max-w-[260px] shadow-sm ${pricing.next.average_wb < pricing.current.average_wb ? 'bg-green-50 border-green-200' : 'bg-surface border-slate-100'}`}>
+                      <p className={`text-sm font-bold uppercase tracking-wider mb-3 text-center ${pricing.next.average_wb < pricing.current.average_wb ? 'text-green-600' : 'text-slate-400'}`}>
+                        Next Timeslot
+                        <span className="block opacity-70">({pricing.next.timeslot})</span>
+                      </p>
+                      <div className="flex justify-between items-center mb-2">
+                        <span className="text-slate-600 font-medium">Eastbound</span>
+                        <span className="font-bold">{pricing.next.average_eb.toFixed(2)}¢/km</span>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-slate-600 font-medium">Westbound</span>
+                        <span className="font-bold">{pricing.next.average_wb.toFixed(2)}¢/km</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
+        )}
+
         {/* Hero Section */}
-        <section className="relative pt-32 pb-20 md:pt-48 md:pb-32 overflow-hidden bg-surface">
+        <section className="relative pt-12 pb-20 md:pt-24 md:pb-32 overflow-hidden bg-surface">
           <div className="max-w-7xl mx-auto px-6 grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
             <div className="z-10">
               <h1 className="text-5xl md:text-7xl font-extrabold tracking-tight text-on-surface mb-6 leading-[1.1] font-headline">
@@ -85,64 +143,6 @@ export function Landing() {
             </div>
           </div>
         </section>
-
-        {/* Live Pricing Section */}
-        {pricing && (
-          <section className="py-12 bg-white border-y border-outline-variant/20">
-            <div className="max-w-7xl mx-auto px-6">
-              <div className="bg-surface-container-lowest p-8 rounded-2xl shadow-sm border border-primary/20 relative overflow-hidden">
-                <div className="absolute top-0 right-0 w-64 h-64 bg-primary/5 rounded-full blur-3xl -mr-20 -mt-20"></div>
-                
-                <div className="relative z-10 flex flex-col md:flex-row items-center gap-8 justify-between">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-3 mb-4">
-                      <div className="bg-primary/10 p-3 rounded-full text-primary">
-                        <Clock className="w-6 h-6" />
-                      </div>
-                      <h2 className="text-2xl md:text-3xl font-bold font-headline">Heading out now?</h2>
-                    </div>
-                    <p className="text-xl font-medium text-slate-700 mb-2">
-                      Leave <span className="font-bold text-primary">{pricing.next.average_wb > pricing.current.average_wb ? `before ${pricing.next.timeslot}` : `after ${pricing.next.timeslot}`}</span> to save money
-                    </p>
-                    <p className="text-sm text-slate-500">Based on live 407 ETR average rates for {pricing.day_type}s.</p>
-                  </div>
-                  
-                  <div className="flex-1 w-full flex gap-4 md:gap-8 justify-end">
-                    <div className="bg-surface p-5 rounded-xl border border-slate-100 flex-1 max-w-[260px] shadow-sm">
-                      <p className="text-sm font-bold uppercase tracking-wider text-slate-400 mb-3 text-center">
-                        Current Timeslot
-                        <span className="block opacity-70">({pricing.current.timeslot})</span>
-                      </p>
-                      <div className="flex justify-between items-center mb-2">
-                        <span className="text-slate-600 font-medium">Eastbound</span>
-                        <span className="font-bold">{pricing.current.average_eb.toFixed(2)}¢/km</span>
-                      </div>
-                      <div className="flex justify-between items-center">
-                        <span className="text-slate-600 font-medium">Westbound</span>
-                        <span className="font-bold">{pricing.current.average_wb.toFixed(2)}¢/km</span>
-                      </div>
-                    </div>
-                    
-                    <div className={`p-5 rounded-xl border flex-1 max-w-[260px] shadow-sm ${pricing.next.average_wb < pricing.current.average_wb ? 'bg-green-50 border-green-200' : 'bg-surface border-slate-100'}`}>
-                      <p className={`text-sm font-bold uppercase tracking-wider mb-3 text-center ${pricing.next.average_wb < pricing.current.average_wb ? 'text-green-600' : 'text-slate-400'}`}>
-                        Next Timeslot
-                        <span className="block opacity-70">({pricing.next.timeslot})</span>
-                      </p>
-                      <div className="flex justify-between items-center mb-2">
-                        <span className="text-slate-600 font-medium">Eastbound</span>
-                        <span className="font-bold">{pricing.next.average_eb.toFixed(2)}¢/km</span>
-                      </div>
-                      <div className="flex justify-between items-center">
-                        <span className="text-slate-600 font-medium">Westbound</span>
-                        <span className="font-bold">{pricing.next.average_wb.toFixed(2)}¢/km</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </section>
-        )}
 
         {/* Features Section */}
         <section id="features" className="py-24 bg-surface-container-low">
