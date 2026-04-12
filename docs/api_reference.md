@@ -1,5 +1,17 @@
 # API Reference
 
+## System
+
+### `GET /health`
+Simple health check endpoint to verify the API is running.
+
+**Response (200 OK):**
+```text
+OK
+```
+
+---
+
 ## Authentication
 
 ### `POST /auth/register`
@@ -141,6 +153,40 @@ Accepts a CSV statement, processes it, and returns the detailed analysis.
       ]
     }
   ]
+}
+```
+
+---
+
+## Pricing
+
+### `POST /api/pricing`
+Returns the current and next timeslot prices for a given date and time based on the 2026 toll rates.
+
+**Request Body:**
+```json
+{
+  "date": "2026-04-13",
+  "time": "06:30 AM"
+}
+```
+*   `date`: Format `YYYY-MM-DD`.
+*   `time`: Format `HH:MM AM/PM` or `HH:MM[:SS]` (24h).
+
+**Response (200 OK):**
+```json
+{
+  "current": {
+    "timeslot": "5:00 AM",
+    "average_wb": 69.10,
+    "average_eb": 72.45
+  },
+  "next": {
+    "timeslot": "7:00 AM",
+    "average_wb": 89.35,
+    "average_eb": 92.10
+  },
+  "day_type": "Weekday"
 }
 ```
 
