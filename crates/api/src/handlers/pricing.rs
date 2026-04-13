@@ -1,5 +1,5 @@
 use axum::{Json, http::StatusCode};
-use chrono::{NaiveDate, Datelike};
+use chrono::{NaiveDate, Datelike, Duration};
 use toll_optimizer_core::{
     constants::{WEEKDAY_TIMESLOTS_2026, WEEKEND_TIMESLOTS_2026},
     light_vehicles::{
@@ -68,7 +68,7 @@ pub async fn get_current_and_next_prices(
         }
     };
 
-    // 4. Determine timeslot indices
+    // 4. Determine current timeslot indices
     let (slots, eb_averages, wb_averages) = match day_type {
         DayType::Weekday => (
             &WEEKDAY_TIMESLOTS_2026[..],
@@ -109,6 +109,39 @@ pub async fn get_current_and_next_prices(
 
     let next_idx = (current_idx + 1) % slot_minutes.len();
 
+    // 5. Determine next timeslot's day type and prices (handling wrap-around)
+    let (next_slots, next_eb_averages, next_wb_averages) = if next_idx == 0 {
+        // Wrapped around to the next day
+        let next_date = date + Duration::days(1);
+        let n_day = next_date.day();
+        let n_month = next_date.month();
+        let n_year = next_date.year() as u32;
+
+        let next_day_type = if trip_analyzer::is_holiday(n_day, n_month, n_year) {
+            DayType::Holiday
+        } else if trip_analyzer::is_weekend(n_day, n_month, n_year) {
+            DayType::Weekend
+        } else {
+            DayType::Weekday
+        };
+
+        match next_day_type {
+            DayType::Weekday => (
+                &WEEKDAY_TIMESLOTS_2026[..],
+                &WEEKDAY_EB_AVERAGE_TOLL_PRICES_2026[..],
+                &WEEKDAY_WB_AVERAGE_TOLL_PRICES_2026[..],
+            ),
+            DayType::Weekend | DayType::Holiday => (
+                &WEEKEND_TIMESLOTS_2026[..],
+                &WEEKEND_EB_AVERAGE_TOLL_PRICES_2026[..],
+                &WEEKEND_WB_AVERAGE_TOLL_PRICES_2026[..],
+            ),
+        }
+    } else {
+        // Still the same day type
+        (slots, eb_averages, wb_averages)
+    };
+
     let day_type_str = match day_type {
         DayType::Weekday => "Weekday",
         DayType::Weekend => "Weekend",
@@ -122,9 +155,9 @@ pub async fn get_current_and_next_prices(
             average_wb: wb_averages[current_idx],
         },
         next: TimeslotPrices {
-            timeslot: slots[next_idx].to_string(),
-            average_eb: eb_averages[next_idx],
-            average_wb: wb_averages[next_idx],
+            timeslot: next_slots[next_idx].to_string(),
+            average_eb: next_eb_averages[next_idx],
+            average_wb: next_wb_averages[next_idx],
         },
         day_type: day_type_str.to_string(),
     }))
@@ -162,10 +195,10 @@ mod tests {
 
         assert_eq!(day_type, "Weekend");
         assert_eq!(current.timeslot, "9:00 PM");
-        assert_eq!(next.timeslot, "8:30 AM");
-        // Weekend WB 2026 9pm is 50.56, 8:30am is 58.15
+        // Sunday 10 PM should roll over to Monday (Weekday) 5:00 AM
+        assert_eq!(next.timeslot, "5:00 AM");
         assert_eq!(current.average_wb, 50.56);
-        assert_eq!(next.average_wb, 58.15);
+        assert_eq!(next.average_wb, 69.10); // Monday 5am WB rate
     }
 }
 
