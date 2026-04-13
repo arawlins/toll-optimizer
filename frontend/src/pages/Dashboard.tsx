@@ -13,7 +13,7 @@ import type {
 } from '../lib/api';
 import { UploadDropzone } from '../components/UploadDropzone';
 
-import { History as HistoryIcon, TrendingDown, Clock, MapPin, ChevronDown, ChevronUp, Route } from 'lucide-react';
+import { History as HistoryIcon, TrendingDown, Clock, MapPin, ChevronDown, ChevronUp, Route, Sparkles } from 'lucide-react';
 import { Navbar } from '../components/Navbar';
 import { Footer } from '../components/Footer';
 import clsx from 'clsx';
@@ -308,9 +308,16 @@ export function Dashboard() {
 
                               return (
                                 <div key={`${transponder.plate}-${summary.direction}`} className="space-y-4">
-                                  <div className="flex items-center gap-2 pb-2 border-b border-gray-100">
-                                    <MapPin className="w-4 h-4 text-blue-500" />
-                                    <h4 className="font-bold text-gray-800 uppercase text-xs tracking-wider">
+                                  <div className="flex items-center gap-2 pb-2 border-b border-gray-50">
+                                    <div className="text-blue-600">
+                                      <MapPin 
+                                        className="w-4 h-4" 
+                                        fill="currentColor" 
+                                        stroke="white" 
+                                        strokeWidth="2.5"
+                                      />
+                                    </div>
+                                    <h4 className="font-bold text-blue-600 uppercase text-[10px] tracking-widest">
                                       {summary.direction} Trips
                                     </h4>
                                   </div>
@@ -359,9 +366,9 @@ export function Dashboard() {
                                             </div>
 
                                             {centroid.optimization_advice && (
-                                              <div className="mb-4 p-3 bg-green-100/50 rounded-xl text-xs text-green-800 border border-green-200/50 font-bold flex items-start gap-2">
-                                                <TrendingDown className="w-4 h-4 flex-shrink-0" />
-                                                <span>{centroid.optimization_advice}</span>
+                                              <div className="mb-4 p-3 bg-emerald-50 rounded-xl text-xs text-emerald-900 border border-emerald-100 flex items-start gap-2 shadow-sm">
+                                                <Sparkles className="w-4 h-4 text-emerald-500 flex-shrink-0 mt-0.5" />
+                                                <span className="font-medium leading-tight">{centroid.optimization_advice}</span>
                                               </div>
                                             )}
 
