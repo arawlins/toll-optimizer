@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { endpoints } from '../lib/api';
 import type { 
@@ -194,9 +195,15 @@ export function Dashboard() {
 
         {/* Upload Section */}
         <section className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-          <div className="p-6">
-            <h2 className="text-lg font-semibold mb-4">Analyze New Statement</h2>
+          <div className="p-6 text-center">
+            <h2 className="text-lg font-semibold mb-4 text-left">Analyze New Statement</h2>
             <UploadDropzone onSuccess={handleUploadSuccess} />
+            <Link 
+              to="/how-to" 
+              className="text-sm text-blue-600 hover:text-blue-800 hover:underline mt-4 inline-block font-medium"
+            >
+              How to download your 407 ETR statement
+            </Link>
           </div>
         </section>
 

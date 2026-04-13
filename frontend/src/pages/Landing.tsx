@@ -13,9 +13,11 @@ import { endpoints, type PricingResponse } from '../lib/api';
 import { Clock } from 'lucide-react';
 
 import { useNavigate } from 'react-router-dom';
+import { useAuthStore } from '../store';
 
 export function Landing() {
   const navigate = useNavigate();
+  const { user } = useAuthStore();
   const [pricing, setPricing] = useState<PricingResponse | null>(null);
 
   useEffect(() => {
@@ -62,8 +64,8 @@ export function Landing() {
                   </div>
                   
                   <div className="flex-1 w-full flex flex-col sm:flex-row gap-4 md:gap-8 justify-center md:justify-end items-center">
-                    <div className="bg-surface p-5 rounded-xl border border-slate-100 w-full sm:max-w-[260px] shadow-sm">
-                      <p className="text-sm font-bold uppercase tracking-wider text-slate-400 mb-3 text-center">
+                    <div className={`p-5 rounded-xl border w-full sm:max-w-[260px] shadow-sm ${pricing.current.average_wb < pricing.next.average_wb ? 'bg-green-50 border-green-200' : 'bg-surface border-slate-100'}`}>
+                      <p className={`text-sm font-bold uppercase tracking-wider mb-3 text-center ${pricing.current.average_wb < pricing.next.average_wb ? 'text-green-600' : 'text-slate-400'}`}>
                         Current Timeslot
                         <span className="block opacity-70">({pricing.current.timeslot})</span>
                       </p>
@@ -110,7 +112,7 @@ export function Landing() {
               </p>
               <div className="flex flex-wrap gap-4">
                 <button
-                  onClick={() => navigate('/login')}
+                  onClick={() => navigate(user ? '/dashboard' : '/login')}
                   className="bg-gradient-to-br from-primary to-primary-container text-white px-8 py-4 rounded-xl font-bold text-lg shadow-lg hover:shadow-xl transition-all duration-300 active:scale-95"
                 >
                   Get Started Now

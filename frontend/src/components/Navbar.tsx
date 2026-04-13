@@ -76,7 +76,7 @@ export function Navbar() {
                   <div className="w-7 h-7 bg-primary/10 rounded-full flex items-center justify-center text-primary group-hover:bg-primary/20 transition-colors">
                     <User className="w-4 h-4" />
                   </div>
-                  <span className="text-sm text-slate-700 font-bold max-w-[150px] truncate">{user.email}</span>
+                  <span className="text-sm text-slate-700 max-w-[150px] truncate">{user.email}</span>
                   <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform duration-200 ${isMenuOpen ? 'rotate-180' : ''}`} />
                 </button>
 
@@ -84,7 +84,7 @@ export function Navbar() {
                   <div className="absolute right-0 mt-2 w-56 bg-white rounded-2xl shadow-xl border border-slate-100 py-2 animate-in fade-in zoom-in-95 duration-100 origin-top-right">
                     <div className="px-4 py-3 border-b border-slate-50 mb-1">
                       <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-0.5">Signed in as</p>
-                      <p className="text-xs font-bold text-slate-900 truncate">{user.email}</p>
+                      <p className="text-xs text-slate-900 truncate">{user.email}</p>
                     </div>
                     <button
                       onClick={() => {
@@ -112,7 +112,7 @@ export function Navbar() {
                       Log In
                     </button>
                     <button 
-                      onClick={() => navigate('/login')}
+                      onClick={() => navigate(user ? '/dashboard' : '/login')}
                       className="bg-primary hover:bg-primary-container text-on-primary px-6 py-2.5 rounded-xl font-bold transition-all duration-300 active:scale-95 shadow-md"
                     >
                       Get Started
@@ -181,7 +181,7 @@ export function Navbar() {
                 </button>
                 <button 
                   onClick={() => {
-                    navigate('/login');
+                    navigate(user ? '/dashboard' : '/login');
                     setIsMobileMenuOpen(false);
                   }}
                   className="bg-primary text-on-primary px-6 py-4 rounded-xl font-bold text-lg shadow-md"
@@ -193,7 +193,7 @@ export function Navbar() {
               <>
                 <div className="bg-slate-50 p-4 rounded-xl mb-2">
                   <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Signed in as</p>
-                  <p className="text-sm font-bold text-slate-900 truncate">{user.email}</p>
+                  <p className="text-sm text-slate-900 truncate">{user.email}</p>
                 </div>
                 {location.pathname !== '/dashboard' && (
                   <button 

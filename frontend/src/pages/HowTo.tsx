@@ -10,9 +10,11 @@ import { Navbar } from '../components/Navbar';
 import { Footer } from '../components/Footer';
 
 import { useNavigate } from 'react-router-dom';
+import { useAuthStore } from '../store';
 
 export function HowTo() {
   const navigate = useNavigate();
+  const { user } = useAuthStore();
 
   return (
     <div className="bg-background text-on-surface antialiased font-body min-h-screen">
@@ -136,7 +138,7 @@ export function HowTo() {
               Join over 5,000 businesses and commuters who have optimized their toll spending with our editorial-grade insights.
             </p>
             <button 
-              onClick={() => navigate('/login')}
+              onClick={() => navigate(user ? '/dashboard' : '/login')}
               className="bg-gradient-to-br from-primary to-primary-container text-on-primary px-10 py-5 rounded-xl text-lg font-bold shadow-xl hover:scale-105 active:scale-95 transition-all"
             >
               Get Started Now
