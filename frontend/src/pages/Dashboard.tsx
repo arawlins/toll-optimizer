@@ -190,7 +190,7 @@ export function Dashboard() {
       {/* Header */}
       <Navbar />
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-28 pb-12 space-y-8">
 
         {/* Upload Section */}
         <section className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
