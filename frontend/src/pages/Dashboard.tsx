@@ -14,6 +14,7 @@ import type {
 } from '../lib/api';
 import { UploadDropzone } from '../components/UploadDropzone';
 
+import { useAnalysisStore } from '../store';
 import { History as HistoryIcon, TrendingDown, Clock, MapPin, ChevronDown, ChevronUp, Route, Sparkles } from 'lucide-react';
 import { Navbar } from '../components/Navbar';
 import { Footer } from '../components/Footer';
@@ -21,7 +22,7 @@ import clsx from 'clsx';
 
 export function Dashboard() {
 
-  const [analysis, setAnalysis] = useState<AnalysisResponse | null>(null);
+  const { analysis, setAnalysis } = useAnalysisStore();
   const [viewMode, setViewMode] = useState<'time' | 'distance'>('time');
   const [expandedCentroids, setExpandedCentroids] = useState<string[]>([]);
   const [expandedTransponders, setExpandedTransponders] = useState<string[]>([]);

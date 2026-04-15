@@ -1,5 +1,8 @@
 import { create } from 'zustand';
-import type { User } from './lib/api';
+import { persist, createJSONStorage } from 'zustand/middleware';
+import type { StateStorage } from 'zustand/middleware';
+import { get, set, del } from 'idb-keyval';
+import type { User, AnalysisResponse } from './lib/api';
 
 
 interface AuthState {
@@ -23,3 +26,34 @@ export const useAuthStore = create<AuthState>((set) => ({
     set({ token: null, user: null });
   },
 }));
+
+// Custom storage for IndexedDB
+const idbStorage: StateStorage = {
+  getItem: async (name: string): Promise<string | null> => {
+    return (await get(name)) || null;
+  },
+  setItem: async (name: string, value: string): Promise<void> => {
+    await set(name, value);
+  },
+  removeItem: async (name: string): Promise<void> => {
+    await del(name);
+  },
+};
+
+interface AnalysisState {
+  analysis: AnalysisResponse | null;
+  setAnalysis: (analysis: AnalysisResponse | null) => void;
+}
+
+export const useAnalysisStore = create<AnalysisState>()(
+  persist(
+    (set) => ({
+      analysis: null,
+      setAnalysis: (analysis) => set({ analysis }),
+    }),
+    {
+      name: 'analysis-storage',
+      storage: createJSONStorage(() => idbStorage),
+    }
+  )
+);
