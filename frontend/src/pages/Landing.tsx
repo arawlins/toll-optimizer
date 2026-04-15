@@ -60,7 +60,7 @@ export function Landing() {
                     <p className="text-xl font-medium text-slate-700 mb-2">
                       Leave <span className="font-bold text-primary">{pricing.next.average_wb > pricing.current.average_wb ? `before ${pricing.next.timeslot}` : `after ${pricing.next.timeslot}`}</span> to save money
                     </p>
-                    <p className="text-sm text-slate-500">Based on live 407 ETR average rates for {pricing.day_type}s.</p>
+                    <p className="text-sm text-slate-500">Based on live 407 ETR average rates for light vehicles on {pricing.day_type}s.</p>
                   </div>
                   
                   <div className="flex-1 w-full flex flex-col sm:flex-row gap-4 md:gap-8 justify-center md:justify-end items-center">

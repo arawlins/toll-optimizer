@@ -31,7 +31,8 @@ The `toll-optimizer` web application transforms the core analysis logic into a d
 
 ### Frontend (React)
 -   **Build Tool**: `Vite` with `TypeScript`.
--   **State/Data Fetching**: `React Query` (TanStack Query).
+-   **State Management**: `Zustand` with `persist` middleware and **IndexedDB** (`idb-keyval`) for local analysis state persistence.
+-   **Data Fetching**: `React Query` (TanStack Query).
 -   **Styling**: `Tailwind CSS` + `shadcn/ui`.
 -   **Charts**: `Recharts` for visualizing savings and trip clusters.
 
@@ -104,10 +105,12 @@ Endpoints below require `Authorization: Bearer <token>`.
     -   Accepts `multipart/form-data` (CSV file).
     -   Processes CSV in-memory using `core` library.
     -   Performs K-means clustering and pricing optimization.
-    -   Returns detailed JSON analysis:
-        -   Detailed trips (with suggested entry/exit).
-        -   Trip clusters (time and distance).
-        -   Potential savings.
+    -   Returns detailed JSON analysis.
+
+### Pricing
+-   **`POST /api/pricing`**:
+    -   Returns current and next timeslot prices based on live 407 ETR rates.
+    -   Protected by a per-IP rate limiter (20 requests per second).
 
 ---
 
@@ -117,7 +120,7 @@ Endpoints below require `Authorization: Bearer <token>`.
 
 -   **HTTPS & Reverse Proxy**: The application is designed to be deployed behind a TLS-terminating reverse proxy. The default `docker-compose.yml` includes an auto-provisioning **Caddy** server to handle Let's Encrypt certificates automatically for VPS deployments.
 -   **User Enumeration**: The system prevents detailed enumeration by providing a generic "Invalid credentials" error on login. For registration, if a user already exists, it returns a generic "Registration failed" error to obscure precise email existence without breaking the seamless login-on-register UX pattern.
--   **Rate Limiting**: To prevent brute force and DDoS attacks, authentication endpoints (`/auth/login` and `/auth/register`) are aggressively rate-limited (e.g., 5 requests per 10 seconds per IP).
+-   **Rate Limiting**: To prevent brute force and DoS attacks, authentication endpoints (`/auth/login` and `/auth/register`) are aggressively rate-limited (2 requests per second). The public pricing API is also rate-limited (20 requests per second).
 -   **CORS**: Cross-Origin Resource Sharing is strictly enforced based on the `FRONTEND_URL` environment variable.
 -   **Internal Logs**: Loki log aggregation and querying are intentionally restricted to internal Docker network access to prevent unauthorized log reading.
 

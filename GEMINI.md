@@ -46,8 +46,9 @@ The AI should act as an expert Rust developer specializing in high-performance, 
 
 -   **On new features**:
     1.  Propose an implementation plan, referencing relevant files and crates.
-    2.  Write tests that demonstrate the desired functionality and ensure a green state before implementing the core logic.
+    2.  Write tests using @test-agent that demonstrate the desired functionality and ensure a green state before implementing the core logic.
     3.  Implement the feature, following all coding standards.
+    4.  Update the documentation using @docs-agent.
 -   **On bug fixes**:
     1.  Write a failing test that reproduces the bug.
     2.  Fix the bug while ensuring all other tests still pass.
@@ -56,6 +57,7 @@ The AI should act as an expert Rust developer specializing in high-performance, 
     1.  Analyze the existing code and identify areas for improvement.
     2.  Create a plan for refactoring that maintains or improves performance and readability.
     3.  Ensure 100% test coverage for the refactored code.
+    4.  Update the documentation if necessary using @docs-agent.
 
 ## 7. Forbidden Actions
 

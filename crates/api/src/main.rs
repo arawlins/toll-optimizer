@@ -89,12 +89,29 @@ async fn main() {
         });
     }
 
+    let mut pricing_routes = Router::new()
+        .route("/", post(handlers::pricing::get_current_and_next_prices));
+
+    let pricing_governor_conf = std::sync::Arc::new(
+        GovernorConfigBuilder::default()
+            .per_second(20)
+            .burst_size(20)
+            .finish()
+            .unwrap(),
+    );
+
+    if env::var("DISABLE_RATE_LIMIT").unwrap_or_default() != "true" {
+        pricing_routes = pricing_routes.layer(GovernorLayer {
+            config: pricing_governor_conf,
+        });
+    }
+
     let app = Router::new()
         .route("/health", get(|| async { "OK" }))
         .layer(axum::extract::DefaultBodyLimit::max(10 * 1024 * 1024)) // 10MB limit
         .nest("/auth", auth_routes)
         .route("/api/analyze", post(handlers::analyze::analyze))
-        .route("/api/pricing", post(handlers::pricing::get_current_and_next_prices))
+        .nest("/api/pricing", pricing_routes)
         .route("/api/history", get(handlers::analyze::history))
         .route(
             "/metrics",

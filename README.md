@@ -121,8 +121,10 @@ cargo test -- --test-threads=1
 ## Features
 - **Time-Based Analysis**: Identifies trip clusters and calculates potential savings if you were to leave in a cheaper timeslot.
 - **Distance-Based Analysis**: Suggests alternate entry or exit points that could lower your toll for the same route.
-- **Savings Persistence**: Automatically saves the best optimization strategy (Time or Distance) to your account history.
+- **Analysis Persistence**: Automatically saves your most recent analysis state to **IndexedDB**, allowing you to navigate away and return or refresh the page without re-uploading your CSV.
+- **Savings History**: Persistently saves optimization metadata (Time or Distance) to your account history for long-term tracking.
 - **Interactive Dashboard**: Grouped analysis by **transponder**, collapsible cards, and detailed trip tables with suggested route mappings.
+- **Live Pricing**: Real-time 407 ETR rate lookup for the current and upcoming timeslots.
 
 ## License
 MIT
