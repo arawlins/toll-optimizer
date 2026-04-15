@@ -57,3 +57,36 @@ If the development of Toll Optimizer shifts toward a public SaaS model, the foll
 3.  **Intellectual Property Claims:** 407 ETR could issue a Cease and Desist (C&D) regarding the unauthorized reproduction of their proprietary tolling algorithms in a public-facing application.
 
 **Recommendation:** Maintain the current "Local-First / Self-Hosted" philosophy to ensure compliance with 407 ETR's legal framework.
+
+---
+
+## Publicly Hosted Web Application (Free vs. Commercial)
+
+A common question is whether releasing a hosted version of the web application to the public for free would mitigate legal risks. While "free" removes the most direct violation of "Commercial Use," it introduces several other major legal friction points:
+
+### 1. Broad Interpretation of "Commercial Use"
+In many legal terms, "Commercial Use" is interpreted broadly. It often refers to **any use that is not the personal use of the account holder.** By providing a platform for *others* to process their 407 ETR data, the application transitions from a "personal tool" to a "third-party service provider," which interferes with 407 ETR's exclusive relationship with its customers.
+
+### 2. Unauthorized Derivative Works & Competition
+The application contains a recreation of 407 ETR's proprietary tolling logic. 407 ETR can argue that systematically offering a "Toll Optimization" service—even for free—based on their proprietary rate structures is an unauthorized derivative work that competes with their own billing and information systems.
+
+### 3. Data Privacy & PIPEDA Liability (Critical Risk)
+Releasing a public, hosted web app fundamentally changes the data architecture.
+*   **Data Custodianship:** If the app is hosted, the developer is now collecting, storing, and processing **Personally Identifiable Information (PII)** belonging to others (names, account numbers, and detailed life patterns).
+*   **Legal Responsibility:** Under Canadian privacy laws (PIPEDA), the host becomes legally responsible for the protection of this data. 407 ETR explicitly disclaims responsibility for data once moved to a third party, and they may take legal action to prevent unauthorized third parties from "aggregating" their customers' trip data.
+
+### 4. Interference with Contractual Relations
+A public tool that suggests 407 ETR bills are "sub-optimal" or provides different calculations can be viewed as interfering with the contract between 407 ETR and its customers, potentially increasing their customer service costs.
+
+---
+
+## Final Recommendation
+
+To minimize legal risk while still providing value to the community, the following "Local-First" strategies are recommended:
+
+1.  **Distributed Model:** Continue releasing the code as an open-source project (CLI and Docker) so users can run the environment themselves.
+2.  **Client-Side Processing:** If a public website is hosted, ensure all CSV parsing and analysis happen **entirely in the user's browser** (e.g., via JavaScript or WebAssembly). No data should ever be uploaded to a central server.
+3.  **Strict Disclaimers:** Maintain heavy legal disclaimers stating no affiliation with 407 ETR and that all outputs are "best-effort" estimations for personal use only.
+
+**Conclusion:** A publicly hosted version (even if free) remains a high-risk venture that would likely attract a Cease and Desist (C&D) from 407 ETR's legal department once discovered.
+
