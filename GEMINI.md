@@ -20,8 +20,8 @@ The AI should act as an expert Rust developer specializing in high-performance, 
 
 ## 4. Project Structure
 
--   The project uses a standard Cargo workspace structure.
--   All core application logic is in `src/`.
+-   The project is a single root Cargo binary crate.
+-   All core logic and CLI entry points are in `src/`.
 -   Integration tests are located in the `tests/` directory.
 -   Sample CSV files are in the `csv/` directory.
 -   Code examples are in `examples/`.

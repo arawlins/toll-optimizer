@@ -1,130 +1,59 @@
-# Toll Optimizer
+# Toll Optimizer CLI
 
-Toll Optimizer is a high-performance Rust-based system designed to analyze 407 ETR (Electronic Toll Route) statements. it identifies patterns in your travel and suggests optimizations based on **time** (shifting trips to cheaper timeslots) and **distance** (adjusting entry/exit points) to reduce your total toll charges.
-
-## Project Structure
-
-- **`crates/core`**: Core logic for parsing CSVs, calculating tolls (including 2026 rates), and clustering trips using K-Means.
-- **`crates/api`**: Axum-based REST API for multi-user analysis, history tracking, and authentication.
-- **`crates/cli`**: Command-line interface for local CSV analysis.
-- **`frontend`**: React (TypeScript) + Vite dashboard for visualizing savings and managing uploads.
-
-## Prerequisites
-
-- **Rust**: Latest stable version.
-- **Node.js & npm**: For the frontend.
-- **Docker**: For the PostgreSQL database.
-- **PostgreSQL Client** (optional): For manual schema inspection.
-
-## Quick Start (Production / Docker)
-
-The easiest way to run the full application is using Docker Compose.
-
-### 1. Setup Environment
-Copy `env.txt` to `.env` in the root directory and set the values.
-
-### 2. Start the System
-```bash
-docker-compose up --build -d
-```
-The application will automatically:
-- Start a PostgreSQL database.
-- Run database migrations.
-- Build the React frontend.
-- Start the Axum API serving both the backend and frontend.
-
-### 2. Access the Dashboard
-- **Toll Optimizer UI**: [http://localhost:3000](http://localhost:3000)
-- **Grafana Dashboard**: [http://localhost:3001](http://localhost:3001) (Default: `admin` / `admin`)
-- **Prometheus Metrics**: [http://localhost:9090](http://localhost:9090)
-- **Alertmanager**: [http://localhost:9093](http://localhost:9093)
-
----
-
-## Monitoring & Observability
-
-The system includes a full monitoring stack (Loki stack) for metrics, logs, and alerting:
-
-- **Grafana**: The central dashboard for visualizing metrics and logs. Pre-configured with Prometheus and Loki datasources.
-- **Prometheus**: Automatically scrapes quantitative metrics from the API every 15s.
-- **Loki**: Aggregates structured JSON logs from all containers.
-- **Promtail**: Automatically discovers and ships Docker container logs to Loki.
-- **Alertmanager**: Handles alerts triggered by Prometheus metrics or Loki log patterns.
-
-### Querying Logs in Grafana
-1. Open Grafana at [http://localhost:3001](http://localhost:3001).
-2. Go to **Explore**.
-3. Select **Loki** as the datasource.
-4. Use LogQL to filter logs, e.g., `{container="toll_optimizer_app"}`.
-
-### Alerting
-Alerts are configured for:
-- **High Error Rates**: Triggered when "ERROR" appears frequently in logs.
-- **Unknown Entry/Exit Points**: Triggered when the CSV parser encounters unrecognized locations, including the specific point name in the alert description.
-
----
-
-## Development Setup
-
-If you want to run the components separately for development:
-
-### 1. Start the Database
-```bash
-docker-compose up db -d
-```
-
-### 2. Configure Environment
-Copy `env.txt` to `.env` in the root directory (or `crates/api`) and set the values.
-
-### 3. Start the Backend API
-```bash
-cargo run -p toll-optimizer-api
-```
-The API will be available at `http://localhost:3000`.
-
-### 4. Start the Frontend
-```bash
-cd frontend
-npm install
-npm run dev
-```
-Open [http://localhost:5173](http://localhost:5173) in your browser. Note: In dev mode, the frontend connects to `http://localhost:3000` via Vite's proxy or environment configuration.
-
-## Using the CLI Tool
-If you prefer to analyze local files without a database:
-1. Run the analyzer, providing the path to your CSV statement as an argument:
-```bash
-cargo run -p toll-optimizer-cli -- <csv_file_path>
-```
-**Example:**
-```bash
-cargo run -p toll-optimizer-cli -- csv/"2025-12-28 - 573522284 Statement.csv"
-```
-
-## Running Tests
-
-The test suite includes unit tests, core logic tests, and full API integration tests.
-
-### Prerequisites
-Some API integration tests require a running database. Start it with:
-```bash
-docker-compose up db -d
-```
-
-### Execution
-Due to integration tests spawning API processes that bind to specific ports and share the database, tests must be run **sequentially**:
-
-```bash
-cargo test -- --test-threads=1
-```
+Toll Optimizer is a high-performance Rust-based tool designed to analyze 407 ETR (Electronic Toll Route) statements. It identifies patterns in your travel and suggests optimizations based on **time** (shifting trips to cheaper timeslots) and **distance** (adjusting entry/exit points) to reduce your total toll charges.
 
 ## Features
 - **Time-Based Analysis**: Identifies trip clusters and calculates potential savings if you were to leave in a cheaper timeslot.
 - **Distance-Based Analysis**: Suggests alternate entry or exit points that could lower your toll for the same route.
-- **Analysis Persistence**: Automatically saves your most recent analysis state to **IndexedDB**, allowing you to navigate away and return or refresh the page without re-uploading your CSV.
-- **Savings History**: Persistently saves optimization metadata (Time or Distance) to your account history for long-term tracking.
-- **Interactive Dashboard**: Grouped analysis by **transponder**, collapsible cards, and detailed trip tables with suggested route mappings.
-- **Live Pricing**: Real-time 407 ETR rate lookup for the current and upcoming timeslots.
+- **2026 Rate Projections**: Includes the latest 2026 toll rates for accurate savings estimates.
+- **Standalone Binaries**: Run the tool without needing to install Rust or Cargo.
+
+## Installation
+
+### 1. Download Pre-compiled Binaries
+You can download the latest standalone binary for your operating system from the [Releases](https://github.com/arawlins/toll-optimizer/releases) page.
+
+- **Linux**: `toll-optimizer-linux-x86_64.tar.gz`
+- **macOS (Intel)**: `toll-optimizer-macos-x86_64.tar.gz`
+- **macOS (Apple Silicon)**: `toll-optimizer-macos-aarch64.tar.gz`
+- **Windows**: `toll-optimizer-windows-x86_64.zip`
+
+Extract the archive and run the `toll-optimizer` executable.
+
+### 2. Build from Source
+If you have Rust installed, you can build and install the tool directly:
+```bash
+cargo install --path .
+```
+
+## Usage
+
+Analyze a 407 ETR CSV statement file:
+
+```bash
+toll-optimizer <path-to-csv>
+```
+
+### Options:
+- `-v, --verbose`: Show detailed trip listings and validation.
+- `-j, --json`: Output results in JSON format (for programmatic use).
+- `-h, --help`: Show help information.
+- `-V, --version`: Show version information.
+
+### Example:
+```bash
+toll-optimizer csv/2025-12-28-Statement.csv --verbose
+```
+
+## CSV Format
+The tool expects the standard CSV export format from the 407 ETR website. Ensure your file contains headers like `Date`, `Entry Time`, `Entry Point`, `Exit Point`, etc.
+
+## Development
+
+Run tests:
+```bash
+cargo test
+```
 
 ## License
 MIT
