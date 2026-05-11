@@ -32,7 +32,7 @@ The tool groups your trips into clusters based on their **entry time**.
 -   **Cheaper Prev/Next**: Indicates if leaving a few minutes earlier or later would move the trip into a significantly cheaper timeslot.
 -   **Potential Savings**: The sum of all savings if you shifted every trip in that cluster to the recommended timeslot.
 
-### 2. Distance-Based (Zones) Clustering
+### 2. Distance-Based Clustering
 The tool identifies routes you take frequently and suggests alternate entry or exit points.
 -   **Example**: `Hwy404 -> Kennedy (Avg: 5.04 km)`
 -   **Optimization Note**: `[Exit on Warden to save some $$$ (Save $1.42)]`

@@ -494,7 +494,6 @@ pub struct TransponderSummaryByTime<'a> {
     pub transponder_plate: String,
     pub direction: Direction,
     pub centroids: Vec<CentroidData<'a>>,
-    pub best_k: usize,
     pub formatted_centroids: Vec<String>,
 }
 
@@ -515,7 +514,6 @@ pub struct TransponderSummaryByDistance<'a> {
     pub transponder_plate: String,
     pub direction: Direction,
     pub centroids: Vec<CentroidDataByDistance<'a>>,
-    pub best_k: usize,
     pub formatted_centroids: Vec<String>,
 }
 
@@ -1049,7 +1047,6 @@ pub fn analyze_trips_by_time<'a>(
                     transponder_plate: plate.clone(),
                     direction: direction.clone(),
                     centroids: filtered_centroid_data,
-                    best_k,
                     formatted_centroids: filtered_formatted_centroids,
                 });
             }
@@ -1345,7 +1342,6 @@ pub fn analyze_trips_by_distance<'a>(
                     transponder_plate: plate.clone(),
                     direction: direction.clone(),
                     centroids: filtered_centroid_data,
-                    best_k,
                     formatted_centroids: filtered_formatted_centroids,
                 });
             }

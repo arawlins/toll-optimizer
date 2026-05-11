@@ -2,7 +2,7 @@ use anyhow::{Context, Result};
 use clap::Parser;
 use std::fs;
 use std::path::PathBuf;
-use toll_optimizer::{DayType, csv_parser, trip_analyzer};
+use toll_optimizer::{DayType, csv_parser, md_output, trip_analyzer};
 
 /// Toll Optimizer: Analyze 407 ETR statements and suggest optimizations.
 #[derive(Parser, Debug)]
@@ -15,6 +15,10 @@ struct Args {
     /// Output results in JSON format
     #[arg(short, long)]
     json: bool,
+
+    /// Output results in Markdown format
+    #[arg(short, long)]
+    markdown: bool,
 
     /// Show verbose output (detailed trip listings)
     #[arg(short, long)]
@@ -33,25 +37,33 @@ fn main() -> Result<()> {
 
     let results = csv_parser::parse_trips(file);
 
+    let summaries_by_time = trip_analyzer::analyze_trips_by_time(&results);
+    let summaries_by_distance = trip_analyzer::analyze_trips_by_distance(&results);
+
     if args.json {
-        // For now, we'll just print a placeholder if JSON is requested
-        // In a real scenario, we'd serialize the summaries.
-        println!("JSON output requested (not yet fully implemented in this refactor).");
+        let output = serde_json::json!({
+            "time_based_analysis": summaries_by_time,
+            "distance_based_analysis": summaries_by_distance,
+        });
+        println!("{}", serde_json::to_string_pretty(&output)?);
+        return Ok(());
+    }
+
+    if args.markdown {
+        md_output::print_markdown(&summaries_by_time, &summaries_by_distance, args.verbose);
+        return Ok(());
     }
 
     println!("--- Time-Based Clustering Analysis ---");
-    let summaries = trip_analyzer::analyze_trips_by_time(&results);
-
-    for summary in &summaries {
+    for summary in &summaries_by_time {
         println!(
             "Transponder: {}, Direction: {:?}",
             summary.transponder_plate, summary.direction
         );
 
-
         for centroid_data in &summary.centroids {
             println!("    Trips near {}:", centroid_data.centroid_time);
-            
+
             if args.verbose {
                 for trip_summary in &centroid_data.trips {
                     let trip = trip_summary.trip;
@@ -72,8 +84,10 @@ fn main() -> Result<()> {
                                 .as_ref()
                                 .map(|t| format!(" (<= {})", t))
                                 .unwrap_or_default();
-                            optimization_msg
-                                .push_str(&format!(" [Cheaper Prev: ${:.2}{}]", prev_cost, target_msg));
+                            optimization_msg.push_str(&format!(
+                                " [Cheaper Prev: ${:.2}{}]",
+                                prev_cost, target_msg
+                            ));
                         }
                     }
 
@@ -84,8 +98,10 @@ fn main() -> Result<()> {
                                 .as_ref()
                                 .map(|t| format!(" (>= {})", t))
                                 .unwrap_or_default();
-                            optimization_msg
-                                .push_str(&format!(" [Cheaper Next: ${:.2}{}]", next_cost, target_msg));
+                            optimization_msg.push_str(&format!(
+                                " [Cheaper Next: ${:.2}{}]",
+                                next_cost, target_msg
+                            ));
                         }
                     }
 
@@ -196,15 +212,13 @@ fn main() -> Result<()> {
         }
     }
 
-    let summaries_by_distance = trip_analyzer::analyze_trips_by_distance(&results);
-
-    println!("\n--- Distance-Based (Zones) Clustering Analysis ---");
+    println!("\n--- Distance-Based Clustering Analysis ---");
     for summary in &summaries_by_distance {
         println!(
             "Transponder: {}, Direction: {:?}",
             summary.transponder_plate, summary.direction
         );
-        
+
         for centroid_data in &summary.centroids {
             println!(
                 "    {} -> {} (Avg: {:.2} km):",
@@ -222,7 +236,7 @@ fn main() -> Result<()> {
                 "      Total Toll Charge: ${:.2}",
                 centroid_data.total_toll_charge
             );
-            
+
             if args.verbose {
                 for trip_summary in &centroid_data.trips {
                     let trip = trip_summary.trip;

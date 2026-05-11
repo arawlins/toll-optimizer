@@ -28,6 +28,7 @@ The AI should act as an expert Rust developer specializing in high-performance, 
 -   Performance benchmarks are in `benches/`.
 -   Update documentation using docs-agent.md as a guideline
 -   Update tests using test-agent.md as a guideline
+-   **LLM Skill**: See `SKILL.md` for instructions on how to use this tool with an LLM.
 
 ## 5. Coding Standards
 
