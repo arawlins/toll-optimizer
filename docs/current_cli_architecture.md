@@ -25,7 +25,7 @@ The binary includes the following internal modules:
 3.  **Analysis**:
     -   **Time Analysis**: Identifies temporal clusters and suggests shifting trips to adjacent cheaper timeslots.
     -   **Distance Analysis**: Identifies geographic clusters and suggests adjusting entry/exit points for savings.
-4.  **Output**: `stdout` (Rich text reports with `--verbose` details) or future JSON serialization.
+4.  **Output**: `stdout` (Rich text reports with `--verbose` details) or structured JSON serialization (via `--json`).
 
 ## Distribution & Build
 The application is distributed as a pre-compiled, standalone binary via GitHub Actions.

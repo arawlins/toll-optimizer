@@ -6,6 +6,9 @@ Toll Optimizer is a high-performance Rust-based tool designed to analyze 407 ETR
 - **Time-Based Analysis**: Identifies trip clusters and calculates potential savings if you were to leave in a cheaper timeslot.
 - **Distance-Based Analysis**: Suggests alternate entry or exit points that could lower your toll for the same route.
 - **2026 Rate Projections**: Includes the latest 2026 toll rates for accurate savings estimates.
+- **JSON Output**: Fully structured machine-readable output optimized for LLMs and data pipelines.
+- **Markdown Output**: Professional report format with tables, ideal for sharing and documentation.
+- **LLM Ready**: Includes a native "Skill" definition for seamless use with AI agents.
 - **Standalone Binaries**: Run the tool without needing to install Rust or Cargo.
 
 ## Installation
@@ -37,6 +40,7 @@ toll-optimizer <path-to-csv>
 ### Options:
 - `-v, --verbose`: Show detailed trip listings and validation.
 - `-j, --json`: Output results in JSON format (for programmatic use).
+- `-m, --markdown`: Output results in Markdown format (for reports).
 - `-h, --help`: Show help information.
 - `-V, --version`: Show version information.
 
