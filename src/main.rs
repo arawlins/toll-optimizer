@@ -50,6 +50,32 @@ fn main() -> Result<()> {
 
         let pricing = trip_analyzer::get_pricing(&date, &time)?;
 
+        if args.json {
+            let current_avg = (pricing.current.average_eb + pricing.current.average_wb) / 2.0;
+            let next_avg = (pricing.next.average_eb + pricing.next.average_wb) / 2.0;
+            let advice = if next_avg < current_avg - 0.001 {
+                format!("Waiting for the next timeslot ({}) could save you money!", pricing.next.timeslot)
+            } else if next_avg > current_avg + 0.001 {
+                format!("Leave now ({}) to avoid higher rates in the next timeslot!", pricing.current.timeslot)
+            } else {
+                "Rates are expected to remain stable.".to_string()
+            };
+
+            let output = serde_json::json!({
+                "date": date,
+                "time": time,
+                "pricing": pricing,
+                "advice": advice,
+            });
+            println!("{}", serde_json::to_string_pretty(&output)?);
+            return Ok(());
+        }
+
+        if args.markdown {
+            md_output::print_pricing_markdown(&pricing, &date, &time);
+            return Ok(());
+        }
+
         println!("--- Live Pricing Analysis for {} at {} ---", date, time);
         println!("Day Type: {}", pricing.day_type);
         println!("Current Timeslot: {}", pricing.current.timeslot);

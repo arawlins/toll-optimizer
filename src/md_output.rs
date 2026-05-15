@@ -1,4 +1,5 @@
-use crate::trip_analyzer::{DayType, TransponderSummaryByDistance, TransponderSummaryByTime};
+use crate::trip_analyzer::{DayType, TransponderSummaryByDistance, TransponderSummaryByTime, PricingResponse};
+
 
 /// Prints a comprehensive analysis report in Markdown format.
 ///
@@ -123,4 +124,34 @@ pub fn print_markdown(
             }
         }
     }
+}
+
+/// Prints a live pricing report in Markdown format.
+pub fn print_pricing_markdown(pricing: &PricingResponse, date: &str, time: &str) {
+    println!("# Toll Optimizer Live Pricing Report\n");
+    println!("**Date:** {}  ", date);
+    println!("**Time:** {}  ", time);
+    println!("**Day Type:** {}\n", pricing.day_type);
+
+    println!("## Timeslot Comparison\n");
+    println!("| Timeslot | Average EB | Average WB |");
+    println!("| --- | --- | --- |");
+    println!("| **Current:** {} | {:.2}¢/km | {:.2}¢/km |", pricing.current.timeslot, pricing.current.average_eb, pricing.current.average_wb);
+    println!("| **Next:** {} | {:.2}¢/km | {:.2}¢/km |", pricing.next.timeslot, pricing.next.average_eb, pricing.next.average_wb);
+    println!();
+
+    let current_avg = (pricing.current.average_eb + pricing.current.average_wb) / 2.0;
+    let next_avg = (pricing.next.average_eb + pricing.next.average_wb) / 2.0;
+
+    println!("## Optimization Strategy\n");
+    if next_avg < current_avg - 0.001 {
+        println!("> **Tip:** Waiting for the next timeslot ({}) could save you money!  ", pricing.next.timeslot);
+        println!("> Average rates are expected to drop by approximately {:.2}¢/km.", current_avg - next_avg);
+    } else if next_avg > current_avg + 0.001 {
+        println!("> **Tip:** Leave now ({}) to avoid higher rates in the next timeslot!  ", pricing.current.timeslot);
+        println!("> Average rates are expected to increase by approximately {:.2}¢/km.", next_avg - current_avg);
+    } else {
+        println!("> Rates are expected to remain stable in the next timeslot.");
+    }
+    println!();
 }
