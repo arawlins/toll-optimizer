@@ -2,6 +2,8 @@ use anyhow::{Context, Result};
 use clap::Parser;
 use std::fs;
 use std::path::PathBuf;
+use chrono::Local;
+
 use toll_optimizer::{DayType, csv_parser, md_output, trip_analyzer};
 
 /// Toll Optimizer: Analyze 407 ETR statements and suggest optimizations.
@@ -10,7 +12,20 @@ use toll_optimizer::{DayType, csv_parser, md_output, trip_analyzer};
 struct Args {
     /// Path to the 407 ETR CSV statement file
     #[arg(value_name = "FILE")]
-    csv_file: PathBuf,
+    csv_file: Option<PathBuf>,
+
+    /// Get current and next timeslot pricing
+    #[arg(long)]
+    current_price: bool,
+
+    /// Override date for pricing (YYYY-MM-DD)
+    #[arg(long, value_name = "DATE")]
+    date: Option<String>,
+
+    /// Override time for pricing (HH:MM AM/PM or HH:MM)
+    #[arg(long, value_name = "TIME")]
+    time: Option<String>,
+
 
     /// Output results in JSON format
     #[arg(short, long)]
@@ -28,12 +43,44 @@ struct Args {
 fn main() -> Result<()> {
     let args = Args::parse();
 
-    if !args.csv_file.exists() {
-        anyhow::bail!("File '{}' not found.", args.csv_file.display());
+    if args.current_price {
+        let now = Local::now();
+        let date = args.date.unwrap_or_else(|| now.format("%Y-%m-%d").to_string());
+        let time = args.time.unwrap_or_else(|| now.format("%H:%M").to_string());
+
+        let pricing = trip_analyzer::get_pricing(&date, &time)?;
+
+        println!("--- Live Pricing Analysis for {} at {} ---", date, time);
+        println!("Day Type: {}", pricing.day_type);
+        println!("Current Timeslot: {}", pricing.current.timeslot);
+        println!("  Average EB: {:.2}¢/km", pricing.current.average_eb);
+        println!("  Average WB: {:.2}¢/km", pricing.current.average_wb);
+        println!("Next Timeslot: {}", pricing.next.timeslot);
+        println!("  Average EB: {:.2}¢/km", pricing.next.average_eb);
+        println!("  Average WB: {:.2}¢/km", pricing.next.average_wb);
+
+        let current_avg = (pricing.current.average_eb + pricing.current.average_wb) / 2.0;
+        let next_avg = (pricing.next.average_eb + pricing.next.average_wb) / 2.0;
+
+        if next_avg < current_avg - 0.001 {
+            println!("\nOptimization Tip: Waiting for the next timeslot could save you money!");
+        } else if next_avg > current_avg + 0.001 {
+            println!("\nOptimization Tip: Leave now to avoid higher rates in the next timeslot!");
+        }
+
+        return Ok(());
     }
 
-    let file = fs::File::open(&args.csv_file)
-        .with_context(|| format!("Failed to open file: {}", args.csv_file.display()))?;
+    let csv_file = args.csv_file.ok_or_else(|| {
+        anyhow::anyhow!("CSV file is required unless --current-price is specified.")
+    })?;
+
+    if !csv_file.exists() {
+        anyhow::bail!("File '{}' not found.", csv_file.display());
+    }
+
+    let file = fs::File::open(&csv_file)
+        .with_context(|| format!("Failed to open file: {}", csv_file.display()))?;
 
     let results = csv_parser::parse_trips(file);
 

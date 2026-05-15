@@ -5,6 +5,7 @@ Toll Optimizer is a high-performance Rust-based tool designed to analyze 407 ETR
 ## Features
 - **Time-Based Analysis**: Identifies trip clusters and calculates potential savings if you were to leave in a cheaper timeslot.
 - **Distance-Based Analysis**: Suggests alternate entry or exit points that could lower your toll for the same route.
+- **Live Pricing**: Real-time 407 ETR rate lookup and optimization tips for the current and upcoming timeslots.
 - **2026 Rate Projections**: Includes the latest 2026 toll rates for accurate savings estimates.
 - **JSON Output**: Fully structured machine-readable output optimized for LLMs and data pipelines.
 - **Markdown Output**: Professional report format with tables, ideal for sharing and documentation.
@@ -31,16 +32,32 @@ cargo install --path .
 
 ## Usage
 
+### Analyze a Statement
 Analyze a 407 ETR CSV statement file:
 
 ```bash
 toll-optimizer <path-to-csv>
 ```
 
+### Check Current Pricing
+Get the current and next timeslot prices:
+
+```bash
+toll-optimizer --current-price
+```
+
+You can also override the date and time:
+```bash
+toll-optimizer --current-price --date 2026-05-12 --time "07:30 AM"
+```
+
 ### Options:
 - `-v, --verbose`: Show detailed trip listings and validation.
 - `-j, --json`: Output results in JSON format (for programmatic use).
 - `-m, --markdown`: Output results in Markdown format (for reports).
+- `--current-price`: Display pricing info for the current timeslot.
+- `--date <DATE>`: Override date for pricing (YYYY-MM-DD).
+- `--time <TIME>`: Override time for pricing (HH:MM AM/PM or HH:MM).
 - `-h, --help`: Show help information.
 - `-V, --version`: Show version information.
 

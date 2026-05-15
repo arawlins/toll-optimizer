@@ -13,4 +13,4 @@ The following commands are used for developing and maintaining the Toll Optimize
 
 ## Project specific
 - The application processes CSV files in the `csv/` directory.
-- It specifically looks for a hardcoded filename in `main.rs` currently: `2025-08-28 - 573522284 Statement.csv`.
+- The application accepts the CSV file path as a command-line argument.

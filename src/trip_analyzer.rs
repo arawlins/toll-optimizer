@@ -3,7 +3,10 @@ use crate::light_vehicles;
 use simple_datetime_rs::Date;
 use std::collections::HashMap;
 
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
+use chrono::{NaiveDate, Datelike, Duration};
+use anyhow::{Result, anyhow};
+
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize)]
 pub enum Direction {
@@ -17,6 +20,21 @@ pub enum DayType {
     Weekend,
     Holiday,
 }
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct TimeslotPrices {
+    pub timeslot: String,
+    pub average_wb: f64,
+    pub average_eb: f64,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct PricingResponse {
+    pub current: TimeslotPrices,
+    pub next: TimeslotPrices,
+    pub day_type: String,
+}
+
 
 #[derive(Debug, Clone, Serialize)]
 pub struct TripRecord {
@@ -1349,4 +1367,118 @@ pub fn analyze_trips_by_distance<'a>(
     }
 
     summaries
+}
+
+pub fn parse_time_flexible(time_str: &str) -> Option<u32> {
+    if let Some(m) = parse_time_to_minutes(time_str) {
+        return Some(m);
+    }
+
+    // Try HH:MM (24h)
+    let parts: Vec<&str> = time_str.split(':').collect();
+    if parts.len() >= 2 {
+        let h: u32 = parts[0].trim().parse().ok()?;
+        let m: u32 = parts[1].trim().get(0..2).and_then(|s| s.parse::<u32>().ok()).or_else(|| parts[1].trim().parse().ok())?;
+        if h < 24 && m < 60 {
+            return Some(h * 60 + m);
+        }
+    }
+    None
+}
+
+pub fn classify_day_type(date: NaiveDate) -> DayType {
+    let day = date.day();
+    let month = date.month();
+    let year = date.year() as u32;
+
+    if is_holiday(day, month, year) {
+        DayType::Holiday
+    } else if is_weekend(day, month, year) {
+        DayType::Weekend
+    } else {
+        DayType::Weekday
+    }
+}
+
+pub fn get_pricing(date_str: &str, time_str: &str) -> Result<PricingResponse> {
+    let date = NaiveDate::parse_from_str(date_str, "%Y-%m-%d")
+        .map_err(|e| anyhow!("Invalid date format '{}'. Expected YYYY-MM-DD: {}", date_str, e))?;
+
+    let day_type = classify_day_type(date);
+    let minutes = parse_time_flexible(time_str)
+        .ok_or_else(|| anyhow!("Invalid time format '{}'. Expected HH:MM AM/PM or HH:MM", time_str))?;
+
+    let slots = match day_type {
+        DayType::Weekday => &WEEKDAY_TIMESLOTS_2026[..],
+        DayType::Weekend | DayType::Holiday => &WEEKEND_TIMESLOTS_2026[..],
+    };
+
+    let eb_averages = match day_type {
+        DayType::Weekday => &light_vehicles::WEEKDAY_EB_AVERAGE_TOLL_PRICES_2026[..],
+        DayType::Weekend | DayType::Holiday => &light_vehicles::WEEKEND_EB_AVERAGE_TOLL_PRICES_2026[..],
+    };
+
+    let wb_averages = match day_type {
+        DayType::Weekday => &light_vehicles::WEEKDAY_WB_AVERAGE_TOLL_PRICES_2026[..],
+        DayType::Weekend | DayType::Holiday => &light_vehicles::WEEKEND_WB_AVERAGE_TOLL_PRICES_2026[..],
+    };
+
+    let slot_minutes: Vec<u32> = slots
+        .iter()
+        .filter_map(|&t| parse_time_to_minutes(t))
+        .collect();
+
+    if slot_minutes.is_empty() {
+        return Err(anyhow!("No timeslots defined"));
+    }
+
+    let mut current_idx = slot_minutes.len() - 1;
+    for (i, &slot_time) in slot_minutes.iter().enumerate() {
+        if minutes < slot_time {
+            if i == 0 {
+                current_idx = slot_minutes.len() - 1;
+            } else {
+                current_idx = i - 1;
+            }
+            break;
+        }
+        current_idx = i;
+    }
+
+    let next_idx = (current_idx + 1) % slot_minutes.len();
+
+    let (next_slots, next_eb_averages, next_wb_averages) = if next_idx == 0 {
+        let next_date = date + Duration::days(1);
+        let next_day_type = classify_day_type(next_date);
+
+        let ns = match next_day_type {
+            DayType::Weekday => &WEEKDAY_TIMESLOTS_2026[..],
+            DayType::Weekend | DayType::Holiday => &WEEKEND_TIMESLOTS_2026[..],
+        };
+        let neb = match next_day_type {
+            DayType::Weekday => &light_vehicles::WEEKDAY_EB_AVERAGE_TOLL_PRICES_2026[..],
+            DayType::Weekend | DayType::Holiday => &light_vehicles::WEEKEND_EB_AVERAGE_TOLL_PRICES_2026[..],
+        };
+        let nwb = match next_day_type {
+            DayType::Weekday => &light_vehicles::WEEKDAY_WB_AVERAGE_TOLL_PRICES_2026[..],
+            DayType::Weekend | DayType::Holiday => &light_vehicles::WEEKEND_WB_AVERAGE_TOLL_PRICES_2026[..],
+        };
+        (ns, neb, nwb)
+    } else {
+        (slots, eb_averages, wb_averages)
+    };
+
+    Ok(PricingResponse {
+        current: TimeslotPrices {
+            timeslot: slots[current_idx].to_string(),
+            average_eb: eb_averages[current_idx],
+            average_wb: wb_averages[current_idx],
+        },
+        next: TimeslotPrices {
+            timeslot: next_slots[next_idx].to_string(),
+            average_eb: next_eb_averages[next_idx],
+            average_wb: next_wb_averages[next_idx],
+        },
+        day_type: format!("{:?}", day_type),
+    })
 }
