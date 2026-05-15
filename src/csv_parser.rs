@@ -1,10 +1,22 @@
 use crate::trip_analyzer::{Direction, TripRecord};
 use crate::{ACCESS_POINT_SYNONYMS, ACCESS_POINTS, OLD_ACCESS_POINTS};
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
+use serde::Serialize;
 
-pub fn parse_trips<R: std::io::Read>(reader: R) -> Vec<((String, Direction), Vec<TripRecord>)> {
+#[derive(Debug, Serialize)]
+pub struct ParseResult {
+    pub trips: Vec<((String, Direction), Vec<TripRecord>)>,
+    pub total_processed: usize,
+    pub total_skipped: usize,
+    pub unknown_points: Vec<String>,
+}
+
+pub fn parse_trips<R: std::io::Read>(reader: R) -> ParseResult {
     let mut trips_by_transponder: HashMap<String, Vec<TripRecord>> = HashMap::new();
     let mut header_found = false;
+    let mut total_processed = 0;
+    let mut total_skipped = 0;
+    let mut unknown_points = HashSet::new();
 
     let mut csv_reader = csv::ReaderBuilder::new()
         .has_headers(false)
@@ -56,14 +68,17 @@ pub fn parse_trips<R: std::io::Read>(reader: R) -> Vec<((String, Direction), Vec
 
                     let plate = record.transponder_plate.clone();
                     trips_by_transponder.entry(plate).or_default().push(record);
+                    total_processed += 1;
                 }
-                (None, _) | (_, None) => {
+                _ => {
+                    total_skipped += 1;
                     if entry_index.is_none() {
                         tracing::warn!(
                             entry_point = %record.entry_point,
                             plate = %record.transponder_plate,
                             "Unknown entry point found during CSV parsing"
                         );
+                        unknown_points.insert(record.entry_point.clone());
                     }
                     if exit_index.is_none() {
                         tracing::warn!(
@@ -71,6 +86,7 @@ pub fn parse_trips<R: std::io::Read>(reader: R) -> Vec<((String, Direction), Vec
                             plate = %record.transponder_plate,
                             "Unknown exit point found during CSV parsing"
                         );
+                        unknown_points.insert(record.exit_point.clone());
                     }
                 }
             }
@@ -100,5 +116,13 @@ pub fn parse_trips<R: std::io::Read>(reader: R) -> Vec<((String, Direction), Vec
             .then_with(|| format!("{:?}", a.0.1).cmp(&format!("{:?}", b.0.1)))
     });
 
-    results
+    let mut unknown_points_vec: Vec<String> = unknown_points.into_iter().collect();
+    unknown_points_vec.sort();
+
+    ParseResult {
+        trips: results,
+        total_processed,
+        total_skipped,
+        unknown_points: unknown_points_vec,
+    }
 }

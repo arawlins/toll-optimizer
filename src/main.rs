@@ -110,11 +110,16 @@ fn main() -> Result<()> {
 
     let results = csv_parser::parse_trips(file);
 
-    let summaries_by_time = trip_analyzer::analyze_trips_by_time(&results);
-    let summaries_by_distance = trip_analyzer::analyze_trips_by_distance(&results);
+    let summaries_by_time = trip_analyzer::analyze_trips_by_time(&results.trips);
+    let summaries_by_distance = trip_analyzer::analyze_trips_by_distance(&results.trips);
 
     if args.json {
         let output = serde_json::json!({
+            "summary": {
+                "total_processed": results.total_processed,
+                "total_skipped": results.total_skipped,
+                "unknown_points": results.unknown_points,
+            },
             "time_based_analysis": summaries_by_time,
             "distance_based_analysis": summaries_by_distance,
         });
@@ -123,9 +128,28 @@ fn main() -> Result<()> {
     }
 
     if args.markdown {
-        md_output::print_markdown(&summaries_by_time, &summaries_by_distance, args.verbose);
+        md_output::print_markdown(
+            &summaries_by_time,
+            &summaries_by_distance,
+            args.verbose,
+            results.total_processed,
+            results.total_skipped,
+            &results.unknown_points,
+        );
         return Ok(());
     }
+
+    println!("--- Processing Summary ---");
+    println!("Trips Processed: {}", results.total_processed);
+    println!("Trips Skipped:   {}", results.total_skipped);
+    if !results.unknown_points.is_empty() {
+        println!("\nUnrecognized Access Points:");
+        for point in &results.unknown_points {
+            println!("  - {} | NOT RECOGNIZED", point);
+        }
+    }
+    println!();
+
 
     println!("--- Time-Based Clustering Analysis ---");
     for summary in &summaries_by_time {
@@ -241,7 +265,7 @@ fn main() -> Result<()> {
     if args.verbose {
         println!("\nDetailed Trip Validation:");
 
-        for ((plate, direction), trips) in &results {
+        for ((plate, direction), trips) in &results.trips {
             let total_cost: f64 = trips.iter().map(|t| t.get_total_recorded_cost()).sum();
             println!(
                 "Transponder: {}, Direction: {:?}, Total Trips: {}, Total Cost: ${:.2}",

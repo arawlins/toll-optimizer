@@ -12,19 +12,40 @@ use crate::trip_analyzer::{DayType, TransponderSummaryByDistance, TransponderSum
 /// * `summaries_by_time` - A slice of time-based clustering summaries.
 /// * `summaries_by_distance` - A slice of distance-based clustering summaries.
 /// * `verbose` - Whether to include detailed trip tables in the output.
+/// * `total_processed` - Total number of trips processed.
+/// * `total_skipped` - Total number of trips skipped.
+/// * `unknown_points` - List of unrecognized entry/exit points.
 ///
 /// # Example
 ///
 /// ```rust
 /// // Assuming summaries are already generated
-/// toll_optimizer::md_output::print_markdown(&time_summaries, &dist_summaries, true);
+/// toll_optimizer::md_output::print_markdown(&time_summaries, &dist_summaries, true, 10, 2, &[]);
 /// ```
 pub fn print_markdown(
     summaries_by_time: &[TransponderSummaryByTime],
     summaries_by_distance: &[TransponderSummaryByDistance],
     verbose: bool,
+    total_processed: usize,
+    total_skipped: usize,
+    unknown_points: &[String],
 ) {
     println!("# Toll Optimizer Analysis Report\n");
+
+    println!("## Processing Summary\n");
+    println!("| Metric | Value |");
+    println!("| --- | --- |");
+    println!("| Trips Processed | {} |", total_processed);
+    println!("| Trips Skipped | {} |", total_skipped);
+    println!();
+
+    if !unknown_points.is_empty() {
+        println!("### Unrecognized Access Points\n");
+        for point in unknown_points {
+            println!("- {} | NOT RECOGNIZED", point);
+        }
+        println!();
+    }
 
     println!("## Time-Based Clustering Analysis\n");
     for summary in summaries_by_time {
