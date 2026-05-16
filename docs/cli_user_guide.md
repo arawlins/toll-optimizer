@@ -25,6 +25,25 @@ toll-optimizer statement.csv
 -   `-m, --markdown`: Outputs the analysis in a clean Markdown format with tables, suitable for copying into reports or GitHub issues.
 -   `-h, --help`: Displays usage information.
 
+## Live Pricing and Trip Planning
+Get real-time 407 ETR rate lookups and optimization advice for your current or planned trip.
+
+```bash
+# Get rates for the current time
+toll-optimizer --current-price
+
+# Check rates for a specific future date and time
+toll-optimizer --current-price --date 2026-05-12 --time "07:30 AM"
+
+# Specify a vehicle class (Default: "Light vehicle")
+toll-optimizer --current-price --vehicle-class "Heavy Single Unit"
+```
+
+The live pricing check provides:
+- **Current Timeslot**: The rate you would pay if you entered the highway right now.
+- **Next Timeslot**: The rate for the following timeslot, helping you decide whether to "Leave now" or "Wait".
+- **Optimization Tip**: A clear directive (e.g., "Wait for the next timeslot to save money!").
+
 ## Understanding the Results
 
 The tool provides three output formats: **Standard (Text)**, **JSON**, and **Markdown**.
