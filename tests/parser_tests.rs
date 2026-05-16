@@ -9,8 +9,8 @@ fn test_parse_valid_csv_line() {
     ];
 
     let results = csv_parser::parse_trips(lines.join("\n").as_bytes());
-    assert_eq!(results.len(), 1);
-    let ((plate, direction), trips) = &results[0];
+    assert_eq!(results.trips.len(), 1);
+    let ((plate, direction), trips) = &results.trips[0];
     assert_eq!(plate, "TEST_PLATE_001");
     assert_eq!(direction, &Direction::Eastbound);
     assert_eq!(trips.len(), 1);
@@ -26,8 +26,8 @@ fn test_parse_csv_with_synonyms() {
     ];
 
     let results = csv_parser::parse_trips(lines.join("\n").as_bytes());
-    assert_eq!(results.len(), 1);
-    let ((_, _), trips) = &results[0];
+    assert_eq!(results.trips.len(), 1);
+    let ((_, _), trips) = &results.trips[0];
     assert_eq!(trips[0].entry_point, "Brock(Hwy7)");
 }
 
@@ -39,7 +39,7 @@ fn test_parse_skips_non_light_vehicles() {
     ];
 
     let results = csv_parser::parse_trips(lines.join("\n").as_bytes());
-    assert_eq!(results.len(), 0);
+    assert_eq!(results.trips.len(), 0);
 }
 
 #[test]
@@ -51,14 +51,15 @@ fn test_parse_unknown_points() {
 
     let results = csv_parser::parse_trips(lines.join("\n").as_bytes());
     // Should skip trips with unknown entry/exit points
-    assert_eq!(results.len(), 0);
+    assert_eq!(results.trips.len(), 0);
+    assert_eq!(results.total_skipped, 1);
 }
 
 #[test]
 fn test_parse_empty_input() {
     let lines: Vec<String> = vec![];
     let results = csv_parser::parse_trips(lines.join("\n").as_bytes());
-    assert_eq!(results.len(), 0);
+    assert_eq!(results.trips.len(), 0);
 }
 
 #[test]
@@ -70,5 +71,5 @@ fn test_parse_malformed_lines() {
     ];
 
     let results = csv_parser::parse_trips(lines.join("\n").as_bytes());
-    assert_eq!(results.len(), 0);
+    assert_eq!(results.trips.len(), 0);
 }

@@ -1,3 +1,8 @@
+---
+name: toll-optimizer
+description: Analyze 407 ETR toll statements to find savings through time-shifting or route adjustments, and check live pricing. Use when analyzing monthly CSV statements or planning trips with live pricing information.
+---
+
 # Skill: Toll Optimizer
 
 Analyze 407 ETR toll statements to find savings through time-shifting or route adjustments, and check live pricing.
@@ -29,9 +34,9 @@ The primary tool for analysis and pricing.
 
 ### 1. Monthly Analysis
 To perform a standard monthly review:
-1.  Identify the most recent statement in the `csv/` directory.
-2.  Run the optimizer with the `--json` flag:
-    `toll-optimizer --json "csv/<filename>.csv"`
+1.  Run the optimizer with the `--json` and `--verbose` flags:
+    `toll-optimizer --json --verbose "<filename>.csv"`
+2.  Parse the `Processing Summary` section to get the total time-based and distance-based costs saved.
 3.  Parse the `time_based_analysis` to find "Cheaper Prev" or "Cheaper Next" opportunities.
 4.  Parse the `distance_based_analysis` to find route optimization advice (e.g., "Exit on Warden to save some $$$").
 
@@ -42,11 +47,6 @@ If a user asks about current rates or planning a trip:
 2.  For a specific time:
     `toll-optimizer --current-price --date 2026-05-12 --time "07:30 AM"`
 3.  Compare "Current Timeslot" and "Next Timeslot" averages to provide leaving/waiting advice.
-
-### 3. Deep Dive
-If a user asks why a specific trip was expensive:
-1.  Run with `--verbose` and search for the date or entry point.
-2.  Use the `detailed_trip_validation` section to verify if the recorded toll matches the calculated toll (detecting overcharges).
 
 ## Success Criteria
 - [ ] Correct mode identified (Analysis vs. Pricing).

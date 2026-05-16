@@ -1,14 +1,13 @@
 use anyhow::{Context, Result};
+use chrono::Local;
 use clap::Parser;
 use std::fs;
 use std::path::PathBuf;
-use chrono::Local;
 
 use toll_optimizer::{DayType, csv_parser, md_output, trip_analyzer};
 
-/// Toll Optimizer: Analyze 407 ETR statements and suggest optimizations.
 #[derive(Parser, Debug)]
-#[command(author, version, about, long_about = None)]
+#[command(author, version, long_about = None, arg_required_else_help = true)]
 struct Args {
     /// Path to the 407 ETR CSV statement file
     #[arg(value_name = "FILE")]
@@ -25,7 +24,6 @@ struct Args {
     /// Override time for pricing (HH:MM AM/PM or HH:MM)
     #[arg(long, value_name = "TIME")]
     time: Option<String>,
-
 
     /// Output results in JSON format
     #[arg(short, long)]
@@ -45,7 +43,9 @@ fn main() -> Result<()> {
 
     if args.current_price {
         let now = Local::now();
-        let date = args.date.unwrap_or_else(|| now.format("%Y-%m-%d").to_string());
+        let date = args
+            .date
+            .unwrap_or_else(|| now.format("%Y-%m-%d").to_string());
         let time = args.time.unwrap_or_else(|| now.format("%H:%M").to_string());
 
         let pricing = trip_analyzer::get_pricing(&date, &time)?;
@@ -54,9 +54,15 @@ fn main() -> Result<()> {
             let current_avg = (pricing.current.average_eb + pricing.current.average_wb) / 2.0;
             let next_avg = (pricing.next.average_eb + pricing.next.average_wb) / 2.0;
             let advice = if next_avg < current_avg - 0.001 {
-                format!("Waiting for the next timeslot ({}) could save you money!", pricing.next.timeslot)
+                format!(
+                    "Waiting for the next timeslot ({}) could save you money!",
+                    pricing.next.timeslot
+                )
             } else if next_avg > current_avg + 0.001 {
-                format!("Leave now ({}) to avoid higher rates in the next timeslot!", pricing.current.timeslot)
+                format!(
+                    "Leave now ({}) to avoid higher rates in the next timeslot!",
+                    pricing.current.timeslot
+                )
             } else {
                 "Rates are expected to remain stable.".to_string()
             };
@@ -113,11 +119,33 @@ fn main() -> Result<()> {
     let summaries_by_time = trip_analyzer::analyze_trips_by_time(&results.trips);
     let summaries_by_distance = trip_analyzer::analyze_trips_by_distance(&results.trips);
 
+    let total_cost: f64 = results
+        .trips
+        .iter()
+        .flat_map(|(_, trips)| trips.iter())
+        .map(|t| t.get_total_recorded_cost())
+        .sum();
+
+    let total_time_savings: f64 = summaries_by_time
+        .iter()
+        .flat_map(|s| s.centroids.iter())
+        .map(|c| c.total_optimized_savings)
+        .sum();
+
+    let total_distance_savings: f64 = summaries_by_distance
+        .iter()
+        .flat_map(|s| s.centroids.iter())
+        .map(|c| c.total_optimized_savings)
+        .sum();
+
     if args.json {
         let output = serde_json::json!({
             "summary": {
                 "total_processed": results.total_processed,
                 "total_skipped": results.total_skipped,
+                "total_cost": total_cost,
+                "total_potential_time_savings": total_time_savings,
+                "total_potential_distance_savings": total_distance_savings,
                 "unknown_points": results.unknown_points,
             },
             "time_based_analysis": summaries_by_time,
@@ -134,6 +162,9 @@ fn main() -> Result<()> {
             args.verbose,
             results.total_processed,
             results.total_skipped,
+            total_cost,
+            total_time_savings,
+            total_distance_savings,
             &results.unknown_points,
         );
         return Ok(());
@@ -142,6 +173,16 @@ fn main() -> Result<()> {
     println!("--- Processing Summary ---");
     println!("Trips Processed: {}", results.total_processed);
     println!("Trips Skipped:   {}", results.total_skipped);
+    println!("Total Bill Cost: ${:.2}", total_cost);
+    println!(
+        "Potential Time-Based Savings:     ${:.2}",
+        total_time_savings
+    );
+    println!(
+        "Potential Distance-Based Savings: ${:.2}",
+        total_distance_savings
+    );
+
     if !results.unknown_points.is_empty() {
         println!("\nUnrecognized Access Points:");
         for point in &results.unknown_points {
@@ -150,8 +191,7 @@ fn main() -> Result<()> {
     }
     println!();
 
-
-    println!("--- Time-Based Clustering Analysis ---");
+    println!("--- Time-Based Analysis ---");
     for summary in &summaries_by_time {
         println!(
             "Transponder: {}, Direction: {:?}",
@@ -309,7 +349,7 @@ fn main() -> Result<()> {
         }
     }
 
-    println!("\n--- Distance-Based Clustering Analysis ---");
+    println!("\n--- Distance-Based Analysis ---");
     for summary in &summaries_by_distance {
         println!(
             "Transponder: {}, Direction: {:?}",

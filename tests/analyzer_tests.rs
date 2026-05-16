@@ -14,7 +14,7 @@ fn test_time_based_optimization_savings() {
     ];
 
     let parsed = csv_parser::parse_trips(csv_lines.join("\n").as_bytes());
-    let analysis = trip_analyzer::analyze_trips_by_time(&parsed);
+    let analysis = trip_analyzer::analyze_trips_by_time(&parsed.trips);
 
     assert_eq!(analysis.len(), 1);
     let summary = &analysis[0];
@@ -36,7 +36,7 @@ fn test_distance_based_optimization_savings() {
     ];
 
     let parsed = csv_parser::parse_trips(csv_lines.join("\n").as_bytes());
-    let analysis = trip_analyzer::analyze_trips_by_distance(&parsed);
+    let analysis = trip_analyzer::analyze_trips_by_distance(&parsed.trips);
 
     assert_eq!(analysis.len(), 1);
     let summary = &analysis[0];
@@ -56,7 +56,7 @@ fn test_multiple_transponders_grouping() {
     ];
 
     let parsed = csv_parser::parse_trips(csv_lines.join("\n").as_bytes());
-    let analysis_time = trip_analyzer::analyze_trips_by_time(&parsed);
+    let analysis_time = trip_analyzer::analyze_trips_by_time(&parsed.trips);
 
     // Should have 2 summaries (one per transponder since direction is same)
     // Should have 2 summaries (one per transponder since direction is same)
@@ -74,7 +74,7 @@ fn test_weekday_vs_weekend_pricing() {
         "\"TEST_PLATE\",\"Light vehicle\",\"28 Aug 25\",\"10:00 AM\",\"QEW\",\"Trafalgar\",\"10.0\",\"0.00\",\"0.00\",\"0.00\"".to_string(),
     ];
     let weekday_parsed = csv_parser::parse_trips(weekday_csv.join("\n").as_bytes());
-    let weekday_trip = &weekday_parsed[0].1[0];
+    let weekday_trip = &weekday_parsed.trips[0].1[0];
     let (weekday_cost, _) = weekday_trip.calculate_cost().unwrap();
 
     // 30 Aug 25 is a Saturday
@@ -83,7 +83,7 @@ fn test_weekday_vs_weekend_pricing() {
         "\"TEST_PLATE\",\"Light vehicle\",\"30 Aug 25\",\"10:00 AM\",\"QEW\",\"Trafalgar\",\"10.0\",\"0.00\",\"0.00\",\"0.00\"".to_string(),
     ];
     let weekend_parsed = csv_parser::parse_trips(weekend_csv.join("\n").as_bytes());
-    let weekend_trip = &weekend_parsed[0].1[0];
+    let weekend_trip = &weekend_parsed.trips[0].1[0];
     let (weekend_cost, _) = weekend_trip.calculate_cost().unwrap();
 
     println!("Weekday: {}, Weekend: {}", weekday_cost, weekend_cost);
@@ -98,7 +98,7 @@ fn test_year_boundary_pricing() {
         "\"TEST_PLATE\",\"Light vehicle\",\"28 Aug 25\",\"10:00 AM\",\"QEW\",\"Hwy404\",\"10.0\",\"0.00\",\"0.00\",\"0.00\"".to_string(),
     ];
     let year25_parsed = csv_parser::parse_trips(year25_csv.join("\n").as_bytes());
-    let year25_trip = &year25_parsed[0].1[0];
+    let year25_trip = &year25_parsed.trips[0].1[0];
     let (cost_25, _) = year25_trip.calculate_cost().unwrap();
 
     let year26_csv = vec![
@@ -106,7 +106,7 @@ fn test_year_boundary_pricing() {
         "\"TEST_PLATE\",\"Light vehicle\",\"28 Aug 26\",\"10:00 AM\",\"QEW\",\"Hwy404\",\"10.0\",\"0.00\",\"0.00\",\"0.00\"".to_string(),
     ];
     let year26_parsed = csv_parser::parse_trips(year26_csv.join("\n").as_bytes());
-    let year26_trip = &year26_parsed[0].1[0];
+    let year26_trip = &year26_parsed.trips[0].1[0];
     let (cost_26, _) = year26_trip.calculate_cost_2026().unwrap();
 
     println!("Cost 2025: {}, Cost 2026: {}", cost_25, cost_26);
@@ -121,7 +121,7 @@ fn test_holiday_classification() {
         "\"TEST_PLATE\",\"Light vehicle\",\"01 Jan 25\",\"10:00 AM\",\"QEW\",\"Trafalgar\",\"10.0\",\"0.00\",\"0.00\",\"0.00\"".to_string(),
     ];
     let holiday_parsed = csv_parser::parse_trips(holiday_csv.join("\n").as_bytes());
-    let holiday_trip = &holiday_parsed[0].1[0];
+    let holiday_trip = &holiday_parsed.trips[0].1[0];
     let (holiday_cost, _) = holiday_trip.calculate_cost().unwrap();
 
     // Compare to weekend pricing
@@ -130,7 +130,7 @@ fn test_holiday_classification() {
         "\"TEST_PLATE\",\"Light vehicle\",\"04 Jan 25\",\"10:00 AM\",\"QEW\",\"Trafalgar\",\"10.0\",\"0.00\",\"0.00\",\"0.00\"".to_string(), // Saturday
     ];
     let weekend_parsed = csv_parser::parse_trips(weekend_csv.join("\n").as_bytes());
-    let weekend_trip = &weekend_parsed[0].1[0];
+    let weekend_trip = &weekend_parsed.trips[0].1[0];
     let (weekend_cost, _) = weekend_trip.calculate_cost().unwrap();
 
     assert_eq!(holiday_cost, weekend_cost, "Holiday toll should match weekend toll calculation");
@@ -146,7 +146,7 @@ fn test_westbound_zone_boundary() {
         "\"TEST_PLATE\",\"Light vehicle\",\"28 Aug 25\",\"10:00 AM\",\"Brock(Hwy7)\",\"QEW\",\"40.0\",\"0.00\",\"0.00\",\"0.00\"".to_string(),
     ];
     let wb_parsed = csv_parser::parse_trips(wb_csv.join("\n").as_bytes());
-    let wb_analysis = trip_analyzer::analyze_trips_by_distance(&wb_parsed);
+    let wb_analysis = trip_analyzer::analyze_trips_by_distance(&wb_parsed.trips);
     
     // Testing there was no panic, and that we have a result
     assert_eq!(wb_analysis.len(), 1);
@@ -162,11 +162,11 @@ fn test_midnight_trip_parsing() {
     let midnight_parsed = csv_parser::parse_trips(midnight_csv.join("\n").as_bytes());
     
     // There should be 1 trip successfully parsed
-    assert_eq!(midnight_parsed.len(), 1, "Midnight trip was not parsed successfully");
-    assert_eq!(midnight_parsed[0].1.len(), 1);
+    assert_eq!(midnight_parsed.trips.len(), 1, "Midnight trip was not parsed successfully");
+    assert_eq!(midnight_parsed.trips[0].1.len(), 1);
     
     // Let's verify timeslot mapping
-    let analysis = trip_analyzer::analyze_trips_by_time(&midnight_parsed);
+    let analysis = trip_analyzer::analyze_trips_by_time(&midnight_parsed.trips);
     assert_eq!(analysis.len(), 1);
     let summary = &analysis[0];
     let centroid = &summary.centroids[0];

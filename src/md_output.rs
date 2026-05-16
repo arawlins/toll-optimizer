@@ -1,5 +1,6 @@
-use crate::trip_analyzer::{DayType, TransponderSummaryByDistance, TransponderSummaryByTime, PricingResponse};
-
+use crate::trip_analyzer::{
+    DayType, PricingResponse, TransponderSummaryByDistance, TransponderSummaryByTime,
+};
 
 /// Prints a comprehensive analysis report in Markdown format.
 ///
@@ -18,9 +19,11 @@ use crate::trip_analyzer::{DayType, TransponderSummaryByDistance, TransponderSum
 ///
 /// # Example
 ///
-/// ```rust
+/// ```rust,no_run
 /// // Assuming summaries are already generated
-/// toll_optimizer::md_output::print_markdown(&time_summaries, &dist_summaries, true, 10, 2, &[]);
+/// # let time_summaries = vec![];
+/// # let dist_summaries = vec![];
+/// toll_optimizer::md_output::print_markdown(&time_summaries, &dist_summaries, true, 10, 2, 100.0, 5.0, 2.0, &[]);
 /// ```
 pub fn print_markdown(
     summaries_by_time: &[TransponderSummaryByTime],
@@ -28,6 +31,9 @@ pub fn print_markdown(
     verbose: bool,
     total_processed: usize,
     total_skipped: usize,
+    total_cost: f64,
+    total_time_savings: f64,
+    total_distance_savings: f64,
     unknown_points: &[String],
 ) {
     println!("# Toll Optimizer Analysis Report\n");
@@ -37,6 +43,15 @@ pub fn print_markdown(
     println!("| --- | --- |");
     println!("| Trips Processed | {} |", total_processed);
     println!("| Trips Skipped | {} |", total_skipped);
+    println!("| Total Bill Cost | ${:.2} |", total_cost);
+    println!(
+        "| Potential Time-Based Savings | ${:.2} |",
+        total_time_savings
+    );
+    println!(
+        "| Potential Distance-Based Savings | ${:.2} |",
+        total_distance_savings
+    );
     println!();
 
     if !unknown_points.is_empty() {
@@ -47,10 +62,13 @@ pub fn print_markdown(
         println!();
     }
 
-    println!("## Time-Based Clustering Analysis\n");
+    println!("## Time-Based Analysis\n");
     for summary in summaries_by_time {
-        println!("### Transponder: {}, Direction: {:?}\n", summary.transponder_plate, summary.direction);
-        
+        println!(
+            "### Transponder: {}, Direction: {:?}\n",
+            summary.transponder_plate, summary.direction
+        );
+
         for centroid in &summary.centroids {
             println!("#### Trips near {}\n", centroid.centroid_time);
             println!("| Metric | Value |");
@@ -58,17 +76,27 @@ pub fn print_markdown(
             println!("| Average Entry Time | {} |", centroid.average_entry_time);
             println!("| Total Distance | {:.3} km |", centroid.total_distance);
             println!("| Total Toll Charge | ${:.2} |", centroid.total_toll_charge);
-            
+
             if centroid.total_toll_charge_previous_timeslot < centroid.total_toll_charge - 0.005 {
-                let savings = centroid.total_toll_charge - centroid.total_toll_charge_previous_timeslot;
-                println!("| Toll (Prev Timeslot) | ${:.2} (Save ${:.2}) |", centroid.total_toll_charge_previous_timeslot, savings);
+                let savings =
+                    centroid.total_toll_charge - centroid.total_toll_charge_previous_timeslot;
+                println!(
+                    "| Toll (Prev Timeslot) | ${:.2} (Save ${:.2}) |",
+                    centroid.total_toll_charge_previous_timeslot, savings
+                );
             }
             if centroid.total_toll_charge_next_timeslot < centroid.total_toll_charge - 0.005 {
                 let savings = centroid.total_toll_charge - centroid.total_toll_charge_next_timeslot;
-                println!("| Toll (Next Timeslot) | ${:.2} (Save ${:.2}) |", centroid.total_toll_charge_next_timeslot, savings);
+                println!(
+                    "| Toll (Next Timeslot) | ${:.2} (Save ${:.2}) |",
+                    centroid.total_toll_charge_next_timeslot, savings
+                );
             }
             if centroid.total_optimized_savings > 0.0 {
-                println!("| Potential Savings | ${:.2} |", centroid.total_optimized_savings);
+                println!(
+                    "| Potential Savings | ${:.2} |",
+                    centroid.total_optimized_savings
+                );
             }
             println!();
 
@@ -83,7 +111,7 @@ pub fn print_markdown(
                         Some(DayType::Weekday) => "Weekday",
                         None => "Unknown",
                     };
-                    
+
                     let mut opt_msgs = Vec::new();
                     let current_cost = trip.get_total_recorded_cost();
                     if let Some(prev) = trip_summary.total_cost_previous_timeslot {
@@ -96,10 +124,17 @@ pub fn print_markdown(
                             opt_msgs.push(format!("Next: ${:.2}", next));
                         }
                     }
-                    
-                    println!("| {} | {} | {} -> {} | {}km | {} | ${:.2} | {} |",
-                        trip.date_of_trip, trip.entry_time, trip.entry_point, trip.exit_point,
-                        trip.distance_km, day_type_str, current_cost, opt_msgs.join(", ")
+
+                    println!(
+                        "| {} | {} | {} -> {} | {}km | {} | ${:.2} | {} |",
+                        trip.date_of_trip,
+                        trip.entry_time,
+                        trip.entry_point,
+                        trip.exit_point,
+                        trip.distance_km,
+                        day_type_str,
+                        current_cost,
+                        opt_msgs.join(", ")
                     );
                 }
                 println!();
@@ -107,20 +142,32 @@ pub fn print_markdown(
         }
     }
 
-    println!("## Distance-Based (Zones) Clustering Analysis\n");
+    println!("## Distance-Based Analysis\n");
     for summary in summaries_by_distance {
-        println!("### Transponder: {}, Direction: {:?}\n", summary.transponder_plate, summary.direction);
-        
+        println!(
+            "### Transponder: {}, Direction: {:?}\n",
+            summary.transponder_plate, summary.direction
+        );
+
         for centroid in &summary.centroids {
-            let entry = centroid.representative_entry.as_deref().unwrap_or("Unknown");
+            let entry = centroid
+                .representative_entry
+                .as_deref()
+                .unwrap_or("Unknown");
             let exit = centroid.representative_exit.as_deref().unwrap_or("Unknown");
-            println!("#### {} -> {} (Avg: {:.2} km)\n", entry, exit, centroid.average_distance);
-            
+            println!(
+                "#### {} -> {} (Avg: {:.2} km)\n",
+                entry, exit, centroid.average_distance
+            );
+
             println!("| Metric | Value |");
             println!("| --- | --- |");
             println!("| Total Toll Charge | ${:.2} |", centroid.total_toll_charge);
             if centroid.total_optimized_savings > 0.0 {
-                println!("| Potential Savings | ${:.2} |", centroid.total_optimized_savings);
+                println!(
+                    "| Potential Savings | ${:.2} |",
+                    centroid.total_optimized_savings
+                );
             }
             println!();
 
@@ -136,9 +183,16 @@ pub fn print_markdown(
                         None => "Unknown",
                     };
                     let note = trip_summary.optimization_note.as_deref().unwrap_or("");
-                    println!("| {} | {} | {} -> {} | {}km | {} | ${:.2} | {} |",
-                        trip.date_of_trip, trip.entry_time, trip.entry_point, trip.exit_point,
-                        trip.distance_km, day_type_str, trip.get_total_recorded_cost(), note
+                    println!(
+                        "| {} | {} | {} -> {} | {}km | {} | ${:.2} | {} |",
+                        trip.date_of_trip,
+                        trip.entry_time,
+                        trip.entry_point,
+                        trip.exit_point,
+                        trip.distance_km,
+                        day_type_str,
+                        trip.get_total_recorded_cost(),
+                        note
                     );
                 }
                 println!();
@@ -157,8 +211,14 @@ pub fn print_pricing_markdown(pricing: &PricingResponse, date: &str, time: &str)
     println!("## Timeslot Comparison\n");
     println!("| Timeslot | Average EB | Average WB |");
     println!("| --- | --- | --- |");
-    println!("| **Current:** {} | {:.2}¢/km | {:.2}¢/km |", pricing.current.timeslot, pricing.current.average_eb, pricing.current.average_wb);
-    println!("| **Next:** {} | {:.2}¢/km | {:.2}¢/km |", pricing.next.timeslot, pricing.next.average_eb, pricing.next.average_wb);
+    println!(
+        "| **Current:** {} | {:.2}¢/km | {:.2}¢/km |",
+        pricing.current.timeslot, pricing.current.average_eb, pricing.current.average_wb
+    );
+    println!(
+        "| **Next:** {} | {:.2}¢/km | {:.2}¢/km |",
+        pricing.next.timeslot, pricing.next.average_eb, pricing.next.average_wb
+    );
     println!();
 
     let current_avg = (pricing.current.average_eb + pricing.current.average_wb) / 2.0;
@@ -166,11 +226,23 @@ pub fn print_pricing_markdown(pricing: &PricingResponse, date: &str, time: &str)
 
     println!("## Optimization Strategy\n");
     if next_avg < current_avg - 0.001 {
-        println!("> **Tip:** Waiting for the next timeslot ({}) could save you money!  ", pricing.next.timeslot);
-        println!("> Average rates are expected to drop by approximately {:.2}¢/km.", current_avg - next_avg);
+        println!(
+            "> **Tip:** Waiting for the next timeslot ({}) could save you money!  ",
+            pricing.next.timeslot
+        );
+        println!(
+            "> Average rates are expected to drop by approximately {:.2}¢/km.",
+            current_avg - next_avg
+        );
     } else if next_avg > current_avg + 0.001 {
-        println!("> **Tip:** Leave now ({}) to avoid higher rates in the next timeslot!  ", pricing.current.timeslot);
-        println!("> Average rates are expected to increase by approximately {:.2}¢/km.", next_avg - current_avg);
+        println!(
+            "> **Tip:** Leave now ({}) to avoid higher rates in the next timeslot!  ",
+            pricing.current.timeslot
+        );
+        println!(
+            "> Average rates are expected to increase by approximately {:.2}¢/km.",
+            next_avg - current_avg
+        );
     } else {
         println!("> Rates are expected to remain stable in the next timeslot.");
     }
