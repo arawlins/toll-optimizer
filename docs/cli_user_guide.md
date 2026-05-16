@@ -17,10 +17,6 @@ toll-optimizer statement.csv
 ## Command-Line Options
 
 -   `<FILE>`: **(Required)** Path to the CSV file.
--   `-v, --verbose`: Enables detailed output. This includes:
-    -   A full breakdown of every trip within each cluster.
-    -   Specific optimization notes (e.g., "Exit on Warden to save $1.42").
-    -   Projected 2026 cost for every individual trip.
 -   `-j, --json`: Outputs the analysis in a structured JSON format. This is the **recommended mode for LLMs** and automated reporting pipelines as it provides precise metadata (savings, optimization targets, and notes) without visual formatting overhead.
 -   `-m, --markdown`: Outputs the analysis in a clean Markdown format with tables, suitable for copying into reports or GitHub issues.
 -   `-h, --help`: Displays usage information.
@@ -51,7 +47,7 @@ The tool provides three output formats: **Standard (Text)**, **JSON**, and **Mar
 ### 1. Markdown Output (`--markdown`)
 The Markdown output is designed for human readability in contexts like GitHub, GitLab, or any Markdown-supporting editor. It organizes the analysis into a structured report:
 - **Tables**: Key metrics like Average Entry Time, Total Distance, and Toll Charges are presented in tables.
-- **Detailed Trip Tables**: If used with `--verbose`, individual trips are listed in a table format, including date, route, and specific optimization suggestions.
+- **Detailed Trip Tables**: Individual trips are listed in a table format, including date, route, and specific optimization suggestions.
 - **Headers**: Uses standard H1-H4 headers to separate time-based and distance-based analysis.
 
 ### 2. Time-Based Clustering (Standard/Markdown)
