@@ -23,12 +23,11 @@ use crate::trip_analyzer::{
 /// // Assuming summaries are already generated
 /// # let time_summaries = vec![];
 /// # let dist_summaries = vec![];
-/// toll_optimizer::md_output::print_markdown(&time_summaries, &dist_summaries, true, 10, 2, 100.0, 5.0, 2.0, &[]);
+/// toll_optimizer::md_output::print_markdown(&time_summaries, &dist_summaries, 10, 2, 100.0, 5.0, 2.0, &[]);
 /// ```
 pub fn print_markdown(
     summaries_by_time: &[TransponderSummaryByTime],
     summaries_by_distance: &[TransponderSummaryByDistance],
-    verbose: bool,
     total_processed: usize,
     total_skipped: usize,
     total_cost: f64,
@@ -100,7 +99,7 @@ pub fn print_markdown(
             }
             println!();
 
-            if verbose && !centroid.trips.is_empty() {
+            if !centroid.trips.is_empty() {
                 println!("| Date | Time | Route | Distance | Type | Cost | Optimization |");
                 println!("| --- | --- | --- | --- | --- | --- | --- |");
                 for trip_summary in &centroid.trips {
@@ -171,7 +170,7 @@ pub fn print_markdown(
             }
             println!();
 
-            if verbose && !centroid.trips.is_empty() {
+            if !centroid.trips.is_empty() {
                 println!("| Date | Time | Route | Distance | Type | Cost | Note |");
                 println!("| --- | --- | --- | --- | --- | --- | --- |");
                 for trip_summary in &centroid.trips {

@@ -52,7 +52,6 @@ toll-optimizer --current-price --date 2026-05-12 --time "07:30 AM"
 ```
 
 ### Options:
-- `-v, --verbose`: Show detailed trip listings and validation.
 - `-j, --json`: Output results in JSON format (for programmatic use).
 - `-m, --markdown`: Output results in Markdown format (for reports).
 - `--current-price`: Display pricing info for the current timeslot.
@@ -63,7 +62,7 @@ toll-optimizer --current-price --date 2026-05-12 --time "07:30 AM"
 
 ### Example:
 ```bash
-toll-optimizer csv/2025-12-28-Statement.csv --verbose
+toll-optimizer csv/2025-12-28-Statement.csv
 ```
 
 ## CSV Format

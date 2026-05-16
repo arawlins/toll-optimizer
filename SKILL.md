@@ -20,10 +20,10 @@ The primary tool for analysis and pricing.
 
 **Global Options:**
 - `--json`: (Recommended for LLMs) Outputs structured analysis or pricing data.
-- `--verbose`: Shows detailed trip listings or optimization advice in human-readable output.
 
 **Analysis Options (Requires `<FILE>`):**
 - `<FILE>`: Path to the 407 ETR CSV statement file.
+  Detailed trip listings and validation are included by default.
 
 **Pricing Options:**
 - `--current-price`: Display pricing info for the current timeslot and provide optimization tips.
@@ -34,8 +34,8 @@ The primary tool for analysis and pricing.
 
 ### 1. Monthly Analysis
 To perform a standard monthly review:
-1.  Run the optimizer with the `--json` and `--verbose` flags:
-    `toll-optimizer --json --verbose "<filename>.csv"`
+1.  Run the optimizer with the `--json` flag:
+    `toll-optimizer --json "<filename>.csv"`
 2.  Parse the `Processing Summary` section to get the total time-based and distance-based costs saved.
 3.  Parse the `time_based_analysis` to find "Cheaper Prev" or "Cheaper Next" opportunities.
 4.  Parse the `distance_based_analysis` to find route optimization advice (e.g., "Exit on Warden to save some $$$").

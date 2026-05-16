@@ -33,9 +33,7 @@ struct Args {
     #[arg(short, long)]
     markdown: bool,
 
-    /// Show verbose output (detailed trip listings)
-    #[arg(short, long)]
-    verbose: bool,
+
 }
 
 fn main() -> Result<()> {
@@ -159,7 +157,6 @@ fn main() -> Result<()> {
         md_output::print_markdown(
             &summaries_by_time,
             &summaries_by_distance,
-            args.verbose,
             results.total_processed,
             results.total_skipped,
             total_cost,
@@ -201,7 +198,7 @@ fn main() -> Result<()> {
         for centroid_data in &summary.centroids {
             println!("    Trips near {}:", centroid_data.centroid_time);
 
-            if args.verbose {
+            if true {
                 for trip_summary in &centroid_data.trips {
                     let trip = trip_summary.trip;
                     let day_type_str = match &trip.day_type {
@@ -302,7 +299,7 @@ fn main() -> Result<()> {
         }
     }
 
-    if args.verbose {
+    if true {
         println!("\nDetailed Trip Validation:");
 
         for ((plate, direction), trips) in &results.trips {
@@ -374,7 +371,7 @@ fn main() -> Result<()> {
                 centroid_data.total_toll_charge
             );
 
-            if args.verbose {
+            if true {
                 for trip_summary in &centroid_data.trips {
                     let trip = trip_summary.trip;
                     let day_type_str = match &trip.day_type {
