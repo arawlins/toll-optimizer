@@ -4,7 +4,7 @@ use clap::Parser;
 use std::fs;
 use std::path::PathBuf;
 
-use toll_optimizer::{DayType, csv_parser, md_output, trip_analyzer};
+use toll_optimizer::{DayType, VehicleClass, csv_parser, md_output, trip_analyzer};
 
 #[derive(Parser, Debug)]
 #[command(author, version, long_about = None, arg_required_else_help = true)]
@@ -24,6 +24,10 @@ struct Args {
     /// Override time for pricing (HH:MM AM/PM or HH:MM)
     #[arg(long, value_name = "TIME")]
     time: Option<String>,
+
+    /// Vehicle class for pricing (e.g., "Light vehicle", "Heavy Single Unit")
+    #[arg(long, value_name = "CLASS", default_value = "Light vehicle")]
+    vehicle_class: String,
 
     /// Output results in JSON format
     #[arg(short, long)]
@@ -45,8 +49,10 @@ fn main() -> Result<()> {
             .date
             .unwrap_or_else(|| now.format("%Y-%m-%d").to_string());
         let time = args.time.unwrap_or_else(|| now.format("%H:%M").to_string());
+        let vehicle_class = VehicleClass::from_str(&args.vehicle_class)
+            .ok_or_else(|| anyhow::anyhow!("Invalid vehicle class: {}", args.vehicle_class))?;
 
-        let pricing = trip_analyzer::get_pricing(&date, &time)?;
+        let pricing = trip_analyzer::get_pricing(&date, &time, vehicle_class)?;
 
         if args.json {
             let current_avg = (pricing.current.average_eb + pricing.current.average_wb) / 2.0;

@@ -57,6 +57,7 @@ toll-optimizer --current-price --date 2026-05-12 --time "07:30 AM"
 - `--current-price`: Display pricing info for the current timeslot.
 - `--date <DATE>`: Override date for pricing (YYYY-MM-DD).
 - `--time <TIME>`: Override time for pricing (HH:MM AM/PM or HH:MM).
+- `--vehicle-class <CLASS>`: Vehicle class for pricing (e.g., "Light vehicle", "Heavy Single Unit", "Heavy Multiple Unit", "Medium Vehicle", "Motorcycle"). Default: "Light vehicle".
 - `-h, --help`: Show help information.
 - `-V, --version`: Show version information.
 

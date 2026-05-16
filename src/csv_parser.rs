@@ -36,27 +36,43 @@ pub fn parse_trips<R: std::io::Read>(reader: R) -> ParseResult {
             continue;
         }
 
-        if let Some(mut record) = TripRecord::from_csv_record(&csv_record) {
-            if OLD_ACCESS_POINTS.contains(&record.entry_point.as_str())
-                || OLD_ACCESS_POINTS.contains(&record.exit_point.as_str())
+        let record_opt = TripRecord::from_csv_record(&csv_record);
+        if record_opt.is_none() && header_found {
+            total_skipped += 1;
+            continue;
+        }
+
+        if let Some(mut record) = record_opt {
+                        if OLD_ACCESS_POINTS
+                .iter()
+                .any(|&p| p.eq_ignore_ascii_case(&record.entry_point))
+                || OLD_ACCESS_POINTS
+                    .iter()
+                    .any(|&p| p.eq_ignore_ascii_case(&record.exit_point))
             {
-                continue;
-            }
-            if record.vehicle_class != "Light vehicle" {
+                total_skipped += 1;
                 continue;
             }
 
-            for &(key, val) in &ACCESS_POINT_SYNONYMS {
-                if record.entry_point == key {
+
+
+
+                        for &(key, val) in &ACCESS_POINT_SYNONYMS {
+                if record.entry_point.eq_ignore_ascii_case(key) {
                     record.entry_point = val.to_string();
                 }
-                if record.exit_point == key {
+                if record.exit_point.eq_ignore_ascii_case(key) {
                     record.exit_point = val.to_string();
                 }
             }
 
-            let entry_index = ACCESS_POINTS.iter().position(|&r| r == record.entry_point);
-            let exit_index = ACCESS_POINTS.iter().position(|&r| r == record.exit_point);
+            let entry_index = ACCESS_POINTS
+                .iter()
+                .position(|&r| r.eq_ignore_ascii_case(&record.entry_point));
+            let exit_index = ACCESS_POINTS
+                .iter()
+                .position(|&r| r.eq_ignore_ascii_case(&record.exit_point));
+
 
             match (entry_index, exit_index) {
                 (Some(entry_idx), Some(exit_idx)) => {

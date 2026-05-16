@@ -29,6 +29,7 @@ The primary tool for analysis and pricing.
 - `--current-price`: Display pricing info for the current timeslot and provide optimization tips.
 - `--date <DATE>`: (Optional) Override date for pricing (YYYY-MM-DD).
 - `--time <TIME>`: (Optional) Override time for pricing (HH:MM AM/PM or HH:MM).
+- `--vehicle-class <CLASS>`: (Optional) Vehicle class for pricing (e.g., "Light vehicle", "Heavy Single Unit", "Heavy Multiple Unit", "Medium Vehicle", "Motorcycle"). Default: "Light vehicle".
 
 ## Procedures
 

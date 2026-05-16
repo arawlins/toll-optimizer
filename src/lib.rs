@@ -5,5 +5,5 @@ pub mod trip_analyzer;
 pub mod md_output;
 
 pub use constants::*;
-pub use vehicle_class::light_vehicles;
-pub use trip_analyzer::{DayType, Direction, TripRecord};
+pub use vehicle_class::*;
+pub use trip_analyzer::{DayType, Direction, TripRecord, VehicleClass};
