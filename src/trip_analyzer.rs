@@ -1244,7 +1244,7 @@ pub fn analyze_trips_by_distance<'a>(
                                         };
 
                                         optimization_note = Some(format!(
-                                            "{} {} to save some $$$ (Save ${:.2})",
+                                            "{} {} to save ${:.2}",
                                             change_type,
                                             new_point_name,
                                             current_total - new_total
@@ -1308,13 +1308,14 @@ pub fn analyze_trips_by_distance<'a>(
                         let mut unique_advice: Vec<String> = advice_map
                             .keys()
                             .map(|a| {
-                                let s = if let Some(idx) = a.find(" (Save") {
+                                if let Some(idx) = a.find(" to save $") {
+                                    &a[..idx]
+                                } else if let Some(idx) = a.find(" (Save") {
                                     &a[..idx]
                                 } else {
                                     a
-                                };
-                                // Strip " to save some $$$" if present to avoid repetition in the joined string
-                                s.replace(" to save some $$$", "")
+                                }
+                                .replace(" to save some $$$", "")
                             })
                             .collect();
                         unique_advice.sort();
@@ -1322,7 +1323,7 @@ pub fn analyze_trips_by_distance<'a>(
 
                         if !unique_advice.is_empty() {
                             optimization_advice =
-                                Some(format!("{} to save some $$$", unique_advice.join(" and ")));
+                                Some(format!("{} to save $$$", unique_advice.join(" and ")));
                         }
                     }
 

@@ -38,7 +38,7 @@ To perform a standard monthly review:
     `toll-optimizer --json "<filename>.csv"`
 2.  Parse the `Processing Summary` section to get the total time-based and distance-based costs saved.
 3.  Parse the `time_based_analysis` to find "Cheaper Prev" or "Cheaper Next" opportunities.
-4.  Parse the `distance_based_analysis` to find route optimization advice (e.g., "Exit on Warden to save some $$$").
+4.  Parse the `distance_based_analysis` to find route optimization advice (e.g., "Exit on Warden to save $1.38").
 
 ### 2. Live Pricing & Planning
 If a user asks about current rates or planning a trip:
