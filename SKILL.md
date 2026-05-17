@@ -23,7 +23,7 @@ The primary tool for analysis and pricing.
 
 **Analysis Options (Requires `<FILE>`):**
 - `<FILE>`: Path to the 407 ETR CSV statement file.
-  Detailed trip listings and validation are included by default.
+  Detailed trip listings are included by default.
 
 **Pricing Options:**
 - `--current-price`: Display pricing info for the current timeslot and provide optimization tips.

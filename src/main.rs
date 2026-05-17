@@ -305,52 +305,7 @@ fn main() -> Result<()> {
         }
     }
 
-    if true {
-        println!("\nDetailed Trip Validation:");
 
-        for ((plate, direction), trips) in &results.trips {
-            let total_cost: f64 = trips.iter().map(|t| t.get_total_recorded_cost()).sum();
-            println!(
-                "Transponder: {}, Direction: {:?}, Total Trips: {}, Total Cost: ${:.2}",
-                plate,
-                direction,
-                trips.len(),
-                total_cost
-            );
-
-            for trip in trips {
-                let day_type_str = match &trip.day_type {
-                    Some(DayType::Holiday) => "Holiday",
-                    Some(DayType::Weekend) => "Weekend",
-                    Some(DayType::Weekday) => "Weekday",
-                    None => "Unknown",
-                };
-                let calculation_result = trip.calculate_cost();
-                let calculated_cost_str = calculation_result
-                    .map(|(c, _)| format!("{:.2}", c))
-                    .unwrap_or_else(|| "?".to_string());
-
-                if calculated_cost_str != trip.toll_charge {
-                    let calculated_dist_str = calculation_result
-                        .map(|(_, d)| format!("{:.3}", d))
-                        .unwrap_or_else(|| "?".to_string());
-
-                    println!(
-                        "  - {} {} ({} -> {}: {}km) [{}] [Calc: ${}] [Actual: ${}] [Calc Dist: {}km]",
-                        trip.date_of_trip,
-                        trip.entry_time,
-                        trip.entry_point,
-                        trip.exit_point,
-                        trip.distance_km,
-                        day_type_str,
-                        calculated_cost_str,
-                        trip.toll_charge,
-                        calculated_dist_str
-                    );
-                }
-            }
-        }
-    }
 
     println!("\n--- Distance-Based Analysis ---");
     for summary in &summaries_by_distance {

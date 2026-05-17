@@ -1206,7 +1206,7 @@ pub fn analyze_trips_by_time<'a>(
                             targets.sort();
                             targets.dedup();
                             optimization_advice = Some(format!(
-                                "Try leaving {} to save some $$$",
+                                "Try leaving {} to save money",
                                 targets.join(" or ")
                             ));
                         }
@@ -1504,7 +1504,7 @@ pub fn analyze_trips_by_distance<'a>(
 
                         if !unique_advice.is_empty() {
                             optimization_advice =
-                                Some(format!("{} to save $$$", unique_advice.join(" and ")));
+                                Some(format!("{} to save money", unique_advice.join(" and ")));
                         }
                     }
 

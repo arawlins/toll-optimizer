@@ -59,7 +59,7 @@ The tool groups your trips into clusters based on their **entry time**.
 ### 2. Distance-Based Clustering
 The tool identifies routes you take frequently and suggests alternate entry or exit points.
 -   **Example**: `Hwy404 -> Kennedy (Avg: 5.04 km)`
--   **Optimization Note**: `[Exit on Warden to save some $$$ (Save $1.42)]`
+-   **Optimization Note**: `[Exit on Warden to save $1.42]`
 -   **Rationale**: Sometimes exiting one ramp earlier and driving a short distance on a surface road can save a disproportionate amount in toll charges, especially during peak hours when per-km rates are high.
 
 ### 3. 2026 Projections

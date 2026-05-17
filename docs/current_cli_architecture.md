@@ -8,7 +8,7 @@ The **Toll Optimizer CLI** is a standalone Rust command-line utility designed to
 ### 1. Entry Point (`src/main.rs`)
 -   **Responsibility**: Manages the CLI lifecycle using `clap`.
 -   **Key Features**:
-    -   **Argument Parsing**: Uses `clap` for robust input handling (`--verbose`, `--json`, etc.).
+    -   **Argument Parsing**: Uses `clap` for robust input handling (`--json`, `--markdown`, etc.).
     -   **Error Handling**: Employs `anyhow` for user-friendly error messages and context.
     -   **Reporting**: Generates formatted terminal reports summarizing savings by time and distance.
 
@@ -25,7 +25,7 @@ The binary includes the following internal modules:
 3.  **Analysis**:
     -   **Time Analysis**: Identifies temporal clusters and suggests shifting trips to adjacent cheaper timeslots.
     -   **Distance Analysis**: Identifies geographic clusters and suggests adjusting entry/exit points for savings.
-4.  **Output**: `stdout` (Rich text reports with `--verbose` details) or structured JSON serialization (via `--json`).
+4.  **Output**: `stdout` (Rich text reports with detailed trip analysis) or structured JSON serialization (via `--json`).
 
 ## Distribution & Build
 The application is distributed as a pre-compiled, standalone binary via GitHub Actions.
