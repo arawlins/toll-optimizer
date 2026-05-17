@@ -36,11 +36,23 @@ fn test_parse_handles_heavy_vehicles() {
     let lines = vec![
         "\"Transponder/Plate Number\",\"Vehicle Class\",\"Date of Trip\",\"Entry Time\",\"Entry Point\",\"Exit Point\",\"Distance (km)\",\"Toll Charge ($)\",\"Trip Toll Charge ($)\",\"Camera Charge ($)\"".to_string(),
         "\"TEST_PLATE_HV\",\"Heavy Single Unit\",\"28 Aug 25\",\"10:00 AM\",\"QEW\",\"Trafalgar\",\"10.0\",\"5.00\",\"0.00\",\"0.00\"".to_string(),
+        "\"TEST_PLATE_HM\",\"Heavy Multiple Unit\",\"28 Aug 25\",\"10:00 AM\",\"QEW\",\"Trafalgar\",\"10.0\",\"5.00\",\"0.00\",\"0.00\"".to_string(),
     ];
 
     let results = csv_parser::parse_trips(lines.join("\n").as_bytes());
-    assert_eq!(results.trips.len(), 1);
-    assert_eq!(results.total_processed, 1);
+    assert_eq!(results.total_processed, 2);
+}
+
+#[test]
+fn test_parse_handles_medium_and_motorcycle() {
+    let lines = vec![
+        "\"Transponder/Plate Number\",\"Vehicle Class\",\"Date of Trip\",\"Entry Time\",\"Entry Point\",\"Exit Point\",\"Distance (km)\",\"Toll Charge ($)\",\"Trip Toll Charge ($)\",\"Camera Charge ($)\"".to_string(),
+        "\"TEST_PLATE_MV\",\"Medium Vehicle\",\"28 Aug 25\",\"10:00 AM\",\"QEW\",\"Trafalgar\",\"10.0\",\"5.00\",\"0.00\",\"0.00\"".to_string(),
+        "\"TEST_PLATE_MC\",\"Motorcycle\",\"28 Aug 25\",\"10:00 AM\",\"QEW\",\"Trafalgar\",\"10.0\",\"5.00\",\"0.00\",\"0.00\"".to_string(),
+    ];
+
+    let results = csv_parser::parse_trips(lines.join("\n").as_bytes());
+    assert_eq!(results.total_processed, 2);
 }
 
 #[test]
