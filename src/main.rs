@@ -256,6 +256,7 @@ fn main() -> Result<()> {
             total_distance_savings,
             &results.unknown_points,
             &results.unknown_vehicle_classes,
+            &results.camera_charges,
         );
         return Ok(());
     }
@@ -283,6 +284,23 @@ fn main() -> Result<()> {
         println!("\nUnrecognized Vehicle Classes:");
         for class in &results.unknown_vehicle_classes {
             println!("  - {} | NOT RECOGNIZED", class);
+        }
+    }
+
+    if !results.camera_charges.is_empty() {
+        println!("\nCamera Charges by Transponder/Plate:");
+        let mut plates: Vec<_> = results.camera_charges.keys().collect();
+        plates.sort();
+        let mut show_recommendation = false;
+        for plate in plates {
+            let charge = results.camera_charges[plate];
+            println!("  - {}: ${:.2}", plate, charge);
+            if charge > 31.50 {
+                show_recommendation = true;
+            }
+        }
+        if show_recommendation {
+            println!("\nTip: Leasing a transponder for $31.50 (plus applicable taxes) per year will save you money on the camera charges.");
         }
     }
     println!();

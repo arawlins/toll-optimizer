@@ -107,3 +107,18 @@ fn test_e2e_single_trip_json() {
     assert_eq!(json["trip_charge"], 1.0);
     assert_eq!(json["total_estimated_cost"], base_toll + 1.0);
 }
+
+#[test]
+fn test_e2e_camera_charges() {
+    let output = run_optimizer(&["tests/csv/2025-08-28 - camera charges.csv"]);
+    
+    assert!(output.contains("Camera Charges by Transponder/Plate:"));
+    assert!(output.contains("  - A12345K0: $15.90"));
+    assert!(output.contains("  - A12345K1: $37.10"));
+    
+    // A12345K2 has $0.00, so it should NOT be in the camera charges list
+    // We check for the specific list item format to avoid matching other sections
+    assert!(!output.contains("  - A12345K2:"));
+    
+    assert!(output.contains("Tip: Leasing a transponder for $31.50 (plus applicable taxes) per year will save you money on the camera charges."));
+}

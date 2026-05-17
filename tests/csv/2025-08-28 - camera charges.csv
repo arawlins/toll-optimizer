@@ -1,0 +1,16 @@
+"NOTE: This is not a complete invoice, only the trip detail (plate/transponder, date, time, entry, exit, toll charges, trip toll charges, and camera charges) for the current invoice."
+
+"Name: John Doe","InvNo: 123456","BillDate: 28 Aug 25","BillPeriod: 28 Jul 25 to 27 Aug 25"
+
+"Transponder/Plate Number","Vehicle Class","Date of Trip","Entry Time","Entry Point","Exit Point","Distance (km)","Toll Charge ($)","Trip Toll Charge ($)","Camera Charge ($)"
+"A12345K1","Light vehicle","22 Jul 25","8:04 AM","McCowan","Hwy404"," 7.252","4.52","1.00","5.30"
+"A12345K1","Light vehicle","22 Jul 25","5:25 PM","Hwy404","Kennedy"," 5.037","3.70","1.00","5.30"
+"A12345K1","Light vehicle","23 Jul 25","8:02 AM","McCowan","Hwy404"," 7.252","4.52","1.00","5.30"
+"A12345K1","Light vehicle","23 Jul 25","5:26 PM","Hwy404","Warden"," 3.107","2.28","1.00","5.30"
+"A12345K0","Light vehicle","24 Jul 25","8:20 AM","McCowan","Hwy404"," 7.252","4.52","1.00","5.30"
+"A12345K1","Light vehicle","24 Jul 25","9:24 AM","Markham","Brock(Hwy7)"," 14.590","9.96","1.00","5.30"
+"A12345K0","Light vehicle","24 Jul 25","11:50 PM","Hwy404","Kennedy"," 5.037","1.82","1.00","5.30"
+"A12345K0","Light vehicle","25 Jul 25","9:35 PM","Markham","Kennedy"," 4.318","1.56","1.00","5.30"
+"A12345K1","Light vehicle","26 Jul 25","3:00 PM","Brock(Hwy7)","McCowan"," 16.693","8.25","1.00","5.30"
+"A12345K1","Light vehicle","26 Jul 25","4:44 PM","McCowan","Hwy401"," 56.259","28.16","1.00","5.30"
+"A12345K2","Light vehicle","26 Jul 25","4:44 PM","McCowan","Hwy401"," 56.259","28.16","1.00","0.00"

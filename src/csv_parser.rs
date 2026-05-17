@@ -10,6 +10,7 @@ pub struct ParseResult {
     pub total_skipped: usize,
     pub unknown_points: Vec<String>,
     pub unknown_vehicle_classes: Vec<String>,
+    pub camera_charges: HashMap<String, f64>,
 }
 
 pub fn parse_trips<R: std::io::Read>(reader: R) -> ParseResult {
@@ -19,6 +20,7 @@ pub fn parse_trips<R: std::io::Read>(reader: R) -> ParseResult {
     let mut total_skipped = 0;
     let mut unknown_points = HashSet::new();
     let mut unknown_vehicle_classes = HashSet::new();
+    let mut camera_charges: HashMap<String, f64> = HashMap::new();
 
     let mut csv_reader = csv::ReaderBuilder::new()
         .has_headers(false)
@@ -91,6 +93,10 @@ pub fn parse_trips<R: std::io::Read>(reader: R) -> ParseResult {
                     });
 
                     let plate = record.transponder_plate.clone();
+                    let camera_charge = record.camera_charge.trim().parse::<f64>().unwrap_or(0.0);
+                    if camera_charge > 0.0 {
+                        *camera_charges.entry(plate.clone()).or_insert(0.0) += camera_charge;
+                    }
                     trips_by_transponder.entry(plate).or_default().push(record);
                     total_processed += 1;
                 }
@@ -152,5 +158,6 @@ pub fn parse_trips<R: std::io::Read>(reader: R) -> ParseResult {
         total_skipped,
         unknown_points: unknown_points_vec,
         unknown_vehicle_classes: unknown_vehicle_classes_vec,
+        camera_charges,
     }
 }

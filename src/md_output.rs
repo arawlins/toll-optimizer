@@ -23,7 +23,8 @@ use crate::trip_analyzer::{
 /// // Assuming summaries are already generated
 /// # let time_summaries = vec![];
 /// # let dist_summaries = vec![];
-/// toll_optimizer::md_output::print_markdown(&time_summaries, &dist_summaries, 10, 2, 100.0, 5.0, 2.0, &[], &[]);
+/// # let camera_charges = std::collections::HashMap::new();
+/// toll_optimizer::md_output::print_markdown(&time_summaries, &dist_summaries, 10, 2, 100.0, 5.0, 2.0, &[], &[], &camera_charges);
 /// ```
 pub fn print_markdown(
     summaries_by_time: &[TransponderSummaryByTime],
@@ -35,6 +36,7 @@ pub fn print_markdown(
     total_distance_savings: f64,
     unknown_points: &[String],
     unknown_vehicle_classes: &[String],
+    camera_charges: &std::collections::HashMap<String, f64>,
 ) {
     println!("# Toll Optimizer Analysis Report\n");
 
@@ -68,6 +70,26 @@ pub fn print_markdown(
             println!("- {} | NOT RECOGNIZED", class);
         }
         println!();
+    }
+
+    if !camera_charges.is_empty() {
+        println!("### Camera Charges\n");
+        println!("| Transponder/Plate | Charge |");
+        println!("| --- | --- |");
+        let mut plates: Vec<_> = camera_charges.keys().collect();
+        plates.sort();
+        let mut show_recommendation = false;
+        for plate in plates {
+            let charge = camera_charges[plate];
+            println!("| {} | ${:.2} |", plate, charge);
+            if charge > 31.50 {
+                show_recommendation = true;
+            }
+        }
+        println!();
+        if show_recommendation {
+            println!("> **Tip:** Leasing a transponder for $31.50 (plus applicable taxes) per year will save you money on the camera charges.\n");
+        }
     }
 
     println!("## Time-Based Analysis\n");
