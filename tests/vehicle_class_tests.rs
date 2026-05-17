@@ -1,9 +1,8 @@
-use toll_optimizer::trip_analyzer;
-use toll_optimizer::{DayType, Direction, VehicleClass};
+use toll_optimizer::{DayType, Direction, VehicleClass, calculate_single_trip_cost};
 
 #[test]
 fn test_medium_vehicle_cost() {
-    let result = trip_analyzer::calculate_single_trip_cost(
+    let result = calculate_single_trip_cost(
         "QEW",
         "Trafalgar",
         "2026-05-12",
@@ -19,7 +18,7 @@ fn test_medium_vehicle_cost() {
     assert_eq!(day_type, DayType::Weekday);
 
     // Compare with Light Vehicle
-    let light_result = trip_analyzer::calculate_single_trip_cost(
+    let light_result = calculate_single_trip_cost(
         "QEW",
         "Trafalgar",
         "2026-05-12",
@@ -36,7 +35,7 @@ fn test_medium_vehicle_cost() {
 
 #[test]
 fn test_motorcycle_cost() {
-    let result = trip_analyzer::calculate_single_trip_cost(
+    let result = calculate_single_trip_cost(
         "QEW",
         "Trafalgar",
         "2026-05-12",
@@ -52,7 +51,7 @@ fn test_motorcycle_cost() {
     assert_eq!(day_type, DayType::Weekday);
 
     // Motorcycle in 407 ETR is usually cheaper than light vehicle.
-    let light_result = trip_analyzer::calculate_single_trip_cost(
+    let light_result = calculate_single_trip_cost(
         "QEW",
         "Trafalgar",
         "2026-05-12",
@@ -69,7 +68,7 @@ fn test_motorcycle_cost() {
 
 #[test]
 fn test_heavy_single_unit_cost() {
-    let result = trip_analyzer::calculate_single_trip_cost(
+    let result = calculate_single_trip_cost(
         "QEW",
         "Trafalgar",
         "2026-05-12",
@@ -85,7 +84,7 @@ fn test_heavy_single_unit_cost() {
     assert_eq!(day_type, DayType::Weekday);
 
     // Compare with Medium Vehicle
-    let medium_result = trip_analyzer::calculate_single_trip_cost(
+    let medium_result = calculate_single_trip_cost(
         "QEW",
         "Trafalgar",
         "2026-05-12",
@@ -102,7 +101,7 @@ fn test_heavy_single_unit_cost() {
 
 #[test]
 fn test_heavy_multiple_unit_cost() {
-    let result = trip_analyzer::calculate_single_trip_cost(
+    let result = calculate_single_trip_cost(
         "QEW",
         "Trafalgar",
         "2026-05-12",
@@ -118,7 +117,7 @@ fn test_heavy_multiple_unit_cost() {
     assert_eq!(day_type, DayType::Weekday);
 
     // Compare with Heavy Single Unit
-    let heavy_single_result = trip_analyzer::calculate_single_trip_cost(
+    let heavy_single_result = calculate_single_trip_cost(
         "QEW",
         "Trafalgar",
         "2026-05-12",
@@ -136,7 +135,7 @@ fn test_heavy_multiple_unit_cost() {
 #[test]
 fn test_heavy_vehicle_weekend_cost() {
     // 30 Aug 25 is a Saturday
-    let result = trip_analyzer::calculate_single_trip_cost(
+    let result = calculate_single_trip_cost(
         "QEW",
         "Trafalgar",
         "2025-08-30",
@@ -145,7 +144,7 @@ fn test_heavy_vehicle_weekend_cost() {
     )
     .unwrap();
 
-    let weekday_result = trip_analyzer::calculate_single_trip_cost(
+    let weekday_result = calculate_single_trip_cost(
         "QEW",
         "Trafalgar",
         "2025-08-28", // Thursday
@@ -163,7 +162,7 @@ fn test_heavy_vehicle_weekend_cost() {
 #[test]
 fn test_motorcycle_holiday_cost() {
     // 01 Jan 26 is a Thursday, normally a weekday, but is a holiday.
-    let result = trip_analyzer::calculate_single_trip_cost(
+    let result = calculate_single_trip_cost(
         "QEW",
         "Trafalgar",
         "2026-01-01",
@@ -172,7 +171,7 @@ fn test_motorcycle_holiday_cost() {
     )
     .unwrap();
 
-    let weekend_result = trip_analyzer::calculate_single_trip_cost(
+    let weekend_result = calculate_single_trip_cost(
         "QEW",
         "Trafalgar",
         "2026-01-04", // Sunday

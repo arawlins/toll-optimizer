@@ -4,7 +4,12 @@ use clap::Parser;
 use std::fs;
 use std::path::PathBuf;
 
-use toll_optimizer::{DayType, VehicleClass, csv_parser, md_output, trip_analyzer};
+use toll_optimizer::{
+    DayType, VehicleClass, analyze_trips_by_distance, analyze_trips_by_time,
+    calculate_single_trip_cost, get_pricing, parse_trips, print_markdown,
+    print_pricing_markdown, print_single_trip_markdown,
+    AnalysisMarkdownReport, SingleTripMarkdownReport,
+};
 
 #[derive(Parser, Debug)]
 #[command(author, version, long_about = None, arg_required_else_help = true)]
@@ -74,7 +79,7 @@ fn main() -> Result<()> {
             .parse::<VehicleClass>()
             .map_err(|_| anyhow::anyhow!("Invalid vehicle class: {}", args.vehicle_class))?;
 
-        let (cost, dist, direction, day_type) = trip_analyzer::calculate_single_trip_cost(
+        let (cost, dist, direction, day_type) = calculate_single_trip_cost(
             &entry,
             &exit,
             &date_str,
@@ -101,7 +106,7 @@ fn main() -> Result<()> {
         }
 
         if args.markdown {
-            md_output::print_single_trip_markdown(md_output::SingleTripMarkdownReport {
+            print_single_trip_markdown(SingleTripMarkdownReport {
                 entry: &entry,
                 exit: &exit,
                 date: &date_str,
@@ -141,7 +146,7 @@ fn main() -> Result<()> {
             .parse::<VehicleClass>()
             .map_err(|_| anyhow::anyhow!("Invalid vehicle class: {}", args.vehicle_class))?;
 
-        let pricing = trip_analyzer::get_pricing(&date, &time, vehicle_class)?;
+        let pricing = get_pricing(&date, &time, vehicle_class)?;
 
         if args.json {
             let current_avg = (pricing.current.average_eb + pricing.current.average_wb) / 2.0;
@@ -171,7 +176,7 @@ fn main() -> Result<()> {
         }
 
         if args.markdown {
-            md_output::print_pricing_markdown(&pricing, &date, &time);
+            print_pricing_markdown(&pricing, &date, &time);
             return Ok(());
         }
 
@@ -207,10 +212,10 @@ fn main() -> Result<()> {
     let file = fs::File::open(&csv_file)
         .with_context(|| format!("Failed to open file: {}", csv_file.display()))?;
 
-    let results = csv_parser::parse_trips(file);
+    let results = parse_trips(file);
 
-    let summaries_by_time = trip_analyzer::analyze_trips_by_time(&results.trips);
-    let summaries_by_distance = trip_analyzer::analyze_trips_by_distance(&results.trips);
+    let summaries_by_time = analyze_trips_by_time(&results.trips);
+    let summaries_by_distance = analyze_trips_by_distance(&results.trips);
 
     let total_cost: f64 = results
         .trips
@@ -250,7 +255,7 @@ fn main() -> Result<()> {
     }
 
     if args.markdown {
-        md_output::print_markdown(md_output::AnalysisMarkdownReport {
+        print_markdown(AnalysisMarkdownReport {
             summaries_by_time: &summaries_by_time,
             summaries_by_distance: &summaries_by_distance,
             total_processed: results.total_processed,

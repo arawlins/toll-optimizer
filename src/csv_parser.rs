@@ -1,5 +1,5 @@
+use crate::constants::{ACCESS_POINT_SYNONYMS, ACCESS_POINTS, OLD_ACCESS_POINTS};
 use crate::trip_analyzer::{Direction, TripRecord};
-use crate::{ACCESS_POINT_SYNONYMS, ACCESS_POINTS, OLD_ACCESS_POINTS};
 use serde::Serialize;
 use std::collections::{HashMap, HashSet};
 

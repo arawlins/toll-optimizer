@@ -44,7 +44,7 @@ pub struct AnalysisMarkdownReport<'report, 'trips> {
 /// # let time_summaries = vec![];
 /// # let dist_summaries = vec![];
 /// # let camera_charges = std::collections::HashMap::new();
-/// let report = toll_optimizer::md_output::AnalysisMarkdownReport {
+/// let report = toll_optimizer::AnalysisMarkdownReport {
 ///     summaries_by_time: &time_summaries,
 ///     summaries_by_distance: &dist_summaries,
 ///     total_processed: 10,
@@ -56,7 +56,7 @@ pub struct AnalysisMarkdownReport<'report, 'trips> {
 ///     unknown_vehicle_classes: &[],
 ///     camera_charges: &camera_charges,
 /// };
-/// toll_optimizer::md_output::print_markdown(report);
+/// toll_optimizer::print_markdown(report);
 /// ```
 pub fn print_markdown(report: AnalysisMarkdownReport<'_, '_>) {
     let AnalysisMarkdownReport {

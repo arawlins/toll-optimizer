@@ -1,4 +1,4 @@
-use toll_optimizer::trip_analyzer::{format_minutes_to_time, parse_time_to_minutes};
+use toll_optimizer::{format_minutes_to_time, parse_time_to_minutes};
 
 #[test]
 fn test_parse_time_to_minutes() {

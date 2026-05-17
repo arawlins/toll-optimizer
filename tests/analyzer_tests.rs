@@ -1,6 +1,7 @@
-use toll_optimizer::csv_parser;
-use toll_optimizer::trip_analyzer;
-use toll_optimizer::{DayType, Direction};
+use toll_optimizer::{
+    DayType, Direction, analyze_trips_by_distance, analyze_trips_by_time,
+    calculate_single_trip_cost, parse_trips,
+};
 
 #[test]
 fn test_time_based_optimization_savings() {
@@ -14,8 +15,8 @@ fn test_time_based_optimization_savings() {
         "\"TEST_PLATE\",\"Light vehicle\",\"28 Aug 25\",\"7:30 AM\",\"QEW\",\"Appleby\",\"10.0\",\"10.00\",\"0.00\",\"0.00\"".to_string(),
     ];
 
-    let parsed = csv_parser::parse_trips(csv_lines.join("\n").as_bytes());
-    let analysis = trip_analyzer::analyze_trips_by_time(&parsed.trips);
+    let parsed = parse_trips(csv_lines.join("\n").as_bytes());
+    let analysis = analyze_trips_by_time(&parsed.trips);
 
     assert_eq!(analysis.len(), 1);
     let summary = &analysis[0];
@@ -39,8 +40,8 @@ fn test_distance_based_optimization_savings() {
         "\"TEST_PLATE\",\"Light vehicle\",\"28 Aug 25\",\"10:00 AM\",\"QEW\",\"Trafalgar\",\"10.0\",\"5.00\",\"0.00\",\"0.00\"".to_string(),
     ];
 
-    let parsed = csv_parser::parse_trips(csv_lines.join("\n").as_bytes());
-    let analysis = trip_analyzer::analyze_trips_by_distance(&parsed.trips);
+    let parsed = parse_trips(csv_lines.join("\n").as_bytes());
+    let analysis = analyze_trips_by_distance(&parsed.trips);
 
     assert_eq!(analysis.len(), 1);
     let summary = &analysis[0];
@@ -59,8 +60,8 @@ fn test_multiple_transponders_grouping() {
         "\"PLATE_B\",\"Light vehicle\",\"28 Aug 25\",\"11:00 AM\",\"QEW\",\"Trafalgar\",\"10.0\",\"5.00\",\"0.00\",\"0.00\"".to_string(),
     ];
 
-    let parsed = csv_parser::parse_trips(csv_lines.join("\n").as_bytes());
-    let analysis_time = trip_analyzer::analyze_trips_by_time(&parsed.trips);
+    let parsed = parse_trips(csv_lines.join("\n").as_bytes());
+    let analysis_time = analyze_trips_by_time(&parsed.trips);
 
     // Should have 2 summaries (one per transponder since direction is same)
     // Should have 2 summaries (one per transponder since direction is same)
@@ -77,7 +78,7 @@ fn test_weekday_vs_weekend_pricing() {
         "\"Transponder/Plate Number\",\"Vehicle Class\",\"Date of Trip\",\"Entry Time\",\"Entry Point\",\"Exit Point\",\"Distance (km)\",\"Toll Charge ($)\",\"Trip Toll Charge ($)\",\"Camera Charge ($)\"".to_string(),
         "\"TEST_PLATE\",\"Light vehicle\",\"28 Aug 25\",\"10:00 AM\",\"QEW\",\"Trafalgar\",\"10.0\",\"0.00\",\"0.00\",\"0.00\"".to_string(),
     ];
-    let weekday_parsed = csv_parser::parse_trips(weekday_csv.join("\n").as_bytes());
+    let weekday_parsed = parse_trips(weekday_csv.join("\n").as_bytes());
     let weekday_trip = &weekday_parsed.trips[0].1[0];
     let (weekday_cost, _) = weekday_trip.calculate_cost().unwrap();
 
@@ -86,7 +87,7 @@ fn test_weekday_vs_weekend_pricing() {
         "\"Transponder/Plate Number\",\"Vehicle Class\",\"Date of Trip\",\"Entry Time\",\"Entry Point\",\"Exit Point\",\"Distance (km)\",\"Toll Charge ($)\",\"Trip Toll Charge ($)\",\"Camera Charge ($)\"".to_string(),
         "\"TEST_PLATE\",\"Light vehicle\",\"30 Aug 25\",\"10:00 AM\",\"QEW\",\"Trafalgar\",\"10.0\",\"0.00\",\"0.00\",\"0.00\"".to_string(),
     ];
-    let weekend_parsed = csv_parser::parse_trips(weekend_csv.join("\n").as_bytes());
+    let weekend_parsed = parse_trips(weekend_csv.join("\n").as_bytes());
     let weekend_trip = &weekend_parsed.trips[0].1[0];
     let (weekend_cost, _) = weekend_trip.calculate_cost().unwrap();
 
@@ -104,7 +105,7 @@ fn test_year_boundary_pricing() {
         "\"Transponder/Plate Number\",\"Vehicle Class\",\"Date of Trip\",\"Entry Time\",\"Entry Point\",\"Exit Point\",\"Distance (km)\",\"Toll Charge ($)\",\"Trip Toll Charge ($)\",\"Camera Charge ($)\"".to_string(),
         "\"TEST_PLATE\",\"Light vehicle\",\"28 Aug 25\",\"10:00 AM\",\"QEW\",\"Hwy404\",\"10.0\",\"0.00\",\"0.00\",\"0.00\"".to_string(),
     ];
-    let year25_parsed = csv_parser::parse_trips(year25_csv.join("\n").as_bytes());
+    let year25_parsed = parse_trips(year25_csv.join("\n").as_bytes());
     let year25_trip = &year25_parsed.trips[0].1[0];
     let (cost_25, _) = year25_trip.calculate_cost().unwrap();
 
@@ -112,7 +113,7 @@ fn test_year_boundary_pricing() {
         "\"Transponder/Plate Number\",\"Vehicle Class\",\"Date of Trip\",\"Entry Time\",\"Entry Point\",\"Exit Point\",\"Distance (km)\",\"Toll Charge ($)\",\"Trip Toll Charge ($)\",\"Camera Charge ($)\"".to_string(),
         "\"TEST_PLATE\",\"Light vehicle\",\"28 Aug 26\",\"10:00 AM\",\"QEW\",\"Hwy404\",\"10.0\",\"0.00\",\"0.00\",\"0.00\"".to_string(),
     ];
-    let year26_parsed = csv_parser::parse_trips(year26_csv.join("\n").as_bytes());
+    let year26_parsed = parse_trips(year26_csv.join("\n").as_bytes());
     let year26_trip = &year26_parsed.trips[0].1[0];
     let (cost_26, _) = year26_trip.calculate_cost_2026().unwrap();
 
@@ -130,7 +131,7 @@ fn test_holiday_classification() {
         "\"Transponder/Plate Number\",\"Vehicle Class\",\"Date of Trip\",\"Entry Time\",\"Entry Point\",\"Exit Point\",\"Distance (km)\",\"Toll Charge ($)\",\"Trip Toll Charge ($)\",\"Camera Charge ($)\"".to_string(),
         "\"TEST_PLATE\",\"Light vehicle\",\"01 Jan 25\",\"10:00 AM\",\"QEW\",\"Trafalgar\",\"10.0\",\"0.00\",\"0.00\",\"0.00\"".to_string(),
     ];
-    let holiday_parsed = csv_parser::parse_trips(holiday_csv.join("\n").as_bytes());
+    let holiday_parsed = parse_trips(holiday_csv.join("\n").as_bytes());
     let holiday_trip = &holiday_parsed.trips[0].1[0];
     let (holiday_cost, _) = holiday_trip.calculate_cost().unwrap();
 
@@ -139,7 +140,7 @@ fn test_holiday_classification() {
         "\"Transponder/Plate Number\",\"Vehicle Class\",\"Date of Trip\",\"Entry Time\",\"Entry Point\",\"Exit Point\",\"Distance (km)\",\"Toll Charge ($)\",\"Trip Toll Charge ($)\",\"Camera Charge ($)\"".to_string(),
         "\"TEST_PLATE\",\"Light vehicle\",\"04 Jan 25\",\"10:00 AM\",\"QEW\",\"Trafalgar\",\"10.0\",\"0.00\",\"0.00\",\"0.00\"".to_string(), // Saturday
     ];
-    let weekend_parsed = csv_parser::parse_trips(weekend_csv.join("\n").as_bytes());
+    let weekend_parsed = parse_trips(weekend_csv.join("\n").as_bytes());
     let weekend_trip = &weekend_parsed.trips[0].1[0];
     let (weekend_cost, _) = weekend_trip.calculate_cost().unwrap();
 
@@ -158,8 +159,8 @@ fn test_westbound_zone_boundary() {
         // Valid westbound trip that ends exactly at QEW or starts exactly at Brock
         "\"TEST_PLATE\",\"Light vehicle\",\"28 Aug 25\",\"10:00 AM\",\"Brock(Hwy7)\",\"QEW\",\"40.0\",\"0.00\",\"0.00\",\"0.00\"".to_string(),
     ];
-    let wb_parsed = csv_parser::parse_trips(wb_csv.join("\n").as_bytes());
-    let wb_analysis = trip_analyzer::analyze_trips_by_distance(&wb_parsed.trips);
+    let wb_parsed = parse_trips(wb_csv.join("\n").as_bytes());
+    let wb_analysis = analyze_trips_by_distance(&wb_parsed.trips);
 
     // Testing there was no panic, and that we have a result
     assert_eq!(wb_analysis.len(), 1);
@@ -172,7 +173,7 @@ fn test_midnight_trip_parsing() {
         "\"Transponder/Plate Number\",\"Vehicle Class\",\"Date of Trip\",\"Entry Time\",\"Entry Point\",\"Exit Point\",\"Distance (km)\",\"Toll Charge ($)\",\"Trip Toll Charge ($)\",\"Camera Charge ($)\"".to_string(),
         "\"TEST_PLATE\",\"Light vehicle\",\"28 Aug 25\",\"12:00 AM\",\"QEW\",\"Trafalgar\",\"10.0\",\"0.00\",\"0.00\",\"0.00\"".to_string(),
     ];
-    let midnight_parsed = csv_parser::parse_trips(midnight_csv.join("\n").as_bytes());
+    let midnight_parsed = parse_trips(midnight_csv.join("\n").as_bytes());
 
     // There should be 1 trip successfully parsed
     assert_eq!(
@@ -183,7 +184,7 @@ fn test_midnight_trip_parsing() {
     assert_eq!(midnight_parsed.trips[0].1.len(), 1);
 
     // Let's verify timeslot mapping
-    let analysis = trip_analyzer::analyze_trips_by_time(&midnight_parsed.trips);
+    let analysis = analyze_trips_by_time(&midnight_parsed.trips);
     assert_eq!(analysis.len(), 1);
     let summary = &analysis[0];
     let centroid = &summary.centroids[0];
@@ -199,7 +200,7 @@ fn test_single_trip_cost_calculation() {
     // McCowan is index 34, Hwy404 is index 30.
     // Distance segments: 33 (1.93), 32 (2.078), 31 (1.029), 30 (0.997) -> approx 6.034 km?
     // Let's just verify the function returns a successful result and the direction is correct.
-    let result = trip_analyzer::calculate_single_trip_cost(
+    let result = calculate_single_trip_cost(
         "McCowan",
         "Hwy404",
         "2026-05-12",
@@ -215,7 +216,7 @@ fn test_single_trip_cost_calculation() {
     assert_eq!(day_type, DayType::Weekday);
 
     // Test case-insensitivity
-    let result_caps = trip_analyzer::calculate_single_trip_cost(
+    let result_caps = calculate_single_trip_cost(
         "MCCOWAN",
         "hwy404",
         "2026-05-12",

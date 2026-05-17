@@ -1,35 +1,41 @@
 //! Toll statement parsing and optimization logic for the `toll-optimizer` CLI.
 //!
-//! The crate exposes the same core functionality used by the command-line
-//! application: CSV statement parsing, 407 ETR route pricing, trip clustering,
-//! and report rendering helpers.
+//! This crate is primarily designed to support the `toll-optimizer` command-line
+//! tool. The public API is focused on supporting the binary and its integration
+//! tests and is not intended for general-purpose library use.
 //!
-//! # Example
-//!
-//! ```rust,no_run
-//! use std::fs::File;
-//!
-//! let file = File::open("statement.csv")?;
-//! let parsed = toll_optimizer::csv_parser::parse_trips(file);
-//! let by_time = toll_optimizer::trip_analyzer::analyze_trips_by_time(&parsed.trips);
-//! let by_distance = toll_optimizer::trip_analyzer::analyze_trips_by_distance(&parsed.trips);
-//! # Ok::<(), std::io::Error>(())
-//! ```
+//! # Core Functionality
+//! - **Parsing**: Loading 407 ETR CSV statements.
+//! - **Analysis**: Clustering trips by time and distance to find optimization opportunities.
+//! - **Pricing**: Calculating costs for single trips or retrieving live pricing info.
+//! - **Reporting**: Generating Markdown or JSON reports.
 
-/// 407 ETR topology, timeslot, access-point, and zone constants.
-pub mod constants;
-/// CSV statement parser for 407 ETR exports.
-pub mod csv_parser;
-/// Markdown report rendering helpers.
-pub mod md_output;
-/// Trip pricing, day classification, and clustering analysis.
-pub mod trip_analyzer;
-/// Vehicle-class-specific toll rate tables.
-pub mod vehicle_class;
+mod constants;
+mod csv_parser;
+mod md_output;
+mod trip_analyzer;
+mod vehicle_class;
 
-/// Re-export of topology constants for CLI and downstream consumers.
-pub use constants::*;
-/// Common trip-analysis domain types.
-pub use trip_analyzer::{DayType, Direction, TripRecord, VehicleClass};
-/// Re-export of raw vehicle-class rate table modules.
-pub use vehicle_class::*;
+// Explicitly re-export only what is required for the CLI and integration tests.
+
+/// Access point names for the 407 ETR.
+pub use constants::ACCESS_POINTS;
+
+/// CSV statement parsing logic.
+pub use csv_parser::{ParseResult, parse_trips};
+
+/// Markdown report generation and report models.
+pub use md_output::{
+    print_markdown, print_pricing_markdown, print_single_trip_markdown,
+    AnalysisMarkdownReport, SingleTripMarkdownReport,
+};
+
+/// Analysis and pricing core.
+pub use trip_analyzer::{
+    DayType, Direction, TripRecord, VehicleClass,
+    analyze_trips_by_distance, analyze_trips_by_time,
+    calculate_single_trip_cost, get_pricing,
+    TransponderSummaryByDistance, TransponderSummaryByTime,
+    CentroidData, CentroidDataByDistance, TripSummary,
+    format_minutes_to_time, parse_time_to_minutes,
+};
