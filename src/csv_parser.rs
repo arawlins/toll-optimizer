@@ -49,7 +49,9 @@ pub fn parse_trips<R: std::io::Read>(reader: R) -> ParseResult {
             if csv_record.len() > 1 {
                 let vc_str = csv_record[1].trim().trim_matches('"');
                 if !vc_str.is_empty()
-                    && crate::trip_analyzer::VehicleClass::from_str(vc_str).is_none()
+                    && vc_str
+                        .parse::<crate::trip_analyzer::VehicleClass>()
+                        .is_err()
                 {
                     unknown_vehicle_classes.insert(vc_str.to_string());
                 }

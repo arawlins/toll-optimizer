@@ -8,6 +8,8 @@ use std::collections::HashMap;
 use anyhow::{Result, anyhow};
 use chrono::{Datelike, Duration, NaiveDate};
 use serde::{Deserialize, Serialize};
+use std::fmt;
+use std::str::FromStr;
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize)]
 pub enum Direction {
@@ -32,17 +34,6 @@ pub enum VehicleClass {
 }
 
 impl VehicleClass {
-    pub fn from_str(s: &str) -> Option<Self> {
-        match s.to_lowercase().as_str() {
-            "light vehicle" => Some(VehicleClass::LightVehicle),
-            "heavy single unit" => Some(VehicleClass::HeavySingleUnit),
-            "heavy multiple unit" => Some(VehicleClass::HeavyMultipleUnit),
-            "medium vehicle" => Some(VehicleClass::MediumVehicle),
-            "motorcycle" => Some(VehicleClass::Motorcycle),
-            _ => None,
-        }
-    }
-
     pub fn to_str(&self) -> &'static str {
         match self {
             VehicleClass::LightVehicle => "Light vehicle",
@@ -260,6 +251,27 @@ impl VehicleClass {
     }
 }
 
+impl FromStr for VehicleClass {
+    type Err = String;
+
+    fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
+        match s.to_lowercase().as_str() {
+            "light vehicle" => Ok(VehicleClass::LightVehicle),
+            "heavy single unit" => Ok(VehicleClass::HeavySingleUnit),
+            "heavy multiple unit" => Ok(VehicleClass::HeavyMultipleUnit),
+            "medium vehicle" => Ok(VehicleClass::MediumVehicle),
+            "motorcycle" => Ok(VehicleClass::Motorcycle),
+            _ => Err(format!("invalid vehicle class: {s}")),
+        }
+    }
+}
+
+impl fmt::Display for VehicleClass {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str(self.to_str())
+    }
+}
+
 #[derive(Debug, Serialize, Deserialize)]
 pub struct TimeslotPrices {
     pub timeslot: String,
@@ -306,7 +318,7 @@ impl TripRecord {
 
         let day_type = classify_day(&date_of_trip);
 
-        let vehicle_class = VehicleClass::from_str(&record[1])?;
+        let vehicle_class = record[1].parse::<VehicleClass>().ok()?;
 
         Some(TripRecord {
             transponder_plate: first.to_string(),
@@ -801,7 +813,7 @@ fn k_means_1d(data: &[u32], k: usize) -> (Vec<u32>, f64) {
             break;
         }
 
-        for c_idx in 0..k {
+        for (c_idx, centroid) in centroids.iter_mut().enumerate().take(k) {
             let mut sum = 0.0;
             let mut count = 0;
             // We need to handle the circular mean carefully.
@@ -813,8 +825,8 @@ fn k_means_1d(data: &[u32], k: usize) -> (Vec<u32>, f64) {
                 if assignments[i] == c_idx {
                     // Adjust point to be close to current centroid to handle wrap-around for averaging
                     let mut p = point as f64;
-                    if (p - centroids[c_idx]).abs() > 720.0 {
-                        if p < centroids[c_idx] {
+                    if (p - *centroid).abs() > 720.0 {
+                        if p < *centroid {
                             p += 1440.0;
                         } else {
                             p -= 1440.0;
@@ -832,7 +844,7 @@ fn k_means_1d(data: &[u32], k: usize) -> (Vec<u32>, f64) {
                 if new_mean >= 1440.0 {
                     new_mean -= 1440.0;
                 }
-                centroids[c_idx] = new_mean;
+                *centroid = new_mean;
             }
         }
     }
@@ -881,7 +893,7 @@ fn k_means_1d_linear(data: &[f64], k: usize) -> (Vec<f64>, f64) {
             break;
         }
 
-        for c_idx in 0..k {
+        for (c_idx, centroid) in centroids.iter_mut().enumerate().take(k) {
             let mut sum = 0.0;
             let mut count = 0;
             for (i, &point) in data.iter().enumerate() {
@@ -891,7 +903,7 @@ fn k_means_1d_linear(data: &[f64], k: usize) -> (Vec<f64>, f64) {
                 }
             }
             if count > 0 {
-                centroids[c_idx] = sum / count as f64;
+                *centroid = sum / count as f64;
             }
         }
     }
@@ -916,9 +928,8 @@ fn find_best_k(wcss_values: &[f64]) -> usize {
     let mut max_dist = -1.0;
     let mut best_k = 1;
 
-    for i in 0..n {
+    for (i, &wcss) in wcss_values.iter().enumerate().take(n) {
         let k = (i + 1) as f64;
-        let wcss = wcss_values[i];
         // Distance from point (k, wcss) to line defined by first and last
         // Line eq: (y2-y1)x - (x2-x1)y + x2y1 - y2x1 = 0
         let numerator = ((last.1 - first.1) * k - (last.0 - first.0) * wcss + last.0 * first.1
@@ -983,13 +994,11 @@ pub fn analyze_trips_by_time<'a>(
                             }
                         }
 
-                        if let Some(c) = best_c {
-                            // Enforce strict 30-minute radius
-                            if min_dist <= 30 {
-                                if let Some(bucket) = clusters_buckets.get_mut(&c) {
-                                    bucket.push(trip);
-                                }
-                            }
+                        if let Some(c) = best_c
+                            && min_dist <= 30
+                            && let Some(bucket) = clusters_buckets.get_mut(&c)
+                        {
+                            bucket.push(trip);
                         }
                     }
                 }
@@ -1000,10 +1009,8 @@ pub fn analyze_trips_by_time<'a>(
                     let centroid_time_str = format_minutes_to_time(centroid);
 
                     // Retrieve trips for this centroid
-                    let cluster_trips = clusters_buckets
-                        .get(&centroid)
-                        .map(|v| v.clone())
-                        .unwrap_or_default();
+                    let cluster_trips =
+                        clusters_buckets.get(&centroid).cloned().unwrap_or_default();
                     let mut cluster_trip_minutes = Vec::new();
 
                     for trip in &cluster_trips {
@@ -1077,16 +1084,15 @@ pub fn analyze_trips_by_time<'a>(
                                             savings = savings.max(total_cost - full_prev_cost);
                                         }
                                     }
-                                } else if timeslot_idx == 0 {
-                                    if let Some((cost, _)) =
+                                } else if timeslot_idx == 0
+                                    && let Some((cost, _)) =
                                         trip.calculate_cost_at_timeslot(timeslots_len - 1)
-                                    {
-                                        let full_prev_cost = cost + fixed_charges;
-                                        total_toll_charge_previous_timeslot += full_prev_cost;
-                                        prev_c = Some(full_prev_cost);
-                                        if full_prev_cost < total_cost {
-                                            savings = savings.max(total_cost - full_prev_cost);
-                                        }
+                                {
+                                    let full_prev_cost = cost + fixed_charges;
+                                    total_toll_charge_previous_timeslot += full_prev_cost;
+                                    prev_c = Some(full_prev_cost);
+                                    if full_prev_cost < total_cost {
+                                        savings = savings.max(total_cost - full_prev_cost);
                                     }
                                 }
 
@@ -1101,14 +1107,14 @@ pub fn analyze_trips_by_time<'a>(
                                             savings = savings.max(total_cost - full_next_cost);
                                         }
                                     }
-                                } else if timeslot_idx == timeslots_len - 1 {
-                                    if let Some((cost, _)) = trip.calculate_cost_at_timeslot(0) {
-                                        let full_next_cost = cost + fixed_charges;
-                                        total_toll_charge_next_timeslot += full_next_cost;
-                                        next_c = Some(full_next_cost);
-                                        if full_next_cost < total_cost {
-                                            savings = savings.max(total_cost - full_next_cost);
-                                        }
+                                } else if timeslot_idx == timeslots_len - 1
+                                    && let Some((cost, _)) = trip.calculate_cost_at_timeslot(0)
+                                {
+                                    let full_next_cost = cost + fixed_charges;
+                                    total_toll_charge_next_timeslot += full_next_cost;
+                                    next_c = Some(full_next_cost);
+                                    if full_next_cost < total_cost {
+                                        savings = savings.max(total_cost - full_next_cost);
                                     }
                                 }
 
@@ -1218,26 +1224,22 @@ pub fn analyze_trips_by_time<'a>(
                     if total_optimized_savings > 0.01 {
                         let mut targets = Vec::new();
                         for ts in &trip_summaries {
-                            if let Some(saved) = ts.optimized_saved {
-                                if saved > 0.01 {
-                                    if let Some(prev) = ts.total_cost_previous_timeslot {
-                                        if (ts.trip.get_total_recorded_cost() - prev).abs() < 0.001
-                                            || ts.optimized_cost == Some(prev)
-                                        {
-                                            if let Some(target) = &ts.prev_timeslot_target {
-                                                targets.push(format!("before {}", target));
-                                            }
-                                        }
-                                    }
-                                    if let Some(next) = ts.total_cost_next_timeslot {
-                                        if (ts.trip.get_total_recorded_cost() - next).abs() < 0.001
-                                            || ts.optimized_cost == Some(next)
-                                        {
-                                            if let Some(target) = &ts.next_timeslot_target {
-                                                targets.push(format!("after {}", target));
-                                            }
-                                        }
-                                    }
+                            if let Some(saved) = ts.optimized_saved
+                                && saved > 0.01
+                            {
+                                if let Some(prev) = ts.total_cost_previous_timeslot
+                                    && ((ts.trip.get_total_recorded_cost() - prev).abs() < 0.001
+                                        || ts.optimized_cost == Some(prev))
+                                    && let Some(target) = &ts.prev_timeslot_target
+                                {
+                                    targets.push(format!("before {}", target));
+                                }
+                                if let Some(next) = ts.total_cost_next_timeslot
+                                    && ((ts.trip.get_total_recorded_cost() - next).abs() < 0.001
+                                        || ts.optimized_cost == Some(next))
+                                    && let Some(target) = &ts.next_timeslot_target
+                                {
+                                    targets.push(format!("after {}", target));
                                 }
                             }
                         }
@@ -1339,13 +1341,11 @@ pub fn analyze_trips_by_distance<'a>(
                             }
                         }
 
-                        if let Some(idx) = best_idx {
-                            // Enforce strict 5.0km radius
-                            if min_diff <= 5.0 {
-                                if let Some(bucket) = clusters_buckets.get_mut(&idx) {
-                                    bucket.push(trip);
-                                }
-                            }
+                        if let Some(idx) = best_idx
+                            && min_diff <= 5.0
+                            && let Some(bucket) = clusters_buckets.get_mut(&idx)
+                        {
+                            bucket.push(trip);
                         }
                     }
                 }
@@ -1354,10 +1354,7 @@ pub fn analyze_trips_by_distance<'a>(
 
                 for (idx, &centroid) in best_centroids.iter().enumerate() {
                     // Retrieve trips for this centroid
-                    let assigned_trips = clusters_buckets
-                        .get(&idx)
-                        .map(|v| v.clone())
-                        .unwrap_or_default();
+                    let assigned_trips = clusters_buckets.get(&idx).cloned().unwrap_or_default();
 
                     let mut cluster_trips = Vec::new(); // Summaries
                     let mut total_distance = 0.0;

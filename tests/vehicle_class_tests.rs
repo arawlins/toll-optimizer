@@ -190,24 +190,24 @@ fn test_motorcycle_holiday_cost() {
 #[test]
 fn test_vehicle_class_from_str() {
     assert_eq!(
-        VehicleClass::from_str("Light vehicle"),
+        "Light vehicle".parse::<VehicleClass>().ok(),
         Some(VehicleClass::LightVehicle)
     );
     assert_eq!(
-        VehicleClass::from_str("Medium Vehicle"),
+        "Medium Vehicle".parse::<VehicleClass>().ok(),
         Some(VehicleClass::MediumVehicle)
     );
     assert_eq!(
-        VehicleClass::from_str("Heavy Single Unit"),
+        "Heavy Single Unit".parse::<VehicleClass>().ok(),
         Some(VehicleClass::HeavySingleUnit)
     );
     assert_eq!(
-        VehicleClass::from_str("Heavy Multiple Unit"),
+        "Heavy Multiple Unit".parse::<VehicleClass>().ok(),
         Some(VehicleClass::HeavyMultipleUnit)
     );
     assert_eq!(
-        VehicleClass::from_str("Motorcycle"),
+        "Motorcycle".parse::<VehicleClass>().ok(),
         Some(VehicleClass::Motorcycle)
     );
-    assert_eq!(VehicleClass::from_str("Unknown"), None);
+    assert!("Unknown".parse::<VehicleClass>().is_err());
 }

@@ -1,21 +1,31 @@
 use crate::trip_analyzer::{
     DayType, Direction, PricingResponse, TransponderSummaryByDistance, TransponderSummaryByTime,
 };
+use std::collections::HashMap;
+
+/// Input data for a complete Markdown analysis report.
+pub struct AnalysisMarkdownReport<'report, 'trips> {
+    pub summaries_by_time: &'report [TransponderSummaryByTime<'trips>],
+    pub summaries_by_distance: &'report [TransponderSummaryByDistance<'trips>],
+    pub total_processed: usize,
+    pub total_skipped: usize,
+    pub total_cost: f64,
+    pub total_time_savings: f64,
+    pub total_distance_savings: f64,
+    pub unknown_points: &'report [String],
+    pub unknown_vehicle_classes: &'report [String],
+    pub camera_charges: &'report HashMap<String, f64>,
+}
 
 /// Prints a comprehensive analysis report in Markdown format.
 ///
 /// This function generates a structured report containing both time-based and
 /// distance-based clustering results. It uses tables to display metrics and
-/// optionally lists detailed trip data if `verbose` is set to true.
+/// lists detailed trip data for each cluster.
 ///
 /// # Arguments
 ///
-/// * `summaries_by_time` - A slice of time-based clustering summaries.
-/// * `summaries_by_distance` - A slice of distance-based clustering summaries.
-/// * `verbose` - Whether to include detailed trip tables in the output.
-/// * `total_processed` - Total number of trips processed.
-/// * `total_skipped` - Total number of trips skipped.
-/// * `unknown_points` - List of unrecognized entry/exit points.
+/// * `report` - Complete analysis report data to render.
 ///
 /// # Example
 ///
@@ -24,20 +34,34 @@ use crate::trip_analyzer::{
 /// # let time_summaries = vec![];
 /// # let dist_summaries = vec![];
 /// # let camera_charges = std::collections::HashMap::new();
-/// toll_optimizer::md_output::print_markdown(&time_summaries, &dist_summaries, 10, 2, 100.0, 5.0, 2.0, &[], &[], &camera_charges);
+/// let report = toll_optimizer::md_output::AnalysisMarkdownReport {
+///     summaries_by_time: &time_summaries,
+///     summaries_by_distance: &dist_summaries,
+///     total_processed: 10,
+///     total_skipped: 2,
+///     total_cost: 100.0,
+///     total_time_savings: 5.0,
+///     total_distance_savings: 2.0,
+///     unknown_points: &[],
+///     unknown_vehicle_classes: &[],
+///     camera_charges: &camera_charges,
+/// };
+/// toll_optimizer::md_output::print_markdown(report);
 /// ```
-pub fn print_markdown(
-    summaries_by_time: &[TransponderSummaryByTime],
-    summaries_by_distance: &[TransponderSummaryByDistance],
-    total_processed: usize,
-    total_skipped: usize,
-    total_cost: f64,
-    total_time_savings: f64,
-    total_distance_savings: f64,
-    unknown_points: &[String],
-    unknown_vehicle_classes: &[String],
-    camera_charges: &std::collections::HashMap<String, f64>,
-) {
+pub fn print_markdown(report: AnalysisMarkdownReport<'_, '_>) {
+    let AnalysisMarkdownReport {
+        summaries_by_time,
+        summaries_by_distance,
+        total_processed,
+        total_skipped,
+        total_cost,
+        total_time_savings,
+        total_distance_savings,
+        unknown_points,
+        unknown_vehicle_classes,
+        camera_charges,
+    } = report;
+
     println!("# Toll Optimizer Analysis Report\n");
 
     println!("## Processing Summary\n");
@@ -146,15 +170,15 @@ pub fn print_markdown(
 
                     let mut opt_msgs = Vec::new();
                     let current_cost = trip.get_total_recorded_cost();
-                    if let Some(prev) = trip_summary.total_cost_previous_timeslot {
-                        if prev < current_cost - 0.005 {
-                            opt_msgs.push(format!("Prev: ${:.2}", prev));
-                        }
+                    if let Some(prev) = trip_summary.total_cost_previous_timeslot
+                        && prev < current_cost - 0.005
+                    {
+                        opt_msgs.push(format!("Prev: ${:.2}", prev));
                     }
-                    if let Some(next) = trip_summary.total_cost_next_timeslot {
-                        if next < current_cost - 0.005 {
-                            opt_msgs.push(format!("Next: ${:.2}", next));
-                        }
+                    if let Some(next) = trip_summary.total_cost_next_timeslot
+                        && next < current_cost - 0.005
+                    {
+                        opt_msgs.push(format!("Next: ${:.2}", next));
                     }
 
                     println!(
@@ -281,30 +305,36 @@ pub fn print_pricing_markdown(pricing: &PricingResponse, date: &str, time: &str)
     println!();
 }
 
+/// Input data for a single-trip Markdown cost report.
+pub struct SingleTripMarkdownReport<'a> {
+    pub entry: &'a str,
+    pub exit: &'a str,
+    pub date: &'a str,
+    pub time: &'a str,
+    pub class: &'a str,
+    pub distance_km: f64,
+    pub direction: &'a Direction,
+    pub day_type: &'a DayType,
+    pub cost: f64,
+}
+
 /// Prints a single trip cost report in Markdown format.
-pub fn print_single_trip_markdown(
-    entry: &str,
-    exit: &str,
-    date: &str,
-    time: &str,
-    class: &str,
-    dist: f64,
-    direction: &Direction,
-    day_type: &DayType,
-    cost: f64,
-) {
+pub fn print_single_trip_markdown(report: SingleTripMarkdownReport<'_>) {
     println!("# Toll Optimizer Single Trip Report\n");
     println!("| Metric | Value |");
     println!("| --- | --- |");
-    println!("| **Route** | {} -> {} |", entry, exit);
-    println!("| **Date** | {} |", date);
-    println!("| **Time** | {} |", time);
-    println!("| **Vehicle Class** | {} |", class);
-    println!("| **Distance** | {:.3} km |", dist);
-    println!("| **Direction** | {:?} |", direction);
-    println!("| **Day Type** | {:?} |", day_type);
-    println!("| **Base Toll** | ${:.2} |", cost);
+    println!("| **Route** | {} -> {} |", report.entry, report.exit);
+    println!("| **Date** | {} |", report.date);
+    println!("| **Time** | {} |", report.time);
+    println!("| **Vehicle Class** | {} |", report.class);
+    println!("| **Distance** | {:.3} km |", report.distance_km);
+    println!("| **Direction** | {:?} |", report.direction);
+    println!("| **Day Type** | {:?} |", report.day_type);
+    println!("| **Base Toll** | ${:.2} |", report.cost);
     println!("| **Trip Charge** | $1.00 |");
-    println!("| **Total Estimated Cost** | **${:.2}** |", cost + 1.00);
+    println!(
+        "| **Total Estimated Cost** | **${:.2}** |",
+        report.cost + 1.00
+    );
     println!();
 }

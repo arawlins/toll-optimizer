@@ -69,8 +69,10 @@ fn main() -> Result<()> {
             .date
             .unwrap_or_else(|| now.format("%Y-%m-%d").to_string());
         let time_str = args.time.unwrap_or_else(|| now.format("%H:%M").to_string());
-        let vehicle_class = VehicleClass::from_str(&args.vehicle_class)
-            .ok_or_else(|| anyhow::anyhow!("Invalid vehicle class: {}", args.vehicle_class))?;
+        let vehicle_class = args
+            .vehicle_class
+            .parse::<VehicleClass>()
+            .map_err(|_| anyhow::anyhow!("Invalid vehicle class: {}", args.vehicle_class))?;
 
         let (cost, dist, direction, day_type) = trip_analyzer::calculate_single_trip_cost(
             &entry,
@@ -99,17 +101,17 @@ fn main() -> Result<()> {
         }
 
         if args.markdown {
-            md_output::print_single_trip_markdown(
-                &entry,
-                &exit,
-                &date_str,
-                &time_str,
-                vehicle_class.to_str(),
-                dist,
-                &direction,
-                &day_type,
+            md_output::print_single_trip_markdown(md_output::SingleTripMarkdownReport {
+                entry: &entry,
+                exit: &exit,
+                date: &date_str,
+                time: &time_str,
+                class: vehicle_class.to_str(),
+                distance_km: dist,
+                direction: &direction,
+                day_type: &day_type,
                 cost,
-            );
+            });
             return Ok(());
         }
 
@@ -134,8 +136,10 @@ fn main() -> Result<()> {
             .date
             .unwrap_or_else(|| now.format("%Y-%m-%d").to_string());
         let time = args.time.unwrap_or_else(|| now.format("%H:%M").to_string());
-        let vehicle_class = VehicleClass::from_str(&args.vehicle_class)
-            .ok_or_else(|| anyhow::anyhow!("Invalid vehicle class: {}", args.vehicle_class))?;
+        let vehicle_class = args
+            .vehicle_class
+            .parse::<VehicleClass>()
+            .map_err(|_| anyhow::anyhow!("Invalid vehicle class: {}", args.vehicle_class))?;
 
         let pricing = trip_analyzer::get_pricing(&date, &time, vehicle_class)?;
 
@@ -246,18 +250,18 @@ fn main() -> Result<()> {
     }
 
     if args.markdown {
-        md_output::print_markdown(
-            &summaries_by_time,
-            &summaries_by_distance,
-            results.total_processed,
-            results.total_skipped,
+        md_output::print_markdown(md_output::AnalysisMarkdownReport {
+            summaries_by_time: &summaries_by_time,
+            summaries_by_distance: &summaries_by_distance,
+            total_processed: results.total_processed,
+            total_skipped: results.total_skipped,
             total_cost,
             total_time_savings,
             total_distance_savings,
-            &results.unknown_points,
-            &results.unknown_vehicle_classes,
-            &results.camera_charges,
-        );
+            unknown_points: &results.unknown_points,
+            unknown_vehicle_classes: &results.unknown_vehicle_classes,
+            camera_charges: &results.camera_charges,
+        });
         return Ok(());
     }
 
@@ -330,32 +334,28 @@ fn main() -> Result<()> {
                     let mut optimization_msg = String::new();
                     let current_cost = trip.get_total_recorded_cost();
 
-                    if let Some(prev_cost) = trip_summary.total_cost_previous_timeslot {
-                        if prev_cost < current_cost - 0.005 {
-                            let target_msg = trip_summary
-                                .prev_timeslot_target
-                                .as_ref()
-                                .map(|t| format!(" (<= {})", t))
-                                .unwrap_or_default();
-                            optimization_msg.push_str(&format!(
-                                " [Cheaper Prev: ${:.2}{}]",
-                                prev_cost, target_msg
-                            ));
-                        }
+                    if let Some(prev_cost) = trip_summary.total_cost_previous_timeslot
+                        && prev_cost < current_cost - 0.005
+                    {
+                        let target_msg = trip_summary
+                            .prev_timeslot_target
+                            .as_ref()
+                            .map(|t| format!(" (<= {})", t))
+                            .unwrap_or_default();
+                        optimization_msg
+                            .push_str(&format!(" [Cheaper Prev: ${:.2}{}]", prev_cost, target_msg));
                     }
 
-                    if let Some(next_cost) = trip_summary.total_cost_next_timeslot {
-                        if next_cost < current_cost - 0.005 {
-                            let target_msg = trip_summary
-                                .next_timeslot_target
-                                .as_ref()
-                                .map(|t| format!(" (>= {})", t))
-                                .unwrap_or_default();
-                            optimization_msg.push_str(&format!(
-                                " [Cheaper Next: ${:.2}{}]",
-                                next_cost, target_msg
-                            ));
-                        }
+                    if let Some(next_cost) = trip_summary.total_cost_next_timeslot
+                        && next_cost < current_cost - 0.005
+                    {
+                        let target_msg = trip_summary
+                            .next_timeslot_target
+                            .as_ref()
+                            .map(|t| format!(" (>= {})", t))
+                            .unwrap_or_default();
+                        optimization_msg
+                            .push_str(&format!(" [Cheaper Next: ${:.2}{}]", next_cost, target_msg));
                     }
 
                     println!(
