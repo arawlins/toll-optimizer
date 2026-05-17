@@ -1,5 +1,6 @@
 use toll_optimizer::csv_parser;
 use toll_optimizer::trip_analyzer;
+use toll_optimizer::{DayType, Direction};
 
 #[test]
 fn test_time_based_optimization_savings() {
@@ -172,4 +173,39 @@ fn test_midnight_trip_parsing() {
     let centroid = &summary.centroids[0];
     // In 2025, 12:00 AM slot is valid and the trip should be placed there
     assert_eq!(centroid.centroid_time, "12:00 AM");
+}
+
+#[test]
+fn test_single_trip_cost_calculation() {
+    use toll_optimizer::VehicleClass;
+
+    // Test a known trip (McCowan to Hwy404, Westbound, Weekday morning 2026)
+    // McCowan is index 34, Hwy404 is index 30.
+    // Distance segments: 33 (1.93), 32 (2.078), 31 (1.029), 30 (0.997) -> approx 6.034 km?
+    // Let's just verify the function returns a successful result and the direction is correct.
+    let result = trip_analyzer::calculate_single_trip_cost(
+        "McCowan",
+        "Hwy404",
+        "2026-05-12",
+        "08:00 AM",
+        VehicleClass::LightVehicle,
+    );
+
+    assert!(result.is_ok());
+    let (cost, dist, direction, day_type) = result.unwrap();
+    assert!(cost > 0.0);
+    assert!(dist > 0.0);
+    assert_eq!(direction, Direction::Westbound);
+    assert_eq!(day_type, DayType::Weekday);
+
+    // Test case-insensitivity
+    let result_caps = trip_analyzer::calculate_single_trip_cost(
+        "MCCOWAN",
+        "hwy404",
+        "2026-05-12",
+        "08:00 AM",
+        VehicleClass::LightVehicle,
+    );
+    assert!(result_caps.is_ok());
+    assert_eq!(result_caps.unwrap().0, cost);
 }

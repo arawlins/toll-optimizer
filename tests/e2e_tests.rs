@@ -82,3 +82,24 @@ fn test_e2e_markdown_output() {
     assert!(output.contains("### Unrecognized Vehicle Classes"));
     assert!(output.contains("- Space Shuttle | NOT RECOGNIZED"));
 }
+
+#[test]
+fn test_e2e_single_trip() {
+    let output = run_optimizer(&["--entry", "McCowan", "--exit", "Hwy404", "--date", "2026-05-12", "--time", "08:00 AM"]);
+    
+    assert!(output.contains("--- Single Trip Cost Analysis ---"));
+    assert!(output.contains("Route: McCowan -> Hwy404"));
+    assert!(output.contains("Estimated Toll: $4.52"));
+}
+
+#[test]
+fn test_e2e_single_trip_json() {
+    let output = run_optimizer(&["--entry", "McCowan", "--exit", "Hwy404", "--date", "2026-05-12", "--time", "08:00 AM", "--json"]);
+    
+    let json: serde_json::Value = serde_json::from_str(&output).expect("Output should be valid JSON");
+    assert_eq!(json["entry"], "McCowan");
+    assert_eq!(json["exit"], "Hwy404");
+    
+    let toll = json["estimated_toll"].as_f64().unwrap();
+    assert!((toll - 4.52).abs() < 0.01);
+}

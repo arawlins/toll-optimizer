@@ -1649,3 +1649,109 @@ pub fn get_pricing(
         day_type: format!("{:?} ({})", day_type, vehicle_class.to_str()),
     })
 }
+
+pub fn calculate_single_trip_cost(
+    entry_point: &str,
+    exit_point: &str,
+    date_str: &str,
+    time_str: &str,
+    vehicle_class: VehicleClass,
+) -> Result<(f64, f64, Direction, DayType)> {
+    let date = NaiveDate::parse_from_str(date_str, "%Y-%m-%d")
+        .map_err(|e| anyhow!("Invalid date format '{}'. Expected YYYY-MM-DD: {}", date_str, e))?;
+
+    let day_type = classify_day_type(date);
+    let minutes = parse_time_flexible(time_str)
+        .ok_or_else(|| anyhow!("Invalid time format '{}'. Expected HH:MM AM/PM or HH:MM", time_str))?;
+
+    let start_idx = ACCESS_POINTS
+        .iter()
+        .position(|&ap| ap.eq_ignore_ascii_case(entry_point))
+        .ok_or_else(|| anyhow!("Invalid entry point: {}", entry_point))?;
+    let end_idx = ACCESS_POINTS
+        .iter()
+        .position(|&ap| ap.eq_ignore_ascii_case(exit_point))
+        .ok_or_else(|| anyhow!("Invalid exit point: {}", exit_point))?;
+
+    let direction = if end_idx > start_idx {
+        Direction::Eastbound
+    } else {
+        Direction::Westbound
+    };
+
+    let year = date.year() as u32;
+
+    // Find timeslot index
+    let slots = match day_type {
+        DayType::Weekday => {
+            if year <= 2025 {
+                &WEEKDAY_TIMESLOTS_2025[..]
+            } else {
+                &WEEKDAY_TIMESLOTS_2026[..]
+            }
+        }
+        DayType::Weekend | DayType::Holiday => {
+            if year <= 2025 {
+                &WEEKEND_TIMESLOTS_2025[..]
+            } else {
+                &WEEKEND_TIMESLOTS_2026[..]
+            }
+        }
+    };
+
+    let slot_minutes: Vec<u32> = slots
+        .iter()
+        .filter_map(|&t| parse_time_to_minutes(t))
+        .collect();
+
+    let mut timeslot_idx = slot_minutes.len() - 1;
+    for (i, &slot_time) in slot_minutes.iter().enumerate() {
+        if minutes < slot_time {
+            if i == 0 {
+                timeslot_idx = slot_minutes.len() - 1;
+            } else {
+                timeslot_idx = i - 1;
+            }
+            break;
+        }
+        timeslot_idx = i;
+    }
+
+    let mut total_cost = 0.0;
+    let mut total_distance = 0.0;
+
+    match direction {
+        Direction::Eastbound => {
+            for i in start_idx..end_idx {
+                let distance = ACCESS_POINT_DISTANCES[i] as f64;
+                total_distance += distance;
+                let ap_name = ACCESS_POINTS[i];
+                let zone = EB_ZONES
+                    .iter()
+                    .find(|&&(name, _)| name == ap_name)
+                    .map(|&(_, z)| z)
+                    .unwrap_or(1) as usize;
+                let price_rate =
+                    vehicle_class.get_rate(&day_type, &direction, year, timeslot_idx, zone - 1);
+                total_cost += distance * price_rate;
+            }
+        }
+        Direction::Westbound => {
+            for i in end_idx..start_idx {
+                let distance = ACCESS_POINT_DISTANCES[i] as f64;
+                total_distance += distance;
+                let ap_name = ACCESS_POINTS[i + 1];
+                let zone = WB_ZONES
+                    .iter()
+                    .find(|&&(name, _)| name == ap_name)
+                    .map(|&(_, z)| z)
+                    .unwrap_or(1) as usize;
+                let price_rate =
+                    vehicle_class.get_rate(&day_type, &direction, year, timeslot_idx, zone - 1);
+                total_cost += distance * price_rate;
+            }
+        }
+    }
+
+    Ok((total_cost / 100.0, total_distance, direction, day_type))
+}

@@ -55,6 +55,7 @@ toll-optimizer --current-price --date 2026-05-12 --time "07:30 AM"
 - `-j, --json`: Output results in JSON format (for programmatic use).
 - `-m, --markdown`: Output results in Markdown format (for reports).
 - `--list-access-points`: List all recognized 407 ETR access points.
+- `--entry <POINT> --exit <POINT>`: Calculate the cost for a single trip between two points.
 - `--current-price`: Display pricing info for the current timeslot.
 - `--date <DATE>`: Override date for pricing (YYYY-MM-DD).
 - `--time <TIME>`: Override time for pricing (HH:MM AM/PM or HH:MM).

@@ -26,11 +26,12 @@ The primary tool for analysis and pricing.
 - `<FILE>`: Path to the 407 ETR CSV statement file.
   Detailed trip listings are included by default.
 
-**Pricing Options:**
+**Pricing & Trip Options:**
 - `--current-price`: Display pricing info for the current timeslot and provide optimization tips.
-- `--date <DATE>`: (Optional) Override date for pricing (YYYY-MM-DD).
-- `--time <TIME>`: (Optional) Override time for pricing (HH:MM AM/PM or HH:MM).
-- `--vehicle-class <CLASS>`: (Optional) Vehicle class for pricing (e.g., "Light vehicle", "Heavy Single Unit", "Heavy Multiple Unit", "Medium Vehicle", "Motorcycle"). Default: "Light vehicle".
+- `--entry <POINT> --exit <POINT>`: Calculate the cost for a single trip between two points. (Both required if either is specified).
+- `--date <DATE>`: (Optional) Override date/time for pricing or single trip (YYYY-MM-DD).
+- `--time <TIME>`: (Optional) Override time for pricing or single trip (HH:MM AM/PM or HH:MM).
+- `--vehicle-class <CLASS>`: (Optional) Vehicle class for pricing or single trip (e.g., "Light vehicle", "Heavy Single Unit", "Heavy Multiple Unit", "Medium Vehicle", "Motorcycle"). Default: "Light vehicle".
 
 ## Procedures
 
@@ -50,7 +51,14 @@ If a user asks about current rates or planning a trip:
     `toll-optimizer --current-price --date 2026-05-12 --time "07:30 AM"`
 3.  Compare "Current Timeslot" and "Next Timeslot" averages to provide leaving/waiting advice.
 
-### 3. Verification
+### 3. Single Trip Calculation
+If a user asks for the cost of a specific trip:
+1.  Identify the entry and exit points.
+2.  Run the calculation:
+    `toll-optimizer --entry "McCowan" --exit "Hwy404"`
+3.  Add `--date`, `--time`, or `--vehicle-class` if specific context is provided.
+
+### 4. Verification
 If a user asks about supported routes or points:
 1.  Run the access point list:
     `toll-optimizer --list-access-points`

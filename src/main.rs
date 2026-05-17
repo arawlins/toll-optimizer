@@ -41,7 +41,13 @@ struct Args {
     #[arg(long)]
     list_access_points: bool,
 
+    /// Entry point for a single trip calculation
+    #[arg(long, requires = "exit")]
+    entry: Option<String>,
 
+    /// Exit point for a single trip calculation
+    #[arg(long, requires = "entry")]
+    exit: Option<String>,
 }
 
 fn main() -> Result<()> {
@@ -54,6 +60,67 @@ fn main() -> Result<()> {
         for point in points {
             println!("  - {}", point);
         }
+        return Ok(());
+    }
+
+    if let (Some(entry), Some(exit)) = (args.entry, args.exit) {
+        let now = Local::now();
+        let date_str = args
+            .date
+            .unwrap_or_else(|| now.format("%Y-%m-%d").to_string());
+        let time_str = args.time.unwrap_or_else(|| now.format("%H:%M").to_string());
+        let vehicle_class = VehicleClass::from_str(&args.vehicle_class)
+            .ok_or_else(|| anyhow::anyhow!("Invalid vehicle class: {}", args.vehicle_class))?;
+
+        let (cost, dist, direction, day_type) = trip_analyzer::calculate_single_trip_cost(
+            &entry,
+            &exit,
+            &date_str,
+            &time_str,
+            vehicle_class,
+        )?;
+
+        if args.json {
+            let output = serde_json::json!({
+                "entry": entry,
+                "exit": exit,
+                "date": date_str,
+                "time": time_str,
+                "vehicle_class": vehicle_class,
+                "distance_km": dist,
+                "direction": direction,
+                "day_type": day_type,
+                "estimated_toll": cost,
+            });
+            println!("{}", serde_json::to_string_pretty(&output)?);
+            return Ok(());
+        }
+
+        if args.markdown {
+            md_output::print_single_trip_markdown(
+                &entry,
+                &exit,
+                &date_str,
+                &time_str,
+                vehicle_class.to_str(),
+                dist,
+                &direction,
+                &day_type,
+                cost,
+            );
+            return Ok(());
+        }
+
+        println!("--- Single Trip Cost Analysis ---");
+        println!("Route: {} -> {}", entry, exit);
+        println!("Date:  {}", date_str);
+        println!("Time:  {}", time_str);
+        println!("Class: {}", vehicle_class.to_str());
+        println!("Distance:  {:.3} km", dist);
+        println!("Direction: {:?}", direction);
+        println!("Day Type:  {:?}", day_type);
+        println!("Estimated Toll: ${:.2}", cost);
+
         return Ok(());
     }
 

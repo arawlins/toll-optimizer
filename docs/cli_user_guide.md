@@ -35,6 +35,17 @@ toll-optimizer --current-price --date 2026-05-12 --time "07:30 AM"
 toll-optimizer --current-price --vehicle-class "Heavy Single Unit"
 ```
 
+### Single Trip Cost Calculation
+Calculate the exact cost of a trip between any two recognized points.
+
+```bash
+# Calculate cost for current time
+toll-optimizer --entry "McCowan" --exit "Hwy404"
+
+# Calculate cost for a specific time and vehicle class
+toll-optimizer --entry "QEW" --exit "Dundas" --date 2026-05-12 --time "08:00 AM" --vehicle-class "Heavy Single Unit"
+```
+
 The live pricing check provides:
 - **Current Timeslot**: The rate you would pay if you entered the highway right now.
 - **Next Timeslot**: The rate for the following timeslot, helping you decide whether to "Leave now" or "Wait".

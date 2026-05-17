@@ -1,5 +1,5 @@
 use crate::trip_analyzer::{
-    DayType, PricingResponse, TransponderSummaryByDistance, TransponderSummaryByTime,
+    DayType, Direction, PricingResponse, TransponderSummaryByDistance, TransponderSummaryByTime,
 };
 
 /// Prints a comprehensive analysis report in Markdown format.
@@ -23,7 +23,7 @@ use crate::trip_analyzer::{
 /// // Assuming summaries are already generated
 /// # let time_summaries = vec![];
 /// # let dist_summaries = vec![];
-/// toll_optimizer::md_output::print_markdown(&time_summaries, &dist_summaries, 10, 2, 100.0, 5.0, 2.0, &[]);
+/// toll_optimizer::md_output::print_markdown(&time_summaries, &dist_summaries, 10, 2, 100.0, 5.0, 2.0, &[], &[]);
 /// ```
 pub fn print_markdown(
     summaries_by_time: &[TransponderSummaryByTime],
@@ -254,5 +254,31 @@ pub fn print_pricing_markdown(pricing: &PricingResponse, date: &str, time: &str)
     } else {
         println!("> Rates are expected to remain stable in the next timeslot.");
     }
+    println!();
+}
+
+/// Prints a single trip cost report in Markdown format.
+pub fn print_single_trip_markdown(
+    entry: &str,
+    exit: &str,
+    date: &str,
+    time: &str,
+    class: &str,
+    dist: f64,
+    direction: &Direction,
+    day_type: &DayType,
+    cost: f64,
+) {
+    println!("# Toll Optimizer Single Trip Report\n");
+    println!("| Metric | Value |");
+    println!("| --- | --- |");
+    println!("| **Route** | {} -> {} |", entry, exit);
+    println!("| **Date** | {} |", date);
+    println!("| **Time** | {} |", time);
+    println!("| **Vehicle Class** | {} |", class);
+    println!("| **Distance** | {:.3} km |", dist);
+    println!("| **Direction** | {:?} |", direction);
+    println!("| **Day Type** | {:?} |", day_type);
+    println!("| **Estimated Toll** | **${:.2}** |", cost);
     println!();
 }
