@@ -279,6 +279,8 @@ pub fn print_single_trip_markdown(
     println!("| **Distance** | {:.3} km |", dist);
     println!("| **Direction** | {:?} |", direction);
     println!("| **Day Type** | {:?} |", day_type);
-    println!("| **Estimated Toll** | **${:.2}** |", cost);
+    println!("| **Base Toll** | ${:.2} |", cost);
+    println!("| **Trip Charge** | $1.00 |");
+    println!("| **Total Estimated Cost** | **${:.2}** |", cost + 1.00);
     println!();
 }

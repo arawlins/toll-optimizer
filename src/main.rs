@@ -90,7 +90,9 @@ fn main() -> Result<()> {
                 "distance_km": dist,
                 "direction": direction,
                 "day_type": day_type,
-                "estimated_toll": cost,
+                "base_toll": cost,
+                "trip_charge": 1.00,
+                "total_estimated_cost": cost + 1.00,
             });
             println!("{}", serde_json::to_string_pretty(&output)?);
             return Ok(());
@@ -119,7 +121,9 @@ fn main() -> Result<()> {
         println!("Distance:  {:.3} km", dist);
         println!("Direction: {:?}", direction);
         println!("Day Type:  {:?}", day_type);
-        println!("Estimated Toll: ${:.2}", cost);
+        println!("Base Toll: ${:.2}", cost);
+        println!("Trip Charge: $1.00");
+        println!("Total Estimated Cost: ${:.2}", cost + 1.00);
 
         return Ok(());
     }

@@ -89,7 +89,9 @@ fn test_e2e_single_trip() {
     
     assert!(output.contains("--- Single Trip Cost Analysis ---"));
     assert!(output.contains("Route: McCowan -> Hwy404"));
-    assert!(output.contains("Estimated Toll: $4.52"));
+    assert!(output.contains("Base Toll: $4.52"));
+    assert!(output.contains("Trip Charge: $1.00"));
+    assert!(output.contains("Total Estimated Cost: $5.52"));
 }
 
 #[test]
@@ -100,6 +102,8 @@ fn test_e2e_single_trip_json() {
     assert_eq!(json["entry"], "McCowan");
     assert_eq!(json["exit"], "Hwy404");
     
-    let toll = json["estimated_toll"].as_f64().unwrap();
-    assert!((toll - 4.52).abs() < 0.01);
+    let base_toll = json["base_toll"].as_f64().unwrap();
+    assert!((base_toll - 4.52).abs() < 0.01);
+    assert_eq!(json["trip_charge"], 1.0);
+    assert_eq!(json["total_estimated_cost"], base_toll + 1.0);
 }
