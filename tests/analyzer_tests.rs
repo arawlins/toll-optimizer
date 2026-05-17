@@ -20,9 +20,12 @@ fn test_time_based_optimization_savings() {
     assert_eq!(analysis.len(), 1);
     let summary = &analysis[0];
     let centroid = &summary.centroids[0];
-    
+
     // We expect some potential savings to be identified
-    assert!(centroid.total_optimized_savings > 0.0, "Should have identified time-based savings for 7:30 AM trip");
+    assert!(
+        centroid.total_optimized_savings > 0.0,
+        "Should have identified time-based savings for 7:30 AM trip"
+    );
     assert!(centroid.optimization_advice.is_some());
 }
 
@@ -45,7 +48,7 @@ fn test_distance_based_optimization_savings() {
 
     // Distance optimization should try to move Trafalgar back to Neyagawa
     // and check if it's cheaper.
-    assert!(centroid.total_optimized_savings >= 0.0); 
+    assert!(centroid.total_optimized_savings >= 0.0);
 }
 
 #[test]
@@ -88,7 +91,10 @@ fn test_weekday_vs_weekend_pricing() {
     let (weekend_cost, _) = weekend_trip.calculate_cost().unwrap();
 
     println!("Weekday: {}, Weekend: {}", weekday_cost, weekend_cost);
-    assert!(weekday_cost > weekend_cost, "Weekday base toll should be higher than weekend base toll");
+    assert!(
+        weekday_cost > weekend_cost,
+        "Weekday base toll should be higher than weekend base toll"
+    );
 }
 
 #[test]
@@ -111,7 +117,10 @@ fn test_year_boundary_pricing() {
     let (cost_26, _) = year26_trip.calculate_cost_2026().unwrap();
 
     println!("Cost 2025: {}, Cost 2026: {}", cost_25, cost_26);
-    assert!(cost_26 > cost_25, "2026 toll pricing should be higher than 2025 pricing");
+    assert!(
+        cost_26 > cost_25,
+        "2026 toll pricing should be higher than 2025 pricing"
+    );
 }
 
 #[test]
@@ -134,7 +143,10 @@ fn test_holiday_classification() {
     let weekend_trip = &weekend_parsed.trips[0].1[0];
     let (weekend_cost, _) = weekend_trip.calculate_cost().unwrap();
 
-    assert_eq!(holiday_cost, weekend_cost, "Holiday toll should match weekend toll calculation");
+    assert_eq!(
+        holiday_cost, weekend_cost,
+        "Holiday toll should match weekend toll calculation"
+    );
 }
 
 #[test]
@@ -148,7 +160,7 @@ fn test_westbound_zone_boundary() {
     ];
     let wb_parsed = csv_parser::parse_trips(wb_csv.join("\n").as_bytes());
     let wb_analysis = trip_analyzer::analyze_trips_by_distance(&wb_parsed.trips);
-    
+
     // Testing there was no panic, and that we have a result
     assert_eq!(wb_analysis.len(), 1);
 }
@@ -161,11 +173,15 @@ fn test_midnight_trip_parsing() {
         "\"TEST_PLATE\",\"Light vehicle\",\"28 Aug 25\",\"12:00 AM\",\"QEW\",\"Trafalgar\",\"10.0\",\"0.00\",\"0.00\",\"0.00\"".to_string(),
     ];
     let midnight_parsed = csv_parser::parse_trips(midnight_csv.join("\n").as_bytes());
-    
+
     // There should be 1 trip successfully parsed
-    assert_eq!(midnight_parsed.trips.len(), 1, "Midnight trip was not parsed successfully");
+    assert_eq!(
+        midnight_parsed.trips.len(),
+        1,
+        "Midnight trip was not parsed successfully"
+    );
     assert_eq!(midnight_parsed.trips[0].1.len(), 1);
-    
+
     // Let's verify timeslot mapping
     let analysis = trip_analyzer::analyze_trips_by_time(&midnight_parsed.trips);
     assert_eq!(analysis.len(), 1);

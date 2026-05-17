@@ -25,9 +25,13 @@ fn test_medium_vehicle_cost() {
         "2026-05-12",
         "08:00 AM",
         VehicleClass::LightVehicle,
-    ).unwrap();
-    
-    assert!(cost > light_result.0, "Medium vehicle should be more expensive than light vehicle");
+    )
+    .unwrap();
+
+    assert!(
+        cost > light_result.0,
+        "Medium vehicle should be more expensive than light vehicle"
+    );
 }
 
 #[test]
@@ -54,9 +58,13 @@ fn test_motorcycle_cost() {
         "2026-05-12",
         "08:00 AM",
         VehicleClass::LightVehicle,
-    ).unwrap();
-    
-    assert!(cost < light_result.0, "Motorcycle should be cheaper than light vehicle on 407 ETR");
+    )
+    .unwrap();
+
+    assert!(
+        cost < light_result.0,
+        "Motorcycle should be cheaper than light vehicle on 407 ETR"
+    );
 }
 
 #[test]
@@ -83,9 +91,13 @@ fn test_heavy_single_unit_cost() {
         "2026-05-12",
         "08:00 AM",
         VehicleClass::MediumVehicle,
-    ).unwrap();
-    
-    assert!(cost > medium_result.0, "Heavy single unit should be more expensive than medium vehicle");
+    )
+    .unwrap();
+
+    assert!(
+        cost > medium_result.0,
+        "Heavy single unit should be more expensive than medium vehicle"
+    );
 }
 
 #[test]
@@ -112,9 +124,13 @@ fn test_heavy_multiple_unit_cost() {
         "2026-05-12",
         "08:00 AM",
         VehicleClass::HeavySingleUnit,
-    ).unwrap();
-    
-    assert!(cost > heavy_single_result.0, "Heavy multiple unit should be more expensive than heavy single unit");
+    )
+    .unwrap();
+
+    assert!(
+        cost > heavy_single_result.0,
+        "Heavy multiple unit should be more expensive than heavy single unit"
+    );
 }
 
 #[test]
@@ -126,7 +142,8 @@ fn test_heavy_vehicle_weekend_cost() {
         "2025-08-30",
         "10:00 AM",
         VehicleClass::HeavyMultipleUnit,
-    ).unwrap();
+    )
+    .unwrap();
 
     let weekday_result = trip_analyzer::calculate_single_trip_cost(
         "QEW",
@@ -134,9 +151,13 @@ fn test_heavy_vehicle_weekend_cost() {
         "2025-08-28", // Thursday
         "10:00 AM",
         VehicleClass::HeavyMultipleUnit,
-    ).unwrap();
+    )
+    .unwrap();
 
-    assert!(weekday_result.0 > result.0, "Heavy multiple unit weekday cost should be higher than weekend cost");
+    assert!(
+        weekday_result.0 > result.0,
+        "Heavy multiple unit weekday cost should be higher than weekend cost"
+    );
 }
 
 #[test]
@@ -148,7 +169,8 @@ fn test_motorcycle_holiday_cost() {
         "2026-01-01",
         "10:00 AM",
         VehicleClass::Motorcycle,
-    ).unwrap();
+    )
+    .unwrap();
 
     let weekend_result = trip_analyzer::calculate_single_trip_cost(
         "QEW",
@@ -156,17 +178,36 @@ fn test_motorcycle_holiday_cost() {
         "2026-01-04", // Sunday
         "10:00 AM",
         VehicleClass::Motorcycle,
-    ).unwrap();
+    )
+    .unwrap();
 
-    assert_eq!(result.0, weekend_result.0, "Motorcycle holiday cost should match weekend cost");
+    assert_eq!(
+        result.0, weekend_result.0,
+        "Motorcycle holiday cost should match weekend cost"
+    );
 }
 
 #[test]
 fn test_vehicle_class_from_str() {
-    assert_eq!(VehicleClass::from_str("Light vehicle"), Some(VehicleClass::LightVehicle));
-    assert_eq!(VehicleClass::from_str("Medium Vehicle"), Some(VehicleClass::MediumVehicle));
-    assert_eq!(VehicleClass::from_str("Heavy Single Unit"), Some(VehicleClass::HeavySingleUnit));
-    assert_eq!(VehicleClass::from_str("Heavy Multiple Unit"), Some(VehicleClass::HeavyMultipleUnit));
-    assert_eq!(VehicleClass::from_str("Motorcycle"), Some(VehicleClass::Motorcycle));
+    assert_eq!(
+        VehicleClass::from_str("Light vehicle"),
+        Some(VehicleClass::LightVehicle)
+    );
+    assert_eq!(
+        VehicleClass::from_str("Medium Vehicle"),
+        Some(VehicleClass::MediumVehicle)
+    );
+    assert_eq!(
+        VehicleClass::from_str("Heavy Single Unit"),
+        Some(VehicleClass::HeavySingleUnit)
+    );
+    assert_eq!(
+        VehicleClass::from_str("Heavy Multiple Unit"),
+        Some(VehicleClass::HeavyMultipleUnit)
+    );
+    assert_eq!(
+        VehicleClass::from_str("Motorcycle"),
+        Some(VehicleClass::Motorcycle)
+    );
     assert_eq!(VehicleClass::from_str("Unknown"), None);
 }

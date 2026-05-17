@@ -10,14 +10,19 @@ fn run_optimizer(args: &[&str]) -> String {
         .output()
         .expect("Failed to execute command");
 
-    assert!(output.status.success(), "Command failed with status: {:?}\nStderr: {}", output.status, String::from_utf8_lossy(&output.stderr));
+    assert!(
+        output.status.success(),
+        "Command failed with status: {:?}\nStderr: {}",
+        output.status,
+        String::from_utf8_lossy(&output.stderr)
+    );
     String::from_utf8_lossy(&output.stdout).to_string()
 }
 
 #[test]
 fn test_e2e_light_vehicles() {
     let output = run_optimizer(&["tests/csv/2025-08-28 - light vehicles.csv"]);
-    
+
     assert!(output.contains("--- Processing Summary ---"));
     assert!(output.contains("Trips Processed: 62"));
     assert!(output.contains("Trips Skipped:   0"));
@@ -29,7 +34,7 @@ fn test_e2e_light_vehicles() {
 #[test]
 fn test_e2e_invalid_entry() {
     let output = run_optimizer(&["tests/csv/2026-02-28 - invalid entry.csv"]);
-    
+
     assert!(output.contains("--- Processing Summary ---"));
     assert!(output.contains("Trips Processed: 6"));
     assert!(output.contains("Trips Skipped:   3"));
@@ -43,7 +48,7 @@ fn test_e2e_invalid_entry() {
 #[test]
 fn test_e2e_mixed_case() {
     let output = run_optimizer(&["tests/csv/2026-04-28 - mixed case.csv"]);
-    
+
     assert!(output.contains("--- Processing Summary ---"));
     assert!(output.contains("Trips Processed: 17"));
     assert!(output.contains("Trips Skipped:   0"));
@@ -53,7 +58,7 @@ fn test_e2e_mixed_case() {
 #[test]
 fn test_e2e_no_preamble() {
     let output = run_optimizer(&["tests/csv/2026-02-28 - no preamble.csv"]);
-    
+
     assert!(output.contains("--- Processing Summary ---"));
     assert!(output.contains("Trips Processed: 8"));
     assert!(output.contains("Trips Skipped:   0"));
@@ -62,19 +67,35 @@ fn test_e2e_no_preamble() {
 #[test]
 fn test_e2e_json_output() {
     let output = run_optimizer(&["tests/csv/2026-02-28 - invalid entry.csv", "--json"]);
-    
-    let json: serde_json::Value = serde_json::from_str(&output).expect("Output should be valid JSON");
+
+    let json: serde_json::Value =
+        serde_json::from_str(&output).expect("Output should be valid JSON");
     assert_eq!(json["summary"]["total_processed"], 6);
     assert_eq!(json["summary"]["total_skipped"], 3);
-    assert!(json["summary"]["unknown_points"].as_array().unwrap().contains(&serde_json::json!("Goober")));
-    assert!(json["summary"]["unknown_points"].as_array().unwrap().contains(&serde_json::json!("Doober")));
-    assert!(json["summary"]["unknown_vehicle_classes"].as_array().unwrap().contains(&serde_json::json!("Space Shuttle")));
+    assert!(
+        json["summary"]["unknown_points"]
+            .as_array()
+            .unwrap()
+            .contains(&serde_json::json!("Goober"))
+    );
+    assert!(
+        json["summary"]["unknown_points"]
+            .as_array()
+            .unwrap()
+            .contains(&serde_json::json!("Doober"))
+    );
+    assert!(
+        json["summary"]["unknown_vehicle_classes"]
+            .as_array()
+            .unwrap()
+            .contains(&serde_json::json!("Space Shuttle"))
+    );
 }
 
 #[test]
 fn test_e2e_markdown_output() {
     let output = run_optimizer(&["tests/csv/2026-02-28 - invalid entry.csv", "--markdown"]);
-    
+
     assert!(output.contains("# Toll Optimizer Analysis Report"));
     assert!(output.contains("## Processing Summary"));
     assert!(output.contains("| Trips Processed | 6 |"));
@@ -85,8 +106,17 @@ fn test_e2e_markdown_output() {
 
 #[test]
 fn test_e2e_single_trip() {
-    let output = run_optimizer(&["--entry", "McCowan", "--exit", "Hwy404", "--date", "2026-05-12", "--time", "08:00 AM"]);
-    
+    let output = run_optimizer(&[
+        "--entry",
+        "McCowan",
+        "--exit",
+        "Hwy404",
+        "--date",
+        "2026-05-12",
+        "--time",
+        "08:00 AM",
+    ]);
+
     assert!(output.contains("--- Single Trip Cost Analysis ---"));
     assert!(output.contains("Route: McCowan -> Hwy404"));
     assert!(output.contains("Base Toll: $4.52"));
@@ -96,12 +126,23 @@ fn test_e2e_single_trip() {
 
 #[test]
 fn test_e2e_single_trip_json() {
-    let output = run_optimizer(&["--entry", "McCowan", "--exit", "Hwy404", "--date", "2026-05-12", "--time", "08:00 AM", "--json"]);
-    
-    let json: serde_json::Value = serde_json::from_str(&output).expect("Output should be valid JSON");
+    let output = run_optimizer(&[
+        "--entry",
+        "McCowan",
+        "--exit",
+        "Hwy404",
+        "--date",
+        "2026-05-12",
+        "--time",
+        "08:00 AM",
+        "--json",
+    ]);
+
+    let json: serde_json::Value =
+        serde_json::from_str(&output).expect("Output should be valid JSON");
     assert_eq!(json["entry"], "McCowan");
     assert_eq!(json["exit"], "Hwy404");
-    
+
     let base_toll = json["base_toll"].as_f64().unwrap();
     assert!((base_toll - 4.52).abs() < 0.01);
     assert_eq!(json["trip_charge"], 1.0);
@@ -111,14 +152,14 @@ fn test_e2e_single_trip_json() {
 #[test]
 fn test_e2e_camera_charges() {
     let output = run_optimizer(&["tests/csv/2025-08-28 - camera charges.csv"]);
-    
+
     assert!(output.contains("Camera Charges by Transponder/Plate:"));
     assert!(output.contains("  - A12345K0: $15.90"));
     assert!(output.contains("  - A12345K1: $37.10"));
-    
+
     // A12345K2 has $0.00, so it should NOT be in the camera charges list
     // We check for the specific list item format to avoid matching other sections
     assert!(!output.contains("  - A12345K2:"));
-    
+
     assert!(output.contains("Tip: Leasing a transponder for $31.50 (plus applicable taxes) per year will save you money on the camera charges."));
 }

@@ -25,9 +25,8 @@ pub const WEEKDAY_WB_TOLL_PRICES_BY_TIMESLOT_AND_ZONE_2026: [[f64; 12]; 8] = [
     ], // 9 p.m.
 ];
 
-pub const WEEKDAY_WB_AVERAGE_TOLL_PRICES_2026: [f64; 8] = [
-    69.10, 89.35, 69.98, 68.94, 71.93, 84.81, 70.12, 50.56,
-];
+pub const WEEKDAY_WB_AVERAGE_TOLL_PRICES_2026: [f64; 8] =
+    [69.10, 89.35, 69.98, 68.94, 71.93, 84.81, 70.12, 50.56];
 
 pub const WEEKDAY_EB_TOLL_PRICES_BY_TIMESLOT_AND_ZONE_2026: [[f64; 12]; 8] = [
     [
@@ -56,9 +55,8 @@ pub const WEEKDAY_EB_TOLL_PRICES_BY_TIMESLOT_AND_ZONE_2026: [[f64; 12]; 8] = [
     ], // 9 p.m.
 ];
 
-pub const WEEKDAY_EB_AVERAGE_TOLL_PRICES_2026: [f64; 8] = [
-    70.98, 87.63, 72.14, 70.97, 73.91, 93.38, 72.08, 50.51,
-];
+pub const WEEKDAY_EB_AVERAGE_TOLL_PRICES_2026: [f64; 8] =
+    [70.98, 87.63, 72.14, 70.97, 73.91, 93.38, 72.08, 50.51];
 
 pub const WEEKEND_WB_TOLL_PRICES_BY_TIMESLOT_AND_ZONE_2026: [[f64; 12]; 4] = [
     [
@@ -75,9 +73,7 @@ pub const WEEKEND_WB_TOLL_PRICES_BY_TIMESLOT_AND_ZONE_2026: [[f64; 12]; 4] = [
     ], // 9 p.m.
 ];
 
-pub const WEEKEND_WB_AVERAGE_TOLL_PRICES_2026: [f64; 4] = [
-    58.15, 67.10, 52.28, 50.56,
-];
+pub const WEEKEND_WB_AVERAGE_TOLL_PRICES_2026: [f64; 4] = [58.15, 67.10, 52.28, 50.56];
 
 pub const WEEKEND_EB_TOLL_PRICES_BY_TIMESLOT_AND_ZONE_2026: [[f64; 12]; 4] = [
     [
@@ -94,9 +90,7 @@ pub const WEEKEND_EB_TOLL_PRICES_BY_TIMESLOT_AND_ZONE_2026: [[f64; 12]; 4] = [
     ], // 9 p.m.
 ];
 
-pub const WEEKEND_EB_AVERAGE_TOLL_PRICES_2026: [f64; 4] = [
-    59.87, 65.51, 52.30, 50.51,
-];
+pub const WEEKEND_EB_AVERAGE_TOLL_PRICES_2026: [f64; 4] = [59.87, 65.51, 52.30, 50.51];
 
 pub const WEEKDAY_WB_TOLL_PRICES_BY_TIMESLOT_AND_ZONE_2025: [[f64; 12]; 9] = [
     [

@@ -88,7 +88,9 @@ pub fn print_markdown(
         }
         println!();
         if show_recommendation {
-            println!("> **Tip:** Leasing a transponder for $31.50 (plus applicable taxes) per year will save you money on the camera charges.\n");
+            println!(
+                "> **Tip:** Leasing a transponder for $31.50 (plus applicable taxes) per year will save you money on the camera charges.\n"
+            );
         }
     }
 

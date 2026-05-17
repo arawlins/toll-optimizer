@@ -300,7 +300,9 @@ fn main() -> Result<()> {
             }
         }
         if show_recommendation {
-            println!("\nTip: Leasing a transponder for $31.50 (plus applicable taxes) per year will save you money on the camera charges.");
+            println!(
+                "\nTip: Leasing a transponder for $31.50 (plus applicable taxes) per year will save you money on the camera charges."
+            );
         }
     }
     println!();
@@ -415,8 +417,6 @@ fn main() -> Result<()> {
             }
         }
     }
-
-
 
     println!("\n--- Distance-Based Analysis ---");
     for summary in &summaries_by_distance {

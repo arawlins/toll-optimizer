@@ -1,7 +1,7 @@
 use crate::trip_analyzer::{Direction, TripRecord};
 use crate::{ACCESS_POINT_SYNONYMS, ACCESS_POINTS, OLD_ACCESS_POINTS};
-use std::collections::{HashMap, HashSet};
 use serde::Serialize;
+use std::collections::{HashMap, HashSet};
 
 #[derive(Debug, Serialize)]
 pub struct ParseResult {
@@ -34,7 +34,10 @@ pub fn parse_trips<R: std::io::Read>(reader: R) -> ParseResult {
         };
 
         if !header_found {
-            if csv_record.iter().any(|field| field.contains("Transponder/Plate Number")) {
+            if csv_record
+                .iter()
+                .any(|field| field.contains("Transponder/Plate Number"))
+            {
                 header_found = true;
             }
             continue;
@@ -45,7 +48,9 @@ pub fn parse_trips<R: std::io::Read>(reader: R) -> ParseResult {
             total_skipped += 1;
             if csv_record.len() > 1 {
                 let vc_str = csv_record[1].trim().trim_matches('"');
-                if !vc_str.is_empty() && crate::trip_analyzer::VehicleClass::from_str(vc_str).is_none() {
+                if !vc_str.is_empty()
+                    && crate::trip_analyzer::VehicleClass::from_str(vc_str).is_none()
+                {
                     unknown_vehicle_classes.insert(vc_str.to_string());
                 }
             }
@@ -53,7 +58,7 @@ pub fn parse_trips<R: std::io::Read>(reader: R) -> ParseResult {
         }
 
         if let Some(mut record) = record_opt {
-                        if OLD_ACCESS_POINTS
+            if OLD_ACCESS_POINTS
                 .iter()
                 .any(|&p| p.eq_ignore_ascii_case(&record.entry_point))
                 || OLD_ACCESS_POINTS
@@ -64,10 +69,7 @@ pub fn parse_trips<R: std::io::Read>(reader: R) -> ParseResult {
                 continue;
             }
 
-
-
-
-                        for &(key, val) in &ACCESS_POINT_SYNONYMS {
+            for &(key, val) in &ACCESS_POINT_SYNONYMS {
                 if record.entry_point.eq_ignore_ascii_case(key) {
                     record.entry_point = val.to_string();
                 }
@@ -82,7 +84,6 @@ pub fn parse_trips<R: std::io::Read>(reader: R) -> ParseResult {
             let exit_index = ACCESS_POINTS
                 .iter()
                 .position(|&r| r.eq_ignore_ascii_case(&record.exit_point));
-
 
             match (entry_index, exit_index) {
                 (Some(entry_idx), Some(exit_idx)) => {
@@ -149,7 +150,8 @@ pub fn parse_trips<R: std::io::Read>(reader: R) -> ParseResult {
     let mut unknown_points_vec: Vec<String> = unknown_points.into_iter().collect();
     unknown_points_vec.sort();
 
-    let mut unknown_vehicle_classes_vec: Vec<String> = unknown_vehicle_classes.into_iter().collect();
+    let mut unknown_vehicle_classes_vec: Vec<String> =
+        unknown_vehicle_classes.into_iter().collect();
     unknown_vehicle_classes_vec.sort();
 
     ParseResult {
