@@ -2,8 +2,13 @@
 name = "toll-optimizer"
 version = "0.1.0"
 edition = "2024"
-authors = ["Anders Rawlins <anders@example.com>"]
+authors = ["Anders Rawlins"]
 description = "A high-performance Rust-based system to analyze and optimize 407 ETR statements."
+license = "MIT"
+repository = "https://github.com/arawlins/toll-optimizer"
+readme = "README.md"
+keywords = ["407-etr", "toll", "cli", "csv", "optimization"]
+categories = ["command-line-utilities"]
 
 [dependencies]
 csv = "1.4.0"
