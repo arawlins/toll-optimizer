@@ -5,15 +5,25 @@ use std::collections::HashMap;
 
 /// Input data for a complete Markdown analysis report.
 pub struct AnalysisMarkdownReport<'report, 'trips> {
+    /// Time-based clustering summaries to render.
     pub summaries_by_time: &'report [TransponderSummaryByTime<'trips>],
+    /// Distance-based clustering summaries to render.
     pub summaries_by_distance: &'report [TransponderSummaryByDistance<'trips>],
+    /// Number of statement rows accepted as trips.
     pub total_processed: usize,
+    /// Number of statement rows skipped.
     pub total_skipped: usize,
+    /// Total recorded bill cost in dollars.
     pub total_cost: f64,
+    /// Total potential savings from time-based optimization.
     pub total_time_savings: f64,
+    /// Total potential savings from distance-based optimization.
     pub total_distance_savings: f64,
+    /// Unknown access points encountered while parsing.
     pub unknown_points: &'report [String],
+    /// Unknown vehicle classes encountered while parsing.
     pub unknown_vehicle_classes: &'report [String],
+    /// Camera charges grouped by transponder or plate.
     pub camera_charges: &'report HashMap<String, f64>,
 }
 
@@ -307,14 +317,23 @@ pub fn print_pricing_markdown(pricing: &PricingResponse, date: &str, time: &str)
 
 /// Input data for a single-trip Markdown cost report.
 pub struct SingleTripMarkdownReport<'a> {
+    /// Entry access point.
     pub entry: &'a str,
+    /// Exit access point.
     pub exit: &'a str,
+    /// Trip date displayed in the report.
     pub date: &'a str,
+    /// Trip time displayed in the report.
     pub time: &'a str,
+    /// Vehicle class label.
     pub class: &'a str,
+    /// Calculated route distance in kilometers.
     pub distance_km: f64,
+    /// Calculated travel direction.
     pub direction: &'a Direction,
+    /// Calculated pricing day type.
     pub day_type: &'a DayType,
+    /// Base route toll in dollars, excluding fixed trip charge.
     pub cost: f64,
 }
 

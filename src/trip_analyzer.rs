@@ -1,3 +1,8 @@
+//! Toll calculation, date classification, and trip clustering logic.
+//!
+//! This module contains the core domain logic used by both the CLI and tests.
+//! Costs are returned in dollars unless explicitly documented as cents/km.
+
 use crate::constants::*;
 use crate::vehicle_class::{
     heavy_multiple_unit, heavy_single_unit, light_vehicles, medium_vehicles, motorcycles,
@@ -11,25 +16,38 @@ use serde::{Deserialize, Serialize};
 use std::fmt;
 use std::str::FromStr;
 
+/// Direction of travel along the ordered 407 ETR access-point list.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize)]
 pub enum Direction {
+    /// Travel from lower-indexed access points toward higher-indexed access points.
     Eastbound,
+    /// Travel from higher-indexed access points toward lower-indexed access points.
     Westbound,
 }
 
+/// Pricing day bucket used by 407 ETR rate tables.
 #[derive(Debug, Clone, PartialEq, Serialize)]
 pub enum DayType {
+    /// Non-holiday Monday through Friday.
     Weekday,
+    /// Saturday or Sunday.
     Weekend,
+    /// A configured statutory holiday; priced with weekend tables.
     Holiday,
 }
 
+/// Supported 407 ETR vehicle classes.
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 pub enum VehicleClass {
+    /// Passenger cars and other light vehicles.
     LightVehicle,
+    /// Heavy single-unit vehicles.
     HeavySingleUnit,
+    /// Heavy multiple-unit vehicles.
     HeavyMultipleUnit,
+    /// Medium vehicles.
     MediumVehicle,
+    /// Motorcycles.
     Motorcycle,
 }
 
@@ -121,6 +139,7 @@ const MOTORCYCLE_RATE_TABLES: VehicleRateTables = VehicleRateTables {
 };
 
 impl VehicleClass {
+    /// Returns the canonical display label for this vehicle class.
     pub fn to_str(&self) -> &'static str {
         match self {
             VehicleClass::LightVehicle => "Light vehicle",
@@ -141,6 +160,10 @@ impl VehicleClass {
         }
     }
 
+    /// Returns the cents-per-kilometer rate for a specific pricing cell.
+    ///
+    /// `timeslot_idx` indexes the active timeslot table for the chosen year and
+    /// day type. `zone_idx` is zero-based, so zone 1 is passed as `0`.
     pub fn get_rate(
         &self,
         day_type: &DayType,
@@ -152,6 +175,7 @@ impl VehicleClass {
         self.rate_tables().select(day_type, direction, year)[timeslot_idx][zone_idx]
     }
 
+    /// Calculates the average cents-per-kilometer rate across all 12 zones.
     pub fn get_average_rate(
         &self,
         day_type: &DayType,
@@ -270,38 +294,67 @@ fn calculate_route_cost(
     })
 }
 
+/// Average pricing for one timeslot.
 #[derive(Debug, Serialize, Deserialize)]
 pub struct TimeslotPrices {
+    /// Human-readable timeslot start label, such as `7:00 AM`.
     pub timeslot: String,
+    /// Average westbound rate in cents per kilometer.
     pub average_wb: f64,
+    /// Average eastbound rate in cents per kilometer.
     pub average_eb: f64,
 }
 
+/// Current and next timeslot pricing response for live/planned pricing.
 #[derive(Debug, Serialize, Deserialize)]
 pub struct PricingResponse {
+    /// Pricing for the timeslot containing the requested time.
     pub current: TimeslotPrices,
+    /// Pricing for the next configured timeslot.
     pub next: TimeslotPrices,
+    /// Day type label including the selected vehicle class.
     pub day_type: String,
 }
 
+/// Parsed 407 ETR trip row.
+///
+/// Monetary and distance fields are stored as statement strings to preserve the
+/// source CSV values. Use calculation helpers for normalized numeric estimates.
 #[derive(Debug, Clone, Serialize)]
 pub struct TripRecord {
+    /// Transponder or plate number from the statement.
     pub transponder_plate: String,
+    /// Parsed 407 ETR vehicle class.
     pub vehicle_class: VehicleClass,
 
+    /// Statement trip date, usually in `DD Mon YY` format.
     pub date_of_trip: String,
+    /// Statement entry time, usually in `H:MM AM/PM` format.
     pub entry_time: String,
+    /// Canonical entry access point.
     pub entry_point: String,
+    /// Canonical exit access point.
     pub exit_point: String,
+    /// Statement distance in kilometers.
     pub distance_km: String,
+    /// Statement variable toll charge in dollars.
     pub toll_charge: String,
+    /// Statement fixed trip toll charge in dollars.
     pub trip_toll_charge: String,
+    /// Statement camera charge in dollars.
     pub camera_charge: String,
+    /// Computed direction once the trip has been validated against access points.
     pub direction: Option<Direction>,
+    /// Computed day type for the statement date.
     pub day_type: Option<DayType>,
 }
 
 impl TripRecord {
+    /// Builds a trip record from a raw CSV row.
+    ///
+    /// Returns `None` when the row is too short or the vehicle class is not
+    /// recognized. Direction is filled in later by the CSV parser after access
+    /// point normalization.
     pub fn from_csv_record(record: &csv::StringRecord) -> Option<Self> {
         if record.len() < 10 {
             return None;
@@ -334,6 +387,7 @@ impl TripRecord {
             day_type,
         })
     }
+    /// Returns the number of pricing timeslots for this trip's year and day type.
     pub fn get_timeslot_count(&self) -> Option<usize> {
         let (_, _, year) = parse_date(&self.date_of_trip)?;
         let count = match (year, self.day_type.as_ref()?) {
@@ -347,6 +401,7 @@ impl TripRecord {
         Some(count)
     }
 
+    /// Returns the pricing timeslot index for a specific `H:MM AM/PM` time.
     pub fn get_timeslot_index_for_time(&self, time_str: &str) -> Option<usize> {
         let entry_minutes = parse_time_to_minutes(time_str)?;
         let (_, _, year) = parse_date(&self.date_of_trip)?;
@@ -384,10 +439,15 @@ impl TripRecord {
         Some(index)
     }
 
+    /// Returns the pricing timeslot index for this trip's entry time.
     pub fn get_timeslot_index(&self) -> Option<usize> {
         self.get_timeslot_index_for_time(&self.entry_time)
     }
 
+    /// Calculates base route toll and distance for explicit access-point indices.
+    ///
+    /// The returned tuple is `(base_toll_dollars, distance_km)`. Fixed trip and
+    /// camera charges are not included.
     pub fn calculate_cost_from_indices(
         &self,
         start_idx: usize,
@@ -410,6 +470,7 @@ impl TripRecord {
         Some((route_cost.base_toll, route_cost.distance_km))
     }
 
+    /// Calculates base route toll and distance at a specific timeslot index.
     pub fn calculate_cost_at_timeslot(&self, timeslot_idx: usize) -> Option<(f64, f64)> {
         // Use ACCESS_POINTS as the canonical list for indices
         let start_idx = get_access_point_index(&self.entry_point)?;
@@ -418,11 +479,16 @@ impl TripRecord {
         self.calculate_cost_from_indices(start_idx, end_idx, timeslot_idx)
     }
 
+    /// Calculates base route toll and distance for this trip's entry timeslot.
     pub fn calculate_cost(&self) -> Option<(f64, f64)> {
         let timeslot_idx = self.get_timeslot_index()?;
         self.calculate_cost_at_timeslot(timeslot_idx)
     }
 
+    /// Returns the statement total of toll, trip toll, and camera charges.
+    ///
+    /// Malformed numeric fields are treated as `0.0`, matching existing parser
+    /// behavior for imperfect CSV exports.
     pub fn get_total_recorded_cost(&self) -> f64 {
         let toll = self.toll_charge.trim().parse::<f64>().unwrap_or(0.0);
         let trip_toll = self.trip_toll_charge.trim().parse::<f64>().unwrap_or(0.0);
@@ -430,13 +496,16 @@ impl TripRecord {
         toll + trip_toll + camera
     }
 
+    /// Returns the west-to-east index for an access-point name.
     pub fn get_access_point_index(&self, name: &str) -> Option<usize> {
         get_access_point_index(name)
     }
+    /// Returns the 2026 timeslot index for this trip's entry time.
     pub fn get_timeslot_index_2026(&self) -> Option<usize> {
         self.get_timeslot_index_for_time_2026(&self.entry_time)
     }
 
+    /// Returns the 2026 timeslot index for a specific `H:MM AM/PM` time.
     pub fn get_timeslot_index_for_time_2026(&self, time_str: &str) -> Option<usize> {
         let entry_minutes = parse_time_to_minutes(time_str)?;
         // Always use 2026 constants
@@ -467,6 +536,10 @@ impl TripRecord {
         Some(index)
     }
 
+    /// Calculates 2026 total estimated cost and distance for this trip.
+    ///
+    /// The returned cost includes the recalculated 2026 base toll plus the
+    /// statement's fixed trip toll and camera charge.
     pub fn calculate_cost_2026(&self) -> Option<(f64, f64)> {
         let timeslot_idx = self.get_timeslot_index_2026()?;
         let direction = self.direction.as_ref()?;
@@ -492,6 +565,7 @@ impl TripRecord {
             route_cost.distance_km,
         ))
     }
+    /// Returns the timeslot labels that apply to this trip.
     pub fn get_timeslots(&self) -> Option<&'static [&'static str]> {
         let (_, _, year) = parse_date(&self.date_of_trip)?;
         match (year, self.day_type.as_ref()?) {
@@ -505,6 +579,7 @@ impl TripRecord {
     }
 }
 
+/// Parses a `H:MM AM/PM` or `HH:MM AM/PM` time into minutes after midnight.
 pub fn parse_time_to_minutes(time: &str) -> Option<u32> {
     let parts: Vec<&str> = time.split_whitespace().collect();
     if parts.len() != 2 {
@@ -534,6 +609,7 @@ pub fn parse_time_to_minutes(time: &str) -> Option<u32> {
     Some(total_minutes)
 }
 
+/// Formats minutes after midnight as `H:MM AM/PM`.
 pub fn format_minutes_to_time(minutes: u32) -> String {
     let hour_24 = minutes / 60;
     let minute = minutes % 60;
@@ -546,6 +622,9 @@ pub fn format_minutes_to_time(minutes: u32) -> String {
     format!("{}:{:02} {}", hour_12, minute, period)
 }
 
+/// Parses a statement date in `DD Mon YY` format.
+///
+/// Returns `(day, month, full_year)`.
 pub fn parse_date(date: &str) -> Option<(u32, u32, u32)> {
     let parts: Vec<&str> = date.split_whitespace().collect();
     if parts.len() != 3 {
@@ -575,6 +654,7 @@ pub fn parse_date(date: &str) -> Option<(u32, u32, u32)> {
     Some((day, month, year))
 }
 
+/// Returns whether a date falls on a weekend.
 pub fn is_weekend(day: u32, month: u32, year: u32) -> bool {
     let date = Date::new(year as u64, month as u64, day as u64);
     date.is_weekend()
@@ -600,10 +680,12 @@ fn get_holidays() -> &'static std::collections::HashSet<(u32, u32, u32)> {
     })
 }
 
+/// Returns whether a date is listed in the bundled holiday calendar.
 pub fn is_holiday(day: u32, month: u32, year: u32) -> bool {
     get_holidays().contains(&(year, month, day))
 }
 
+/// Classifies a statement date as weekday, weekend, or holiday.
 pub fn classify_day(date: &str) -> Option<DayType> {
     if let Some((day, month, year)) = parse_date(date) {
         if is_holiday(day, month, year) {
@@ -617,59 +699,100 @@ pub fn classify_day(date: &str) -> Option<DayType> {
     None
 }
 
+/// Per-trip optimization details included in cluster summaries.
 #[derive(Debug, Serialize)]
 pub struct TripSummary<'a> {
+    /// Borrowed source trip record.
     pub trip: &'a TripRecord,
+    /// Timeslot index used for average-time calculations, when available.
     pub avg_idx: Option<usize>,
+    /// Estimated total cost if shifted to the previous timeslot.
     pub total_cost_previous_timeslot: Option<f64>,
+    /// Estimated total cost if shifted to the next timeslot.
     pub total_cost_next_timeslot: Option<f64>,
+    /// Lowest estimated optimized total cost, when cheaper than recorded.
     pub optimized_cost: Option<f64>,
+    /// Estimated savings relative to the recorded total cost.
     pub optimized_saved: Option<f64>,
+    /// Suggested replacement entry point for distance optimization.
     pub optimized_entry: Option<String>,
+    /// Suggested replacement exit point for distance optimization.
     pub optimized_exit: Option<String>,
+    /// Human-readable optimization note.
     pub optimization_note: Option<String>,
+    /// Latest target time that would place the trip in the previous timeslot.
     pub prev_timeslot_target: Option<String>,
+    /// Earliest target time that would place the trip in the next timeslot.
     pub next_timeslot_target: Option<String>,
 }
 
+/// Time-cluster summary for a group of similar trips.
 #[derive(Debug, Serialize)]
 pub struct CentroidData<'a> {
+    /// Cluster centroid formatted as `H:MM AM/PM`.
     pub centroid_time: String,
+    /// Trips assigned to this cluster.
     pub trips: Vec<TripSummary<'a>>,
+    /// Average entry time for assigned trips.
     pub average_entry_time: String,
+    /// Total recorded distance for assigned trips.
     pub total_distance: f64,
+    /// Total recorded toll charge for assigned trips.
     pub total_toll_charge: f64,
+    /// Total estimated charge if trips shifted to the previous timeslot.
     pub total_toll_charge_previous_timeslot: f64,
+    /// Total estimated charge if trips shifted to the next timeslot.
     pub total_toll_charge_next_timeslot: f64,
+    /// Total estimated savings from the best adjacent-timeslot options.
     pub total_optimized_savings: f64,
+    /// Human-readable time-shift advice for the cluster.
     pub optimization_advice: Option<String>,
 }
 
+/// Time-based analysis for one transponder/plate and direction.
 #[derive(Debug, Serialize)]
 pub struct TransponderSummaryByTime<'a> {
+    /// Transponder or plate identifier.
     pub transponder_plate: String,
+    /// Direction shared by all trips in the summary.
     pub direction: Direction,
+    /// Computed time clusters.
     pub centroids: Vec<CentroidData<'a>>,
+    /// Display-ready centroid labels.
     pub formatted_centroids: Vec<String>,
 }
 
+/// Distance-cluster summary for a group of similar trips.
 #[derive(Debug, Serialize)]
 pub struct CentroidDataByDistance<'a> {
+    /// Cluster centroid distance in kilometers.
     pub centroid_distance: f64,
+    /// Trips assigned to this distance cluster.
     pub trips: Vec<TripSummary<'a>>,
+    /// Average recorded trip distance in kilometers.
     pub average_distance: f64,
+    /// Total recorded toll charge for assigned trips.
     pub total_toll_charge: f64,
+    /// Total estimated savings from entry/exit point adjustments.
     pub total_optimized_savings: f64,
+    /// Human-readable route-adjustment advice for the cluster.
     pub optimization_advice: Option<String>,
+    /// Most common entry point in the cluster.
     pub representative_entry: Option<String>,
+    /// Most common exit point in the cluster.
     pub representative_exit: Option<String>,
 }
 
+/// Distance-based analysis for one transponder/plate and direction.
 #[derive(Debug, Serialize)]
 pub struct TransponderSummaryByDistance<'a> {
+    /// Transponder or plate identifier.
     pub transponder_plate: String,
+    /// Direction shared by all trips in the summary.
     pub direction: Direction,
+    /// Computed distance clusters.
     pub centroids: Vec<CentroidDataByDistance<'a>>,
+    /// Display-ready centroid labels.
     pub formatted_centroids: Vec<String>,
 }
 
@@ -854,6 +977,10 @@ fn find_best_k(wcss_values: &[f64]) -> usize {
     best_k
 }
 
+/// Performs time-based clustering and adjacent-timeslot savings analysis.
+///
+/// Input trips are expected to be grouped by `(transponder_or_plate, direction)`,
+/// as returned by `csv_parser::parse_trips`.
 pub fn analyze_trips_by_time<'a>(
     trips_by_transponder_direction: &'a [((String, Direction), Vec<TripRecord>)],
 ) -> Vec<TransponderSummaryByTime<'a>> {
@@ -1202,6 +1329,10 @@ pub fn analyze_trips_by_time<'a>(
     summaries
 }
 
+/// Performs distance-based clustering and entry/exit adjustment analysis.
+///
+/// Input trips are expected to be grouped by `(transponder_or_plate, direction)`,
+/// as returned by `csv_parser::parse_trips`.
 pub fn analyze_trips_by_distance<'a>(
     trips_by_transponder_direction: &'a [((String, Direction), Vec<TripRecord>)],
 ) -> Vec<TransponderSummaryByDistance<'a>> {
@@ -1493,6 +1624,7 @@ pub fn analyze_trips_by_distance<'a>(
     summaries
 }
 
+/// Parses either `H:MM AM/PM` or 24-hour `HH:MM` into minutes after midnight.
 pub fn parse_time_flexible(time_str: &str) -> Option<u32> {
     if let Some(m) = parse_time_to_minutes(time_str) {
         return Some(m);
@@ -1514,6 +1646,7 @@ pub fn parse_time_flexible(time_str: &str) -> Option<u32> {
     None
 }
 
+/// Classifies a `chrono::NaiveDate` into the pricing day bucket.
 pub fn classify_day_type(date: NaiveDate) -> DayType {
     let day = date.day();
     let month = date.month();
@@ -1528,6 +1661,10 @@ pub fn classify_day_type(date: NaiveDate) -> DayType {
     }
 }
 
+/// Returns current and next 2026 average pricing for a date, time, and vehicle.
+///
+/// `date_str` must be `YYYY-MM-DD`. `time_str` accepts `H:MM AM/PM` or
+/// 24-hour `HH:MM`.
 pub fn get_pricing(
     date_str: &str,
     time_str: &str,
@@ -1625,6 +1762,11 @@ pub fn get_pricing(
     })
 }
 
+/// Calculates the base toll and distance for a single planned trip.
+///
+/// `date_str` must be `YYYY-MM-DD`. `time_str` accepts `H:MM AM/PM` or
+/// 24-hour `HH:MM`. The returned tuple is
+/// `(base_toll_dollars, distance_km, direction, day_type)`.
 pub fn calculate_single_trip_cost(
     entry_point: &str,
     exit_point: &str,

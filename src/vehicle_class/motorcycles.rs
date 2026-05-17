@@ -1,3 +1,5 @@
+//! Motorcycle cents-per-kilometer toll rate tables.
+
 pub const WEEKDAY_WB_TOLL_PRICES_BY_TIMESLOT_AND_ZONE_2026: [[f64; 12]; 8] = [
     [
         63.30, 52.12, 53.28, 48.94, 63.26, 57.24, 60.98, 58.26, 58.26, 45.19, 51.24, 51.24,

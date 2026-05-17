@@ -1,3 +1,9 @@
+//! Static 407 ETR topology, timeslot, and zone data.
+//!
+//! Access points are ordered west-to-east. Distance entries represent the
+//! segment between `ACCESS_POINTS[i]` and `ACCESS_POINTS[i + 1]`.
+
+/// Historical or removed access-point names that should be skipped during CSV parsing.
 pub const OLD_ACCESS_POINTS: [&str; 9] = [
     "LakeRidg",
     "LakeRidge",
@@ -10,25 +16,31 @@ pub const OLD_ACCESS_POINTS: [&str; 9] = [
     "Hwy418",
 ];
 
+/// Weekday pricing timeslot start times for 2026 and later.
 pub const WEEKDAY_TIMESLOTS_2026: [&str; 8] = [
     "5:00 AM", "7:00 AM", "9:30 AM", "10:30 AM", "2:30 PM", "3:30 PM", "6:00 PM", "9:00 PM",
 ];
+/// Weekday pricing timeslot start times for 2025 statements.
 pub const WEEKDAY_TIMESLOTS_2025: [&str; 9] = [
     "12:00 AM", "6:00 AM", "7:00 AM", "9:30 AM", "10:30 AM", "2:30 PM", "3:30 PM", "6:00 PM",
     "7:00 PM",
 ];
 
+/// Weekend and holiday pricing timeslot start times for 2026 and later.
 pub const WEEKEND_TIMESLOTS_2026: [&str; 4] = ["8:30 AM", "10:00 AM", "7:00 PM", "9:00 PM"];
 
+/// Weekend and holiday pricing timeslot start times for 2025 statements.
 pub const WEEKEND_TIMESLOTS_2025: [&str; 5] =
     ["12:00 AM", "8:30 AM", "10:00 AM", "7:00 PM", "9:00 PM"];
 
+/// Input aliases normalized to canonical `ACCESS_POINTS` names.
 pub const ACCESS_POINT_SYNONYMS: [(&str, &str); 3] = [
     ("Brock", "Brock(Hwy7)"),
     ("Brock407", "Brock(Hwy7)"),
     ("YorkDur", "York-DurhamLine"),
 ];
 
+/// Canonical 407 ETR access points ordered from west to east.
 pub const ACCESS_POINTS: [&str; 41] = [
     "QEW",
     "Dundas",
@@ -73,6 +85,7 @@ pub const ACCESS_POINTS: [&str; 41] = [
     "Brock(Hwy7)",
 ];
 
+/// Segment distances in kilometers between adjacent access points.
 pub const ACCESS_POINT_DISTANCES: [f32; 40] = [
     6.062, // QEW-Dundas
     3.847, // Dundas-Appleby
@@ -116,6 +129,7 @@ pub const ACCESS_POINT_DISTANCES: [f32; 40] = [
     4.083, // Whites-Brock(Hwy7)
 ];
 
+/// Eastbound zone number for each canonical access point.
 pub const EB_ZONES: [(&str, u8); 41] = [
     ("QEW", 1),
     ("Dundas", 2),
@@ -160,6 +174,7 @@ pub const EB_ZONES: [(&str, u8); 41] = [
     ("Brock(Hwy7)", 12),
 ];
 
+/// Westbound zone number for each canonical access point.
 pub const WB_ZONES: [(&str, u8); 41] = [
     ("QEW", 1),
     ("Dundas", 1),

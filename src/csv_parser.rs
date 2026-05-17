@@ -3,16 +3,31 @@ use crate::{ACCESS_POINT_SYNONYMS, ACCESS_POINTS, OLD_ACCESS_POINTS};
 use serde::Serialize;
 use std::collections::{HashMap, HashSet};
 
+/// Result of parsing a 407 ETR CSV statement.
+///
+/// Trips are grouped by `(transponder_or_plate, direction)` so the analyzer can
+/// cluster eastbound and westbound travel separately for each vehicle.
 #[derive(Debug, Serialize)]
 pub struct ParseResult {
+    /// Parsed trips grouped by transponder/plate and travel direction.
     pub trips: Vec<((String, Direction), Vec<TripRecord>)>,
+    /// Number of rows accepted as trips.
     pub total_processed: usize,
+    /// Number of rows skipped because they were malformed, unsupported, or unknown.
     pub total_skipped: usize,
+    /// Unique access-point names that did not match the canonical topology.
     pub unknown_points: Vec<String>,
+    /// Unique vehicle-class strings that were not recognized.
     pub unknown_vehicle_classes: Vec<String>,
+    /// Camera charges accumulated by transponder or plate.
     pub camera_charges: HashMap<String, f64>,
 }
 
+/// Parses 407 ETR CSV statement rows into grouped trip records.
+///
+/// The parser scans for the `Transponder/Plate Number` header before processing
+/// records, accepts flexible CSV rows, normalizes known access-point synonyms,
+/// and skips trips containing retired or unknown access points.
 pub fn parse_trips<R: std::io::Read>(reader: R) -> ParseResult {
     let mut trips_by_transponder: HashMap<String, Vec<TripRecord>> = HashMap::new();
     let mut header_found = false;

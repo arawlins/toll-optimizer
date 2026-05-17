@@ -1,3 +1,5 @@
+//! Heavy multiple-unit vehicle cents-per-kilometer toll rate tables.
+
 pub const WEEKDAY_WB_TOLL_PRICES_BY_TIMESLOT_AND_ZONE_2026: [[f64; 12]; 8] = [
     [
         237.39, 195.48, 199.83, 183.54, 237.24, 214.65, 228.69, 218.49, 218.49, 169.47, 192.15,

@@ -1,3 +1,5 @@
+//! Light vehicle cents-per-kilometer toll rate tables.
+
 pub const WEEKDAY_WB_TOLL_PRICES_BY_TIMESLOT_AND_ZONE_2026: [[f64; 12]; 8] = [
     [
         79.13, 65.16, 66.61, 61.18, 79.08, 71.55, 76.23, 72.83, 72.83, 56.49, 64.05, 64.05,
