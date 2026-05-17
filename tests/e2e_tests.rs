@@ -2,10 +2,7 @@ use std::process::Command;
 use std::str;
 
 fn run_optimizer(args: &[&str]) -> String {
-    let output = Command::new("cargo")
-        .arg("run")
-        .arg("--quiet")
-        .arg("--")
+    let output = Command::new(env!("CARGO_BIN_EXE_toll-optimizer"))
         .args(args)
         .output()
         .expect("Failed to execute command");
@@ -17,6 +14,23 @@ fn run_optimizer(args: &[&str]) -> String {
         String::from_utf8_lossy(&output.stderr)
     );
     String::from_utf8_lossy(&output.stdout).to_string()
+}
+
+fn run_optimizer_fail(args: &[&str]) -> (String, String) {
+    let output = Command::new(env!("CARGO_BIN_EXE_toll-optimizer"))
+        .args(args)
+        .output()
+        .expect("Failed to execute command");
+
+    assert!(
+        !output.status.success(),
+        "Command should have failed but succeeded\nStdout: {}",
+        String::from_utf8_lossy(&output.stdout)
+    );
+    (
+        String::from_utf8_lossy(&output.stdout).to_string(),
+        String::from_utf8_lossy(&output.stderr).to_string(),
+    )
 }
 
 #[test]
@@ -162,4 +176,34 @@ fn test_e2e_camera_charges() {
     assert!(!output.contains("  - A12345K2:"));
 
     assert!(output.contains("Tip: Leasing a transponder for $31.50 (plus applicable taxes) per year will save you money on the camera charges."));
+}
+
+#[test]
+fn test_e2e_fail_missing_file() {
+    let (_, stderr) = run_optimizer_fail(&["non_existent_file.csv"]);
+    assert!(stderr.contains("File 'non_existent_file.csv' not found."));
+}
+
+#[test]
+fn test_e2e_fail_invalid_date() {
+    let (_, stderr) = run_optimizer_fail(&["--current-price", "--date", "2026-13-01"]);
+    assert!(stderr.contains("Invalid date format"));
+}
+
+#[test]
+fn test_e2e_fail_invalid_time() {
+    let (_, stderr) = run_optimizer_fail(&["--current-price", "--time", "25:00"]);
+    assert!(stderr.contains("Invalid time format"));
+}
+
+#[test]
+fn test_e2e_fail_invalid_vehicle_class() {
+    let (_, stderr) = run_optimizer_fail(&["--current-price", "--vehicle-class", "Unicycle"]);
+    assert!(stderr.contains("Invalid vehicle class"));
+}
+
+#[test]
+fn test_e2e_fail_invalid_access_point() {
+    let (_, stderr) = run_optimizer_fail(&["--entry", "Nowhere", "--exit", "Hwy404"]);
+    assert!(stderr.contains("Invalid entry point"));
 }
