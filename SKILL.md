@@ -20,6 +20,7 @@ The primary tool for analysis and pricing.
 
 **Global Options:**
 - `--json`: (Recommended for LLMs) Outputs structured analysis or pricing data.
+- `--list-access-points`: Lists all recognized 407 ETR access points.
 
 **Analysis Options (Requires `<FILE>`):**
 - `<FILE>`: Path to the 407 ETR CSV statement file.
@@ -49,8 +50,13 @@ If a user asks about current rates or planning a trip:
     `toll-optimizer --current-price --date 2026-05-12 --time "07:30 AM"`
 3.  Compare "Current Timeslot" and "Next Timeslot" averages to provide leaving/waiting advice.
 
+### 3. Verification
+If a user asks about supported routes or points:
+1.  Run the access point list:
+    `toll-optimizer --list-access-points`
+
 ## Success Criteria
-- [ ] Correct mode identified (Analysis vs. Pricing).
+- [ ] Correct mode identified (Analysis, Pricing, or Listing).
 - [ ] Commands executed successfully.
 - [ ] Savings identified or pricing comparisons presented clearly.
 - [ ] Actionable advice provided (e.g., "Wait until 9:30 AM to save $2.50").

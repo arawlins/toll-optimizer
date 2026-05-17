@@ -37,11 +37,25 @@ struct Args {
     #[arg(short, long)]
     markdown: bool,
 
+    /// List all recognized 407 ETR access points
+    #[arg(long)]
+    list_access_points: bool,
+
 
 }
 
 fn main() -> Result<()> {
     let args = Args::parse();
+
+    if args.list_access_points {
+        println!("Recognized 407 ETR Access Points:");
+        let mut points = toll_optimizer::ACCESS_POINTS.to_vec();
+        points.sort();
+        for point in points {
+            println!("  - {}", point);
+        }
+        return Ok(());
+    }
 
     if args.current_price {
         let now = Local::now();
