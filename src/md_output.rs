@@ -34,6 +34,7 @@ pub fn print_markdown(
     total_time_savings: f64,
     total_distance_savings: f64,
     unknown_points: &[String],
+    unknown_vehicle_classes: &[String],
 ) {
     println!("# Toll Optimizer Analysis Report\n");
 
@@ -57,6 +58,14 @@ pub fn print_markdown(
         println!("### Unrecognized Access Points\n");
         for point in unknown_points {
             println!("- {} | NOT RECOGNIZED", point);
+        }
+        println!();
+    }
+
+    if !unknown_vehicle_classes.is_empty() {
+        println!("### Unrecognized Vehicle Classes\n");
+        for class in unknown_vehicle_classes {
+            println!("- {} | NOT RECOGNIZED", class);
         }
         println!();
     }

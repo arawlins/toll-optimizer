@@ -9,6 +9,7 @@ pub struct ParseResult {
     pub total_processed: usize,
     pub total_skipped: usize,
     pub unknown_points: Vec<String>,
+    pub unknown_vehicle_classes: Vec<String>,
 }
 
 pub fn parse_trips<R: std::io::Read>(reader: R) -> ParseResult {
@@ -17,6 +18,7 @@ pub fn parse_trips<R: std::io::Read>(reader: R) -> ParseResult {
     let mut total_processed = 0;
     let mut total_skipped = 0;
     let mut unknown_points = HashSet::new();
+    let mut unknown_vehicle_classes = HashSet::new();
 
     let mut csv_reader = csv::ReaderBuilder::new()
         .has_headers(false)
@@ -39,6 +41,12 @@ pub fn parse_trips<R: std::io::Read>(reader: R) -> ParseResult {
         let record_opt = TripRecord::from_csv_record(&csv_record);
         if record_opt.is_none() && header_found {
             total_skipped += 1;
+            if csv_record.len() > 1 {
+                let vc_str = csv_record[1].trim().trim_matches('"');
+                if !vc_str.is_empty() && crate::trip_analyzer::VehicleClass::from_str(vc_str).is_none() {
+                    unknown_vehicle_classes.insert(vc_str.to_string());
+                }
+            }
             continue;
         }
 
@@ -135,10 +143,14 @@ pub fn parse_trips<R: std::io::Read>(reader: R) -> ParseResult {
     let mut unknown_points_vec: Vec<String> = unknown_points.into_iter().collect();
     unknown_points_vec.sort();
 
+    let mut unknown_vehicle_classes_vec: Vec<String> = unknown_vehicle_classes.into_iter().collect();
+    unknown_vehicle_classes_vec.sort();
+
     ParseResult {
         trips: results,
         total_processed,
         total_skipped,
         unknown_points: unknown_points_vec,
+        unknown_vehicle_classes: unknown_vehicle_classes_vec,
     }
 }

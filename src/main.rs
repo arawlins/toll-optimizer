@@ -151,6 +151,7 @@ fn main() -> Result<()> {
                 "total_potential_time_savings": total_time_savings,
                 "total_potential_distance_savings": total_distance_savings,
                 "unknown_points": results.unknown_points,
+                "unknown_vehicle_classes": results.unknown_vehicle_classes,
             },
             "time_based_analysis": summaries_by_time,
             "distance_based_analysis": summaries_by_distance,
@@ -169,6 +170,7 @@ fn main() -> Result<()> {
             total_time_savings,
             total_distance_savings,
             &results.unknown_points,
+            &results.unknown_vehicle_classes,
         );
         return Ok(());
     }
@@ -190,6 +192,12 @@ fn main() -> Result<()> {
         println!("\nUnrecognized Access Points:");
         for point in &results.unknown_points {
             println!("  - {} | NOT RECOGNIZED", point);
+        }
+    }
+    if !results.unknown_vehicle_classes.is_empty() {
+        println!("\nUnrecognized Vehicle Classes:");
+        for class in &results.unknown_vehicle_classes {
+            println!("  - {} | NOT RECOGNIZED", class);
         }
     }
     println!();

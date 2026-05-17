@@ -1,0 +1,14 @@
+"NOTE: This is not a complete invoice, only the trip detail (plate/transponder, date, time, entry, exit, toll charges, trip toll charges, and camera charges) for the current invoice."
+
+"Name: John Doe","InvNo: 12345","BillDate: 28 Feb 26","BillPeriod: 28 Jan 26 to 27 Feb 26"
+
+"Transponder/Plate Number","Vehicle Class","Date of Trip","Entry Time","Entry Point","Exit Point","Distance (km)","Toll Charge ($)","Trip Toll Charge ($)","Camera Charge ($)"
+"A12345K1","Light vehicle","27 Jan 26","4:54 PM","Kennedy","Hwy401"," 54.044","52.41","1.00","0.00"
+"A12345K1","Light vehicle","27 Jan 26","9:57 PM","Hwy401","Kennedy"," 54.044","27.32","1.00","0.00"
+"A12345K1","Light vehicle","28 Jan 26","8:59 AM","Warden","Hwy404"," 3.107","1.94","1.00","0.00"
+"A12345K1","Light vehicle","28 Jan 26","3:56 PM","Hwy404","Warden"," 3.107","3.19","1.00","0.00"
+"A12345K0","Light vehicle","30 Jan 26","7:08 PM","McCowan","Brock(Hwy7)"," 16.693","12.58","1.00","0.00"
+"A12345K1","Light vehicle","31 Jan 26","1:14 PM","Goober","Hwy400"," 23.523","16.92","1.00","0.00"
+"A12345K1","Light vehicle","31 Jan 26","3:03 PM","Hwy400","Doober"," 21.308","17.03","1.00","0.00"
+"A12345K1","Space Shuttle","01 Feb 26","12:00 PM","QEW","Hwy404"," 40.000","100.00","1.00","0.00"
+"A12345K0","Light vehicle","01 Feb 26","6:52 PM","Brock(Hwy7)","McCowan"," 16.693","11.07","1.00","0.00"
