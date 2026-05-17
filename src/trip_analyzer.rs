@@ -195,6 +195,81 @@ impl fmt::Display for VehicleClass {
     }
 }
 
+#[derive(Debug, Clone, Copy)]
+struct RouteCost {
+    base_toll: f64,
+    distance_km: f64,
+}
+
+fn get_access_point_index(name: &str) -> Option<usize> {
+    ACCESS_POINTS
+        .iter()
+        .position(|&ap| ap.eq_ignore_ascii_case(name))
+}
+
+fn calculate_route_cost(
+    start_idx: usize,
+    end_idx: usize,
+    direction: &Direction,
+    day_type: &DayType,
+    vehicle_class: VehicleClass,
+    year: u32,
+    timeslot_idx: usize,
+) -> Option<RouteCost> {
+    let mut total_cost_cents = 0.0;
+    let mut total_distance = 0.0;
+
+    match direction {
+        Direction::Eastbound => {
+            if start_idx >= end_idx {
+                return None;
+            }
+
+            for (segment_idx, &distance) in ACCESS_POINT_DISTANCES
+                .iter()
+                .enumerate()
+                .take(end_idx)
+                .skip(start_idx)
+            {
+                let distance = distance as f64;
+                total_distance += distance;
+
+                let access_point = ACCESS_POINTS[segment_idx];
+                let zone = EB_ZONES.iter().find(|&&(name, _)| name == access_point)?.1 as usize;
+                let rate =
+                    vehicle_class.get_rate(day_type, direction, year, timeslot_idx, zone - 1);
+                total_cost_cents += distance * rate;
+            }
+        }
+        Direction::Westbound => {
+            if start_idx <= end_idx {
+                return None;
+            }
+
+            for (segment_idx, &distance) in ACCESS_POINT_DISTANCES
+                .iter()
+                .enumerate()
+                .take(start_idx)
+                .skip(end_idx)
+            {
+                let distance = distance as f64;
+                total_distance += distance;
+
+                let access_point = ACCESS_POINTS.get(segment_idx + 1)?;
+                let zone = WB_ZONES.iter().find(|&&(name, _)| name == *access_point)?.1 as usize;
+                let rate =
+                    vehicle_class.get_rate(day_type, direction, year, timeslot_idx, zone - 1);
+                total_cost_cents += distance * rate;
+            }
+        }
+    }
+
+    Some(RouteCost {
+        base_toll: total_cost_cents / 100.0,
+        distance_km: total_distance,
+    })
+}
+
 #[derive(Debug, Serialize, Deserialize)]
 pub struct TimeslotPrices {
     pub timeslot: String,
@@ -323,74 +398,22 @@ impl TripRecord {
         let day_type = self.day_type.as_ref()?;
         let (_, _, year) = parse_date(&self.date_of_trip)?;
 
-        let mut total_cost = 0.0;
-        let mut total_distance = 0.0;
-
-        match direction {
-            Direction::Eastbound => {
-                if start_idx >= end_idx {
-                    return None;
-                } // Invalid for Eastbound
-                // Segments are from start_idx to end_idx - 1
-                for i in start_idx..end_idx {
-                    let distance = ACCESS_POINT_DISTANCES[i] as f64;
-                    total_distance += distance;
-
-                    // Look up zone using the access point name from ACCESS_POINTS
-                    let ap_name = ACCESS_POINTS[i];
-                    let zone = EB_ZONES.iter().find(|&&(name, _)| name == ap_name)?.1 as usize;
-
-                    // Price lookup
-                    let price_rate = self.vehicle_class.get_rate(
-                        day_type,
-                        direction,
-                        year,
-                        timeslot_idx,
-                        zone - 1,
-                    );
-                    total_cost += distance * price_rate;
-                }
-            }
-            Direction::Westbound => {
-                if start_idx <= end_idx {
-                    return None;
-                } // Invalid for Westbound
-                // Segments are from end_idx to start_idx - 1 (traversed in reverse)
-                for i in end_idx..start_idx {
-                    let distance = ACCESS_POINT_DISTANCES[i] as f64;
-                    total_distance += distance;
-
-                    // For WB, use the zone of the entry point into the segment (higher index)
-                    if i + 1 >= ACCESS_POINTS.len() {
-                        return None;
-                    }
-                    let ap_name = ACCESS_POINTS[i + 1];
-                    let zone = WB_ZONES.iter().find(|&&(name, _)| name == ap_name)?.1 as usize;
-
-                    let price_rate = self.vehicle_class.get_rate(
-                        day_type,
-                        direction,
-                        year,
-                        timeslot_idx,
-                        zone - 1,
-                    );
-
-                    total_cost += distance * price_rate;
-                }
-            }
-        }
-
-        Some((total_cost / 100.0, total_distance)) // Convert cents to dollars
+        let route_cost = calculate_route_cost(
+            start_idx,
+            end_idx,
+            direction,
+            day_type,
+            self.vehicle_class,
+            year,
+            timeslot_idx,
+        )?;
+        Some((route_cost.base_toll, route_cost.distance_km))
     }
 
     pub fn calculate_cost_at_timeslot(&self, timeslot_idx: usize) -> Option<(f64, f64)> {
         // Use ACCESS_POINTS as the canonical list for indices
-        let start_idx = ACCESS_POINTS
-            .iter()
-            .position(|&name| name.eq_ignore_ascii_case(&self.entry_point))?;
-        let end_idx = ACCESS_POINTS
-            .iter()
-            .position(|&name| name.eq_ignore_ascii_case(&self.exit_point))?;
+        let start_idx = get_access_point_index(&self.entry_point)?;
+        let end_idx = get_access_point_index(&self.exit_point)?;
 
         self.calculate_cost_from_indices(start_idx, end_idx, timeslot_idx)
     }
@@ -408,9 +431,7 @@ impl TripRecord {
     }
 
     pub fn get_access_point_index(&self, name: &str) -> Option<usize> {
-        ACCESS_POINTS
-            .iter()
-            .position(|&ap| ap.eq_ignore_ascii_case(name))
+        get_access_point_index(name)
     }
     pub fn get_timeslot_index_2026(&self) -> Option<usize> {
         self.get_timeslot_index_for_time_2026(&self.entry_time)
@@ -453,60 +474,23 @@ impl TripRecord {
 
         let start_idx = self.get_access_point_index(&self.entry_point)?;
         let end_idx = self.get_access_point_index(&self.exit_point)?;
-
-        let mut total_cost = 0.0;
-        let mut total_distance = 0.0;
-
-        match direction {
-            Direction::Eastbound => {
-                if start_idx >= end_idx {
-                    return None;
-                }
-                for i in start_idx..end_idx {
-                    let distance = ACCESS_POINT_DISTANCES[i] as f64;
-                    total_distance += distance;
-                    let ap_name = ACCESS_POINTS[i];
-                    let zone = EB_ZONES.iter().find(|&&(name, _)| name == ap_name)?.1 as usize;
-
-                    let price_rate = self.vehicle_class.get_rate(
-                        day_type,
-                        direction,
-                        2026,
-                        timeslot_idx,
-                        zone - 1,
-                    );
-                    total_cost += distance * price_rate;
-                }
-            }
-            Direction::Westbound => {
-                if start_idx <= end_idx {
-                    return None;
-                }
-                for i in end_idx..start_idx {
-                    let distance = ACCESS_POINT_DISTANCES[i] as f64;
-                    total_distance += distance;
-                    if i + 1 >= ACCESS_POINTS.len() {
-                        return None;
-                    }
-                    let ap_name = ACCESS_POINTS[i + 1];
-                    let zone = WB_ZONES.iter().find(|&&(name, _)| name == ap_name)?.1 as usize;
-
-                    let price_rate = self.vehicle_class.get_rate(
-                        day_type,
-                        direction,
-                        2026,
-                        timeslot_idx,
-                        zone - 1,
-                    );
-                    total_cost += distance * price_rate;
-                }
-            }
-        }
+        let route_cost = calculate_route_cost(
+            start_idx,
+            end_idx,
+            direction,
+            day_type,
+            self.vehicle_class,
+            2026,
+            timeslot_idx,
+        )?;
 
         let trip_toll = self.trip_toll_charge.trim().parse::<f64>().unwrap_or(0.0);
         let camera = self.camera_charge.trim().parse::<f64>().unwrap_or(0.0);
 
-        Some(((total_cost / 100.0) + trip_toll + camera, total_distance))
+        Some((
+            route_cost.base_toll + trip_toll + camera,
+            route_cost.distance_km,
+        ))
     }
     pub fn get_timeslots(&self) -> Option<&'static [&'static str]> {
         let (_, _, year) = parse_date(&self.date_of_trip)?;
@@ -1664,13 +1648,9 @@ pub fn calculate_single_trip_cost(
         )
     })?;
 
-    let start_idx = ACCESS_POINTS
-        .iter()
-        .position(|&ap| ap.eq_ignore_ascii_case(entry_point))
+    let start_idx = get_access_point_index(entry_point)
         .ok_or_else(|| anyhow!("Invalid entry point: {}", entry_point))?;
-    let end_idx = ACCESS_POINTS
-        .iter()
-        .position(|&ap| ap.eq_ignore_ascii_case(exit_point))
+    let end_idx = get_access_point_index(exit_point)
         .ok_or_else(|| anyhow!("Invalid exit point: {}", exit_point))?;
 
     let direction = if end_idx > start_idx {
@@ -1682,7 +1662,7 @@ pub fn calculate_single_trip_cost(
     let year = date.year() as u32;
 
     // Find timeslot index
-    let slots = match day_type {
+    let slots = match &day_type {
         DayType::Weekday => {
             if year <= 2025 {
                 &WEEKDAY_TIMESLOTS_2025[..]
@@ -1704,6 +1684,10 @@ pub fn calculate_single_trip_cost(
         .filter_map(|&t| parse_time_to_minutes(t))
         .collect();
 
+    if slot_minutes.is_empty() {
+        return Err(anyhow!("No timeslots defined"));
+    }
+
     let mut timeslot_idx = slot_minutes.len() - 1;
     for (i, &slot_time) in slot_minutes.iter().enumerate() {
         if minutes < slot_time {
@@ -1717,41 +1701,21 @@ pub fn calculate_single_trip_cost(
         timeslot_idx = i;
     }
 
-    let mut total_cost = 0.0;
-    let mut total_distance = 0.0;
+    let route_cost = calculate_route_cost(
+        start_idx,
+        end_idx,
+        &direction,
+        &day_type,
+        vehicle_class,
+        year,
+        timeslot_idx,
+    )
+    .ok_or_else(|| anyhow!("Invalid route: {} -> {}", entry_point, exit_point))?;
 
-    match direction {
-        Direction::Eastbound => {
-            for i in start_idx..end_idx {
-                let distance = ACCESS_POINT_DISTANCES[i] as f64;
-                total_distance += distance;
-                let ap_name = ACCESS_POINTS[i];
-                let zone = EB_ZONES
-                    .iter()
-                    .find(|&&(name, _)| name == ap_name)
-                    .map(|&(_, z)| z)
-                    .unwrap_or(1) as usize;
-                let price_rate =
-                    vehicle_class.get_rate(&day_type, &direction, year, timeslot_idx, zone - 1);
-                total_cost += distance * price_rate;
-            }
-        }
-        Direction::Westbound => {
-            for i in end_idx..start_idx {
-                let distance = ACCESS_POINT_DISTANCES[i] as f64;
-                total_distance += distance;
-                let ap_name = ACCESS_POINTS[i + 1];
-                let zone = WB_ZONES
-                    .iter()
-                    .find(|&&(name, _)| name == ap_name)
-                    .map(|&(_, z)| z)
-                    .unwrap_or(1) as usize;
-                let price_rate =
-                    vehicle_class.get_rate(&day_type, &direction, year, timeslot_idx, zone - 1);
-                total_cost += distance * price_rate;
-            }
-        }
-    }
-
-    Ok((total_cost / 100.0, total_distance, direction, day_type))
+    Ok((
+        route_cost.base_toll,
+        route_cost.distance_km,
+        direction,
+        day_type,
+    ))
 }
