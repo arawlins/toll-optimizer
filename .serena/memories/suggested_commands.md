@@ -12,5 +12,4 @@ The following commands are used for developing and maintaining the Toll Optimize
 - `cargo fmt`: Formats the code according to `rustfmt` defaults.
 
 ## Project specific
-- The application processes CSV files in the `csv/` directory.
 - The application accepts the CSV file path as a command-line argument.
