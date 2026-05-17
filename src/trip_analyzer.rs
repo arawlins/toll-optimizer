@@ -33,6 +33,93 @@ pub enum VehicleClass {
     Motorcycle,
 }
 
+type RateTable = &'static [[f64; 12]];
+
+struct VehicleRateTables {
+    weekday_eb_2026: RateTable,
+    weekday_wb_2026: RateTable,
+    weekend_eb_2026: RateTable,
+    weekend_wb_2026: RateTable,
+    weekday_eb_2025: RateTable,
+    weekday_wb_2025: RateTable,
+    weekend_eb_2025: RateTable,
+    weekend_wb_2025: RateTable,
+}
+
+impl VehicleRateTables {
+    fn select(&self, day_type: &DayType, direction: &Direction, year: u32) -> RateTable {
+        let is_2026 = year >= 2026;
+        let is_weekday = matches!(day_type, DayType::Weekday);
+        let is_eb = matches!(direction, Direction::Eastbound);
+
+        match (is_2026, is_weekday, is_eb) {
+            (true, true, true) => self.weekday_eb_2026,
+            (true, true, false) => self.weekday_wb_2026,
+            (true, false, true) => self.weekend_eb_2026,
+            (true, false, false) => self.weekend_wb_2026,
+            (false, true, true) => self.weekday_eb_2025,
+            (false, true, false) => self.weekday_wb_2025,
+            (false, false, true) => self.weekend_eb_2025,
+            (false, false, false) => self.weekend_wb_2025,
+        }
+    }
+}
+
+const LIGHT_VEHICLE_RATE_TABLES: VehicleRateTables = VehicleRateTables {
+    weekday_eb_2026: &light_vehicles::WEEKDAY_EB_TOLL_PRICES_BY_TIMESLOT_AND_ZONE_2026,
+    weekday_wb_2026: &light_vehicles::WEEKDAY_WB_TOLL_PRICES_BY_TIMESLOT_AND_ZONE_2026,
+    weekend_eb_2026: &light_vehicles::WEEKEND_EB_TOLL_PRICES_BY_TIMESLOT_AND_ZONE_2026,
+    weekend_wb_2026: &light_vehicles::WEEKEND_WB_TOLL_PRICES_BY_TIMESLOT_AND_ZONE_2026,
+    weekday_eb_2025: &light_vehicles::WEEKDAY_EB_TOLL_PRICES_BY_TIMESLOT_AND_ZONE_2025,
+    weekday_wb_2025: &light_vehicles::WEEKDAY_WB_TOLL_PRICES_BY_TIMESLOT_AND_ZONE_2025,
+    weekend_eb_2025: &light_vehicles::WEEKEND_EB_TOLL_PRICES_BY_TIMESLOT_AND_ZONE_2025,
+    weekend_wb_2025: &light_vehicles::WEEKEND_WB_TOLL_PRICES_BY_TIMESLOT_AND_ZONE_2025,
+};
+
+const HEAVY_SINGLE_UNIT_RATE_TABLES: VehicleRateTables = VehicleRateTables {
+    weekday_eb_2026: &heavy_single_unit::WEEKDAY_EB_TOLL_PRICES_BY_TIMESLOT_AND_ZONE_2026,
+    weekday_wb_2026: &heavy_single_unit::WEEKDAY_WB_TOLL_PRICES_BY_TIMESLOT_AND_ZONE_2026,
+    weekend_eb_2026: &heavy_single_unit::WEEKEND_EB_TOLL_PRICES_BY_TIMESLOT_AND_ZONE_2026,
+    weekend_wb_2026: &heavy_single_unit::WEEKEND_WB_TOLL_PRICES_BY_TIMESLOT_AND_ZONE_2026,
+    weekday_eb_2025: &heavy_single_unit::WEEKDAY_EB_TOLL_PRICES_BY_TIMESLOT_AND_ZONE_2025,
+    weekday_wb_2025: &heavy_single_unit::WEEKDAY_WB_TOLL_PRICES_BY_TIMESLOT_AND_ZONE_2025,
+    weekend_eb_2025: &heavy_single_unit::WEEKEND_EB_TOLL_PRICES_BY_TIMESLOT_AND_ZONE_2025,
+    weekend_wb_2025: &heavy_single_unit::WEEKEND_WB_TOLL_PRICES_BY_TIMESLOT_AND_ZONE_2025,
+};
+
+const HEAVY_MULTIPLE_UNIT_RATE_TABLES: VehicleRateTables = VehicleRateTables {
+    weekday_eb_2026: &heavy_multiple_unit::WEEKDAY_EB_TOLL_PRICES_BY_TIMESLOT_AND_ZONE_2026,
+    weekday_wb_2026: &heavy_multiple_unit::WEEKDAY_WB_TOLL_PRICES_BY_TIMESLOT_AND_ZONE_2026,
+    weekend_eb_2026: &heavy_multiple_unit::WEEKEND_EB_TOLL_PRICES_BY_TIMESLOT_AND_ZONE_2026,
+    weekend_wb_2026: &heavy_multiple_unit::WEEKEND_WB_TOLL_PRICES_BY_TIMESLOT_AND_ZONE_2026,
+    weekday_eb_2025: &heavy_multiple_unit::WEEKDAY_EB_TOLL_PRICES_BY_TIMESLOT_AND_ZONE_2025,
+    weekday_wb_2025: &heavy_multiple_unit::WEEKDAY_WB_TOLL_PRICES_BY_TIMESLOT_AND_ZONE_2025,
+    weekend_eb_2025: &heavy_multiple_unit::WEEKEND_EB_TOLL_PRICES_BY_TIMESLOT_AND_ZONE_2025,
+    weekend_wb_2025: &heavy_multiple_unit::WEEKEND_WB_TOLL_PRICES_BY_TIMESLOT_AND_ZONE_2025,
+};
+
+const MEDIUM_VEHICLE_RATE_TABLES: VehicleRateTables = VehicleRateTables {
+    weekday_eb_2026: &medium_vehicles::WEEKDAY_EB_TOLL_PRICES_BY_TIMESLOT_AND_ZONE_2026,
+    weekday_wb_2026: &medium_vehicles::WEEKDAY_WB_TOLL_PRICES_BY_TIMESLOT_AND_ZONE_2026,
+    weekend_eb_2026: &medium_vehicles::WEEKEND_EB_TOLL_PRICES_BY_TIMESLOT_AND_ZONE_2026,
+    weekend_wb_2026: &medium_vehicles::WEEKEND_WB_TOLL_PRICES_BY_TIMESLOT_AND_ZONE_2026,
+    weekday_eb_2025: &medium_vehicles::WEEKDAY_EB_TOLL_PRICES_BY_TIMESLOT_AND_ZONE_2025,
+    weekday_wb_2025: &medium_vehicles::WEEKDAY_WB_TOLL_PRICES_BY_TIMESLOT_AND_ZONE_2025,
+    weekend_eb_2025: &medium_vehicles::WEEKEND_EB_TOLL_PRICES_BY_TIMESLOT_AND_ZONE_2025,
+    weekend_wb_2025: &medium_vehicles::WEEKEND_WB_TOLL_PRICES_BY_TIMESLOT_AND_ZONE_2025,
+};
+
+const MOTORCYCLE_RATE_TABLES: VehicleRateTables = VehicleRateTables {
+    weekday_eb_2026: &motorcycles::WEEKDAY_EB_TOLL_PRICES_BY_TIMESLOT_AND_ZONE_2026,
+    weekday_wb_2026: &motorcycles::WEEKDAY_WB_TOLL_PRICES_BY_TIMESLOT_AND_ZONE_2026,
+    weekend_eb_2026: &motorcycles::WEEKEND_EB_TOLL_PRICES_BY_TIMESLOT_AND_ZONE_2026,
+    weekend_wb_2026: &motorcycles::WEEKEND_WB_TOLL_PRICES_BY_TIMESLOT_AND_ZONE_2026,
+    weekday_eb_2025: &motorcycles::WEEKDAY_EB_TOLL_PRICES_BY_TIMESLOT_AND_ZONE_2025,
+    weekday_wb_2025: &motorcycles::WEEKDAY_WB_TOLL_PRICES_BY_TIMESLOT_AND_ZONE_2025,
+    weekend_eb_2025: &motorcycles::WEEKEND_EB_TOLL_PRICES_BY_TIMESLOT_AND_ZONE_2025,
+    weekend_wb_2025: &motorcycles::WEEKEND_WB_TOLL_PRICES_BY_TIMESLOT_AND_ZONE_2025,
+};
+
 impl VehicleClass {
     pub fn to_str(&self) -> &'static str {
         match self {
@@ -44,6 +131,16 @@ impl VehicleClass {
         }
     }
 
+    fn rate_tables(&self) -> &'static VehicleRateTables {
+        match self {
+            VehicleClass::LightVehicle => &LIGHT_VEHICLE_RATE_TABLES,
+            VehicleClass::HeavySingleUnit => &HEAVY_SINGLE_UNIT_RATE_TABLES,
+            VehicleClass::HeavyMultipleUnit => &HEAVY_MULTIPLE_UNIT_RATE_TABLES,
+            VehicleClass::MediumVehicle => &MEDIUM_VEHICLE_RATE_TABLES,
+            VehicleClass::Motorcycle => &MOTORCYCLE_RATE_TABLES,
+        }
+    }
+
     pub fn get_rate(
         &self,
         day_type: &DayType,
@@ -52,181 +149,7 @@ impl VehicleClass {
         timeslot_idx: usize,
         zone_idx: usize,
     ) -> f64 {
-        let is_2026 = year >= 2026;
-        let is_weekday = matches!(day_type, DayType::Weekday);
-        let is_eb = matches!(direction, Direction::Eastbound);
-
-        match (self, is_2026, is_weekday, is_eb) {
-            // Light Vehicle
-            (VehicleClass::LightVehicle, true, true, true) => {
-                light_vehicles::WEEKDAY_EB_TOLL_PRICES_BY_TIMESLOT_AND_ZONE_2026[timeslot_idx]
-                    [zone_idx]
-            }
-            (VehicleClass::LightVehicle, true, true, false) => {
-                light_vehicles::WEEKDAY_WB_TOLL_PRICES_BY_TIMESLOT_AND_ZONE_2026[timeslot_idx]
-                    [zone_idx]
-            }
-            (VehicleClass::LightVehicle, true, false, true) => {
-                light_vehicles::WEEKEND_EB_TOLL_PRICES_BY_TIMESLOT_AND_ZONE_2026[timeslot_idx]
-                    [zone_idx]
-            }
-            (VehicleClass::LightVehicle, true, false, false) => {
-                light_vehicles::WEEKEND_WB_TOLL_PRICES_BY_TIMESLOT_AND_ZONE_2026[timeslot_idx]
-                    [zone_idx]
-            }
-            (VehicleClass::LightVehicle, false, true, true) => {
-                light_vehicles::WEEKDAY_EB_TOLL_PRICES_BY_TIMESLOT_AND_ZONE_2025[timeslot_idx]
-                    [zone_idx]
-            }
-            (VehicleClass::LightVehicle, false, true, false) => {
-                light_vehicles::WEEKDAY_WB_TOLL_PRICES_BY_TIMESLOT_AND_ZONE_2025[timeslot_idx]
-                    [zone_idx]
-            }
-            (VehicleClass::LightVehicle, false, false, true) => {
-                light_vehicles::WEEKEND_EB_TOLL_PRICES_BY_TIMESLOT_AND_ZONE_2025[timeslot_idx]
-                    [zone_idx]
-            }
-            (VehicleClass::LightVehicle, false, false, false) => {
-                light_vehicles::WEEKEND_WB_TOLL_PRICES_BY_TIMESLOT_AND_ZONE_2025[timeslot_idx]
-                    [zone_idx]
-            }
-
-            // Heavy Single Unit
-            (VehicleClass::HeavySingleUnit, true, true, true) => {
-                heavy_single_unit::WEEKDAY_EB_TOLL_PRICES_BY_TIMESLOT_AND_ZONE_2026[timeslot_idx]
-                    [zone_idx]
-            }
-            (VehicleClass::HeavySingleUnit, true, true, false) => {
-                heavy_single_unit::WEEKDAY_WB_TOLL_PRICES_BY_TIMESLOT_AND_ZONE_2026[timeslot_idx]
-                    [zone_idx]
-            }
-            (VehicleClass::HeavySingleUnit, true, false, true) => {
-                heavy_single_unit::WEEKEND_EB_TOLL_PRICES_BY_TIMESLOT_AND_ZONE_2026[timeslot_idx]
-                    [zone_idx]
-            }
-            (VehicleClass::HeavySingleUnit, true, false, false) => {
-                heavy_single_unit::WEEKEND_WB_TOLL_PRICES_BY_TIMESLOT_AND_ZONE_2026[timeslot_idx]
-                    [zone_idx]
-            }
-            (VehicleClass::HeavySingleUnit, false, true, true) => {
-                heavy_single_unit::WEEKDAY_EB_TOLL_PRICES_BY_TIMESLOT_AND_ZONE_2025[timeslot_idx]
-                    [zone_idx]
-            }
-            (VehicleClass::HeavySingleUnit, false, true, false) => {
-                heavy_single_unit::WEEKDAY_WB_TOLL_PRICES_BY_TIMESLOT_AND_ZONE_2025[timeslot_idx]
-                    [zone_idx]
-            }
-            (VehicleClass::HeavySingleUnit, false, false, true) => {
-                heavy_single_unit::WEEKEND_EB_TOLL_PRICES_BY_TIMESLOT_AND_ZONE_2025[timeslot_idx]
-                    [zone_idx]
-            }
-            (VehicleClass::HeavySingleUnit, false, false, false) => {
-                heavy_single_unit::WEEKEND_WB_TOLL_PRICES_BY_TIMESLOT_AND_ZONE_2025[timeslot_idx]
-                    [zone_idx]
-            }
-
-            // Heavy Multiple Unit
-            (VehicleClass::HeavyMultipleUnit, true, true, true) => {
-                heavy_multiple_unit::WEEKDAY_EB_TOLL_PRICES_BY_TIMESLOT_AND_ZONE_2026[timeslot_idx]
-                    [zone_idx]
-            }
-            (VehicleClass::HeavyMultipleUnit, true, true, false) => {
-                heavy_multiple_unit::WEEKDAY_WB_TOLL_PRICES_BY_TIMESLOT_AND_ZONE_2026[timeslot_idx]
-                    [zone_idx]
-            }
-            (VehicleClass::HeavyMultipleUnit, true, false, true) => {
-                heavy_multiple_unit::WEEKEND_EB_TOLL_PRICES_BY_TIMESLOT_AND_ZONE_2026[timeslot_idx]
-                    [zone_idx]
-            }
-            (VehicleClass::HeavyMultipleUnit, true, false, false) => {
-                heavy_multiple_unit::WEEKEND_WB_TOLL_PRICES_BY_TIMESLOT_AND_ZONE_2026[timeslot_idx]
-                    [zone_idx]
-            }
-            (VehicleClass::HeavyMultipleUnit, false, true, true) => {
-                heavy_multiple_unit::WEEKDAY_EB_TOLL_PRICES_BY_TIMESLOT_AND_ZONE_2025[timeslot_idx]
-                    [zone_idx]
-            }
-            (VehicleClass::HeavyMultipleUnit, false, true, false) => {
-                heavy_multiple_unit::WEEKDAY_WB_TOLL_PRICES_BY_TIMESLOT_AND_ZONE_2025[timeslot_idx]
-                    [zone_idx]
-            }
-            (VehicleClass::HeavyMultipleUnit, false, false, true) => {
-                heavy_multiple_unit::WEEKEND_EB_TOLL_PRICES_BY_TIMESLOT_AND_ZONE_2025[timeslot_idx]
-                    [zone_idx]
-            }
-            (VehicleClass::HeavyMultipleUnit, false, false, false) => {
-                heavy_multiple_unit::WEEKEND_WB_TOLL_PRICES_BY_TIMESLOT_AND_ZONE_2025[timeslot_idx]
-                    [zone_idx]
-            }
-
-            // Medium Vehicle
-            (VehicleClass::MediumVehicle, true, true, true) => {
-                medium_vehicles::WEEKDAY_EB_TOLL_PRICES_BY_TIMESLOT_AND_ZONE_2026[timeslot_idx]
-                    [zone_idx]
-            }
-            (VehicleClass::MediumVehicle, true, true, false) => {
-                medium_vehicles::WEEKDAY_WB_TOLL_PRICES_BY_TIMESLOT_AND_ZONE_2026[timeslot_idx]
-                    [zone_idx]
-            }
-            (VehicleClass::MediumVehicle, true, false, true) => {
-                medium_vehicles::WEEKEND_EB_TOLL_PRICES_BY_TIMESLOT_AND_ZONE_2026[timeslot_idx]
-                    [zone_idx]
-            }
-            (VehicleClass::MediumVehicle, true, false, false) => {
-                medium_vehicles::WEEKEND_WB_TOLL_PRICES_BY_TIMESLOT_AND_ZONE_2026[timeslot_idx]
-                    [zone_idx]
-            }
-            (VehicleClass::MediumVehicle, false, true, true) => {
-                medium_vehicles::WEEKDAY_EB_TOLL_PRICES_BY_TIMESLOT_AND_ZONE_2025[timeslot_idx]
-                    [zone_idx]
-            }
-            (VehicleClass::MediumVehicle, false, true, false) => {
-                medium_vehicles::WEEKDAY_WB_TOLL_PRICES_BY_TIMESLOT_AND_ZONE_2025[timeslot_idx]
-                    [zone_idx]
-            }
-            (VehicleClass::MediumVehicle, false, false, true) => {
-                medium_vehicles::WEEKEND_EB_TOLL_PRICES_BY_TIMESLOT_AND_ZONE_2025[timeslot_idx]
-                    [zone_idx]
-            }
-            (VehicleClass::MediumVehicle, false, false, false) => {
-                medium_vehicles::WEEKEND_WB_TOLL_PRICES_BY_TIMESLOT_AND_ZONE_2025[timeslot_idx]
-                    [zone_idx]
-            }
-
-            // Motorcycle
-            (VehicleClass::Motorcycle, true, true, true) => {
-                motorcycles::WEEKDAY_EB_TOLL_PRICES_BY_TIMESLOT_AND_ZONE_2026[timeslot_idx]
-                    [zone_idx]
-            }
-            (VehicleClass::Motorcycle, true, true, false) => {
-                motorcycles::WEEKDAY_WB_TOLL_PRICES_BY_TIMESLOT_AND_ZONE_2026[timeslot_idx]
-                    [zone_idx]
-            }
-            (VehicleClass::Motorcycle, true, false, true) => {
-                motorcycles::WEEKEND_EB_TOLL_PRICES_BY_TIMESLOT_AND_ZONE_2026[timeslot_idx]
-                    [zone_idx]
-            }
-            (VehicleClass::Motorcycle, true, false, false) => {
-                motorcycles::WEEKEND_WB_TOLL_PRICES_BY_TIMESLOT_AND_ZONE_2026[timeslot_idx]
-                    [zone_idx]
-            }
-            (VehicleClass::Motorcycle, false, true, true) => {
-                motorcycles::WEEKDAY_EB_TOLL_PRICES_BY_TIMESLOT_AND_ZONE_2025[timeslot_idx]
-                    [zone_idx]
-            }
-            (VehicleClass::Motorcycle, false, true, false) => {
-                motorcycles::WEEKDAY_WB_TOLL_PRICES_BY_TIMESLOT_AND_ZONE_2025[timeslot_idx]
-                    [zone_idx]
-            }
-            (VehicleClass::Motorcycle, false, false, true) => {
-                motorcycles::WEEKEND_EB_TOLL_PRICES_BY_TIMESLOT_AND_ZONE_2025[timeslot_idx]
-                    [zone_idx]
-            }
-            (VehicleClass::Motorcycle, false, false, false) => {
-                motorcycles::WEEKEND_WB_TOLL_PRICES_BY_TIMESLOT_AND_ZONE_2025[timeslot_idx]
-                    [zone_idx]
-            }
-        }
+        self.rate_tables().select(day_type, direction, year)[timeslot_idx][zone_idx]
     }
 
     pub fn get_average_rate(
