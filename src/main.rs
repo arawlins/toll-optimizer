@@ -5,10 +5,9 @@ use std::fs;
 use std::path::PathBuf;
 
 use toll_optimizer::{
-    DayType, VehicleClass, analyze_trips_by_distance, analyze_trips_by_time,
-    calculate_single_trip_cost, get_pricing, parse_trips, print_markdown,
-    print_pricing_markdown, print_single_trip_markdown,
-    AnalysisMarkdownReport, SingleTripMarkdownReport,
+    AnalysisMarkdownReport, DayType, SingleTripMarkdownReport, VehicleClass,
+    analyze_trips_by_distance, analyze_trips_by_time, calculate_single_trip_cost, get_pricing,
+    parse_trips, print_markdown, print_pricing_markdown, print_single_trip_markdown,
 };
 
 #[derive(Parser, Debug)]
@@ -79,13 +78,8 @@ fn main() -> Result<()> {
             .parse::<VehicleClass>()
             .map_err(|_| anyhow::anyhow!("Invalid vehicle class: {}", args.vehicle_class))?;
 
-        let (cost, dist, direction, day_type) = calculate_single_trip_cost(
-            &entry,
-            &exit,
-            &date_str,
-            &time_str,
-            vehicle_class,
-        )?;
+        let (cost, dist, direction, day_type) =
+            calculate_single_trip_cost(&entry, &exit, &date_str, &time_str, vehicle_class)?;
 
         if args.json {
             let output = serde_json::json!({

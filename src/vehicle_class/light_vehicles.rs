@@ -27,9 +27,6 @@ pub const WEEKDAY_WB_TOLL_PRICES_BY_TIMESLOT_AND_ZONE_2026: [[f64; 12]; 8] = [
     ], // 9 p.m.
 ];
 
-pub const WEEKDAY_WB_AVERAGE_TOLL_PRICES_2026: [f64; 8] =
-    [69.10, 89.35, 69.98, 68.94, 71.93, 84.81, 70.12, 50.56];
-
 pub const WEEKDAY_EB_TOLL_PRICES_BY_TIMESLOT_AND_ZONE_2026: [[f64; 12]; 8] = [
     [
         56.49, 57.32, 62.52, 60.70, 68.25, 81.32, 82.76, 80.83, 82.79, 67.79, 73.08, 77.87,
@@ -57,9 +54,6 @@ pub const WEEKDAY_EB_TOLL_PRICES_BY_TIMESLOT_AND_ZONE_2026: [[f64; 12]; 8] = [
     ], // 9 p.m.
 ];
 
-pub const WEEKDAY_EB_AVERAGE_TOLL_PRICES_2026: [f64; 8] =
-    [70.98, 87.63, 72.14, 70.97, 73.91, 93.38, 72.08, 50.51];
-
 pub const WEEKEND_WB_TOLL_PRICES_BY_TIMESLOT_AND_ZONE_2026: [[f64; 12]; 4] = [
     [
         63.43, 59.31, 50.54, 50.50, 50.57, 50.57, 71.91, 71.91, 55.99, 50.57, 50.57, 71.91,
@@ -75,8 +69,6 @@ pub const WEEKEND_WB_TOLL_PRICES_BY_TIMESLOT_AND_ZONE_2026: [[f64; 12]; 4] = [
     ], // 9 p.m.
 ];
 
-pub const WEEKEND_WB_AVERAGE_TOLL_PRICES_2026: [f64; 4] = [58.15, 67.10, 52.28, 50.56];
-
 pub const WEEKEND_EB_TOLL_PRICES_BY_TIMESLOT_AND_ZONE_2026: [[f64; 12]; 4] = [
     [
         49.94, 50.57, 50.57, 50.57, 50.57, 71.91, 71.91, 71.91, 71.91, 56.14, 50.57, 71.90,
@@ -91,8 +83,6 @@ pub const WEEKEND_EB_TOLL_PRICES_BY_TIMESLOT_AND_ZONE_2026: [[f64; 12]; 4] = [
         49.93, 50.56, 50.56, 50.56, 50.56, 50.56, 50.56, 50.56, 50.56, 50.56, 50.56, 50.56,
     ], // 9 p.m.
 ];
-
-pub const WEEKEND_EB_AVERAGE_TOLL_PRICES_2026: [f64; 4] = [59.87, 65.51, 52.30, 50.51];
 
 pub const WEEKDAY_WB_TOLL_PRICES_BY_TIMESLOT_AND_ZONE_2025: [[f64; 12]; 9] = [
     [
@@ -216,12 +206,6 @@ mod tests {
             WEEKEND_EB_TOLL_PRICES_BY_TIMESLOT_AND_ZONE_2026[3][0],
             49.93
         );
-
-        // Average 2026 Prices tests
-        assert_eq!(WEEKDAY_WB_AVERAGE_TOLL_PRICES_2026[0], 69.10);
-        assert_eq!(WEEKDAY_EB_AVERAGE_TOLL_PRICES_2026[7], 50.51);
-        assert_eq!(WEEKEND_WB_AVERAGE_TOLL_PRICES_2026[1], 67.10);
-        assert_eq!(WEEKEND_EB_AVERAGE_TOLL_PRICES_2026[0], 59.87);
 
         // WB Weekday 6 a.m. Zone 1 (2025)
         assert_eq!(
