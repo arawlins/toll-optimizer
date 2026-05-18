@@ -56,6 +56,10 @@ struct Args {
     /// Exit point for a single trip calculation
     #[arg(long, requires = "entry")]
     exit: Option<String>,
+
+    /// Do not output individual trips, only summaries
+    #[arg(long)]
+    show_summary: bool,
 }
 
 fn main() -> Result<()> {
@@ -284,7 +288,7 @@ fn main() -> Result<()> {
         .sum();
 
     if args.json {
-        let output = serde_json::json!({
+        let mut output = serde_json::json!({
             "summary": {
                 "total_processed": results.total_processed,
                 "total_skipped": results.total_skipped,
@@ -297,6 +301,11 @@ fn main() -> Result<()> {
             "time_based_analysis": summaries_by_time,
             "distance_based_analysis": summaries_by_distance,
         });
+
+        if args.show_summary {
+            remove_trips_recursively(&mut output);
+        }
+
         println!("{}", serde_json::to_string_pretty(&output)?);
         return Ok(());
     }
@@ -313,6 +322,7 @@ fn main() -> Result<()> {
             unknown_points: &results.unknown_points,
             unknown_vehicle_classes: &results.unknown_vehicle_classes,
             camera_charges: &results.camera_charges,
+            show_summary: args.show_summary,
         });
         return Ok(());
     }
@@ -373,7 +383,7 @@ fn main() -> Result<()> {
         for centroid_data in &summary.centroids {
             println!("    Trips near {}:", centroid_data.centroid_time);
 
-            if true {
+            if !args.show_summary {
                 for trip_summary in &centroid_data.trips {
                     let trip = trip_summary.trip;
                     let day_type_str = match &trip.day_type {
@@ -495,7 +505,7 @@ fn main() -> Result<()> {
                 centroid_data.total_toll_charge
             );
 
-            if true {
+            if !args.show_summary {
                 for trip_summary in &centroid_data.trips {
                     let trip = trip_summary.trip;
                     let day_type_str = match &trip.day_type {
@@ -535,4 +545,22 @@ fn main() -> Result<()> {
     }
 
     Ok(())
+}
+
+/// Recursively removes all keys named "trips" from a JSON value.
+fn remove_trips_recursively(value: &mut serde_json::Value) {
+    match value {
+        serde_json::Value::Object(obj) => {
+            obj.remove("trips");
+            for v in obj.values_mut() {
+                remove_trips_recursively(v);
+            }
+        }
+        serde_json::Value::Array(arr) => {
+            for v in arr.iter_mut() {
+                remove_trips_recursively(v);
+            }
+        }
+        _ => {}
+    }
 }

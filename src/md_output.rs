@@ -25,6 +25,8 @@ pub struct AnalysisMarkdownReport<'report, 'trips> {
     pub unknown_vehicle_classes: &'report [String],
     /// Camera charges grouped by transponder or plate.
     pub camera_charges: &'report HashMap<String, f64>,
+    /// Whether to show individual trip details.
+    pub show_summary: bool,
 }
 
 /// Prints a comprehensive analysis report in Markdown format.
@@ -55,6 +57,7 @@ pub struct AnalysisMarkdownReport<'report, 'trips> {
 ///     unknown_points: &[],
 ///     unknown_vehicle_classes: &[],
 ///     camera_charges: &camera_charges,
+///     show_summary: false,
 /// };
 /// toll_optimizer::print_markdown(report);
 /// ```
@@ -70,6 +73,7 @@ pub fn print_markdown(report: AnalysisMarkdownReport<'_, '_>) {
         unknown_points,
         unknown_vehicle_classes,
         camera_charges,
+        show_summary,
     } = report;
 
     println!("# Toll Optimizer Analysis Report\n");
@@ -166,7 +170,7 @@ pub fn print_markdown(report: AnalysisMarkdownReport<'_, '_>) {
             }
             println!();
 
-            if !centroid.trips.is_empty() {
+            if !show_summary && !centroid.trips.is_empty() {
                 println!("| Date | Time | Route | Distance | Type | Cost | Optimization |");
                 println!("| --- | --- | --- | --- | --- | --- | --- |");
                 for trip_summary in &centroid.trips {
@@ -237,7 +241,7 @@ pub fn print_markdown(report: AnalysisMarkdownReport<'_, '_>) {
             }
             println!();
 
-            if !centroid.trips.is_empty() {
+            if !show_summary && !centroid.trips.is_empty() {
                 println!("| Date | Time | Route | Distance | Type | Cost | Note |");
                 println!("| --- | --- | --- | --- | --- | --- | --- |");
                 for trip_summary in &centroid.trips {

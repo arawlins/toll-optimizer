@@ -25,6 +25,15 @@ You can download the latest standalone binary for your operating system from the
 
 Extract the archive and run the `toll-optimizer` executable.
 
+#### Note for macOS Users
+When running a downloaded binary on macOS, you may see a message saying "Apple could not verify 'toll-optimizer' is free of malware." To resolve this, you can remove the "quarantine" flag from the binary by running the following command in your terminal:
+
+```bash
+xattr -d com.apple.quarantine /path/to/toll-optimizer
+```
+
+Replace `/path/to/toll-optimizer` with the actual path to the downloaded file (e.g., `~/Downloads/toll-optimizer`).
+
 ### 2. Build from Source
 If you have Rust installed, you can build and install the tool directly:
 ```bash
@@ -93,12 +102,88 @@ toll-optimizer --list-access-points
 - `-j, --json`: Output results in JSON format (for agentic or programmatic use).
 - `-m, --markdown`: Output results in Markdown format (for reports).
 
+### List Pricing Timeslots
+List all 407 ETR pricing timeslots for weekdays and weekends/holidays.
+
+```bash
+toll-optimizer --list-timeslots
+```
+
 ### Help and Version
 Print help or version information.
 
 ```bash
 toll-optimizer --help
 toll-optimizer --version
+```
+
+## LLM Integration (Skill)
+
+Toll Optimizer includes a `SKILL.md` file that allows LLMs (like Gemini, ChatGPT, or Claude) to autonomously analyze your statements and provide financial advice.
+
+### Using with Gemini CLI
+If you use the [Gemini CLI](https://github.com/google/gemini-cli), you can install this tool as a skill:
+
+1. Install the skill using gemini cli:
+   ```bash
+   gemini install skill <path to SKILL.md>
+   ```
+2. Ensure the `toll-optimizer` binary is in your `PATH`.
+
+### Using with Claude Code
+If you use [Claude Code](https://claude.com/product/claude-code), you can install this tool as a skill:
+
+1. Copy the SKILL.md file into your ~/.claude/skills/ directory:
+   ```
+   cp <path to SKILL.md> ~/.claude/skills/
+   ```
+2. Ensure the `toll-optimizer` binary is in your `PATH`.
+
+### Using with Codex
+If you use [Codex](https://developers.openai.com/codex), you can install this tool as a skill:
+
+1. Copy the SKILL.md file into your ~/.codex/skills/ directory:
+   ```
+   cp <path to SKILL.md> ~/.codex/skills/
+   ```
+2. Ensure the `toll-optimizer` binary is in your `PATH`.
+
+### Once installed, you can ask your agent questions like:
+#### "Is it cheaper for me to get on the 407 now or wait 30 minutes?"
+Sample Output:
+```
+The price is the same whether you get on now (5:55 PM) or in 30 minutes (6:25 PM), as both fall within the weekend daytime rate (10:00 AM – 7:00 PM).
+
+  However, if you can wait until 7:00 PM (1 hour and 5 minutes from now), you will save approximately 20% on your toll.
+
+  Pricing Comparison (Weekend)
+   * Now (5:55 PM): ~66.3¢/km (Daytime Rate)
+   * In 30 mins (6:25 PM): ~66.3¢/km (Daytime Rate)
+   * At 7:00 PM: ~52.3¢/km (Evening Rate) — Saves ~14¢/km
+
+  If your trip is long, waiting until 7:00 PM is highly recommended. If you must leave within the next 30 minutes, there is no financial advantage to waiting.
+```
+
+#### "I'm going to drive from Markville Mall to the Cambridge Centre on Wednesday afternoon leaving around 4pm. How much will that trip cost?"
+Sample Output:
+```
+ The estimated cost for your trip from Markville Mall to Cambridge Centre on Wednesday, May 20, 2026, leaving around 4:00 PM, is approximately $54.79 for the 407 ETR portion.
+
+  Trip Details:
+   * 407 Entry: McCowan Rd (closest to Markville Mall)
+   * 407 Exit: Hwy 401 West (where the 407 connects to the 401 toward Cambridge)
+   * Distance on 407: ~56.26 km
+   * Base Toll: $53.79 (Peak Weekday Rate)
+   * Trip Charge: $1.00
+   * Total Estimated 407 Cost: $54.79
+
+  Note: This estimate only covers the 407 ETR toll. The remainder of your journey from the Hwy 401/407 interchange to the Cambridge Centre via Hwy 401 is toll-free. Since you are leaving at 4:00 PM on a
+  weekday, you will be traveling during Peak Period rates.
+```
+
+#### "Help me find ways to reduce my 407 bill, here is a statement: <path to statement.csv>"
+Sample Output:
+```
 ```
 
 ## Development

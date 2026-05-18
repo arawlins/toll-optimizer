@@ -40,7 +40,13 @@ The primary tool for analysis and pricing.
 To perform a standard monthly review:
 1.  Run the optimizer with the `--json` flag:
     `toll-optimizer --json "<filename>.csv"`
-2.  Parse the `Processing Summary` section to get the total time-based and distance-based costs saved.
+    NOTE: ALWAYS use the file specified in `<filename>.csv`. If the file cannot be found then DO NOT look for it, just let the user know that the file was not found. NEVER TRUNCATE THE OUTPUT.
+2.  Parse the `summary` object for the following fields:
+    - `total_potential_distance_savings` (rounded to 2 decimal places) - the total potential distance savings
+    - `total_potential_time_savings` (rounded to 2 decimal places) - the total potential time savings
+    - `total_cost` (rounded to 2 decimal places) - the total cost of the bill
+    - `total_processed` - the number of trips processed
+    The report should ALWAYS include the total cost of the bill and the number of trips processed. The savings should ALWAYS be separated into time-based and distance-based savings. NEVER add them together. For details in time-based savings see step 3 and for details in distance-based savings see step 4.
 3.  Parse the `time_based_analysis` to find "Cheaper Prev" or "Cheaper Next" opportunities.
 4.  Parse the `distance_based_analysis` to find route optimization advice (e.g., "Exit on Warden to save $1.38").
 
@@ -63,8 +69,10 @@ If a user asks for the cost of a specific trip:
 If a user asks about supported routes or points:
 1.  Run the access point list:
     `toll-optimizer --list-access-points --json`
+    NOTE: This can help find entry and exit points when calculating a single trip cost.
 2.  Run the timeslot list:
     `toll-optimizer --list-timeslots --json`
+    NOTE: This can help find other timeslots for live pricing.
 
 ## Success Criteria
 - [ ] Correct mode identified (Analysis, Pricing, or Listing).
