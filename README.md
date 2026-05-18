@@ -51,6 +51,7 @@ toll-optimizer <path-to-csv>
 #### Options:
 - `-j, --json`: Output results in JSON format (for agentic or programmatic use).
 - `-m, --markdown`: Output results in Markdown format (for reports).
+- `--show-summary`: Suppresses individual trip details in the output. Only the processing summary and cluster-level analysis (averages, totals, and optimization advice) will be shown. This works for standard, Markdown, and JSON outputs.
 #### Example:
 ```bash
 toll-optimizer csv/2026-01-28-Statement.csv
@@ -59,7 +60,7 @@ toll-optimizer csv/2026-01-28-Statement.csv
 The tool expects the standard CSV export format from the 407 ETR website. Ensure your file contains headers like `Date`, `Entry Time`, `Entry Point`, `Exit Point`, etc.
 
 ### Check Current Pricing
-Get the current and next timeslot prices:
+Get the current and next timeslot average prices:
 
 ```bash
 toll-optimizer --current-price
@@ -184,6 +185,32 @@ Sample Output:
 #### "Help me find ways to reduce my 407 bill, here is a statement: <path to statement.csv>"
 Sample Output:
 ```
+ Based on your 407 ETR statement from July 28 to August 27, 2025, here is a detailed analysis of how you can reduce your future bills.
+
+  1. Statement Summary
+  ┌──────────────────────────────────┬─────────┐
+  │ Metric                           │ Value   │
+  ├──────────────────────────────────┼─────────┤
+  │ Total Cost of Bill               │ $438.35 │
+  │ Total Trips Processed            │ 62      │
+  │ Potential Distance-Based Savings │ $73.49  │
+  │ Potential Time-Based Savings     │ $10.16  │
+  └──────────────────────────────────┴─────────┘
+
+  2. Distance-Based Optimization Advice
+  You are frequently using entry and exit points that are more expensive than nearby alternatives.
+   - Eastbound (E87290C0/C1): Exiting at Warden instead of Kennedy would have saved you significantly across multiple trips. For your longer trips from Hwy 401, exiting at Warden alone would have saved
+     $1.65.
+   - Westbound (E87290C0/C1): Your frequent entry at McCowan is a major cost driver. Entering at Kennedy instead would have saved you $11.06 for short trips to Hwy 404 and $24.29 for longer commutes.
+   - Specific Route Change: For your Hwy 404 to Kennedy trips, a combination of entering at Bathurst and exiting at Warden/Woodbine could have saved $27.54 over the billing period.
+
+  3. Time-Based Optimization Advice
+  Your commute times often fall right within peak pricing brackets. Small shifts in your departure could yield savings:
+   - Morning Commute: Starting your westbound morning commute before 6:59 AM (ahead of the morning peak) would have saved you approximately $5.08 this month.
+   - Afternoon Commute: For your eastbound trips around 5:11 PM, waiting until after 6:00 PM to enter the highway would have saved you $5.08.
+
+  By implementing these changes—specifically switching your entry point from McCowan to Kennedy for westbound trips and adjusting your afternoon commute to start after 6:00 PM—you could reduce your monthly
+  bill by over $80.
 ```
 
 ## Development

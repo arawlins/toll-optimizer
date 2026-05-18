@@ -8,7 +8,7 @@ description: Analyze 407 ETR toll statements to find savings through time-shifti
 Analyze 407 ETR toll statements to find savings through time-shifting or route adjustments, and check live pricing.
 
 ## Purpose
-This skill allows an LLM to autonomously process toll statements and provide actionable financial advice to a user. It can detect when a trip occurred just minutes after a cheaper rate period ended, when an alternate exit would have saved money, or provide live pricing comparisons for trip planning.
+This skill allows an LLM to autonomously process toll statements and provide actionable financial advice. It detects optimization opportunities based on timing and route selection. It also provides live pricing comparisons for trip planning.
 
 ## Available Tools
 
@@ -25,60 +25,56 @@ The primary tool for analysis and pricing.
 
 **Analysis Options (Requires `<FILE>`):**
 - `<FILE>`: Path to the 407 ETR CSV statement file.
-- `--show-summary`: Suppresses individual trip details. Only processing summary and cluster-level analysis are shown. (Works with standard, Markdown, and JSON outputs).
-  Detailed trip listings are included by default unless `--show-summary` is used.
+- `--show-summary`: Suppresses individual trip details. (Works with JSON outputs).
 
 **Pricing & Trip Options:**
-- `--current-price`: Display pricing info for the current timeslot and provide optimization tips.
-- `--entry <POINT> --exit <POINT>`: Calculate the cost for a single trip between two points. (Both required if either is specified).
-- `--date <DATE>`: (Optional) Override date/time for pricing or single trip (YYYY-MM-DD).
-- `--time <TIME>`: (Optional) Override time for pricing or single trip (HH:MM AM/PM or HH:MM).
-- `--vehicle-class <CLASS>`: (Optional) Vehicle class for pricing or single trip (e.g., "Light vehicle", "Heavy Single Unit", "Heavy Multiple Unit", "Medium Vehicle", "Motorcycle"). Default: "Light vehicle".
+- `--current-price`: Display pricing info for the current timeslot.
+- `--entry <POINT> --exit <POINT>`: Calculate the cost for a single trip.
+- `--date <DATE>`: (Optional) Override date (YYYY-MM-DD).
+- `--time <TIME>`: (Optional) Override time (HH:MM AM/PM).
+- `--vehicle-class <CLASS>`: (Optional) Default: "Light vehicle".
 
 ## Procedures
 
 ### 1. Monthly Analysis
-To perform a standard monthly review:
-1.  Run the optimizer with the `--json` and `--show-summary`flags:
-    `toll-optimizer --json --show-summary "<filename>.csv"`
-    NOTE: ALWAYS use the file specified in `<filename>.csv`. If the file cannot be found then DO NOT look for it, just let the user know that the file was not found. NEVER TRUNCATE THE OUTPUT.
-2.  Parse the `summary` object for the following fields:
-    - `total_potential_distance_savings` (rounded to 2 decimal places) - the total potential distance savings
-    - `total_potential_time_savings` (rounded to 2 decimal places) - the total potential time savings
-    - `total_cost` (rounded to 2 decimal places) - the total cost of the bill
-    - `total_processed` - the number of trips processed
-    The report should ALWAYS include the total cost of the bill and the number of trips processed. The savings should ALWAYS be separated into time-based and distance-based savings. NEVER add them together. For details in time-based savings see step 3 and for details in distance-based savings see step 4.
-3.  Parse the `time_based_analysis` to find "Cheaper Prev" or "Cheaper Next" opportunities.
-4.  Parse the `distance_based_analysis` to find route optimization advice (e.g., "Exit on Warden to save $1.38").
-5.  If a user asks about trip details then run without the `--show-summary` flag:
-    `toll-optimizer --json "<filename>.csv"`
+1.  **Run Tool**: `toll-optimizer --json --show-summary "<filename>.csv"`
+2.  **Validate**: If file not found, report error and stop. NEVER truncate output.
+3.  **Process Data**: Parse `summary`, `time_based_analysis`, and `distance_based_analysis`.
+4.  **Format Output**: You MUST use the **Monthly Analysis Report Template** below.
 
-### 2. Live Pricing & Planning
-If a user asks about current rates or planning a trip:
-1.  Run the pricing check:
-    `toll-optimizer --current-price --json`
-2.  For a specific time:
-    `toll-optimizer --current-price --date 2026-05-12 --time "07:30 AM" --json`
-3.  Compare "Current Timeslot" and "Next Timeslot" averages to provide leaving/waiting advice.
+### 2. Live Pricing
+1.  **Check Rates**: `toll-optimizer --current-price --json`
+2.  **Options**: Override date or time to check pricing for a specific time: `toll-optimizer --current-price --date 2026-05-12 --time "07:30 AM" --json` or `toll-optimizer --current-price --vehicle-class "Medium vehicle" --date 2026-05-12 --time "07:30 AM" --json`.
 
 ### 3. Single Trip Calculation
 If a user asks for the cost of a specific trip:
-1.  Identify the entry and exit points.
-2.  Run the calculation:
-    `toll-optimizer --entry "McCowan" --exit "Hwy404" --json`
-3.  Add `--date`, `--time`, or `--vehicle-class` if specific context is provided.
+1.  **Identify points**: Run `toll-optimizer --list-access-points` if needed.
+2.  **Run calculation**: `toll-optimizer --entry "<POINT>" --exit "<POINT>" --date "<DATE>" --time "<TIME>" --json`
 
-### 4. Verification
-If a user asks about supported routes or points:
-1.  Run the access point list:
-    `toll-optimizer --list-access-points --json`
-    NOTE: This can help find entry and exit points when calculating a single trip cost.
-2.  Run the timeslot list:
-    `toll-optimizer --list-timeslots --json`
-    NOTE: This can help find other timeslots for live pricing.
+
+## Output Format Patterns
+
+### Standard Monthly Analysis Report Template
+When providing a monthly analysis, the response MUST strictly follow this Markdown structure:
+
+**1. Statement Summary**
+| Metric | Value |
+| :--- | :--- |
+| **Total Cost of Bill** | $[total_cost] |
+| **Total Trips Processed** | [total_processed] |
+| **Potential Distance-Based Savings** | $[total_potential_distance_savings] |
+| **Potential Time-Based Savings** | $[total_potential_time_savings] |
+
+**2. Distance-Based Optimization Advice**
+(Parse `distance_based_analysis` and list specific location-based advice)
+- Example: "Entering at **[Point A]** instead of **[Point B]** would save **$[amount]**."
+
+**3. Time-Based Optimization Advice**
+(Parse `time_based_analysis` and list specific timing-based advice)
+- Example: "Starting your afternoon commute **after 6:00 PM** would save **$[amount]**."
 
 ## Success Criteria
-- [ ] Correct mode identified (Analysis, Pricing, or Listing).
-- [ ] Commands executed successfully.
-- [ ] Savings identified or pricing comparisons presented clearly.
-- [ ] Actionable advice provided (e.g., "Wait until 9:30 AM to save $2.50").
+- [ ] Total cost and trips processed are included in a table.
+- [ ] Distance and Time savings are NEVER added together; they are listed separately.
+- [ ] Advice includes specific entry/exit points or clock times.
+- [ ] Final report adheres to the Markdown template.

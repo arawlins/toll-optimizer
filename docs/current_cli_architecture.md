@@ -8,7 +8,7 @@ The **Toll Optimizer CLI** is a standalone Rust command-line utility designed to
 ### 1. Entry Point (`src/main.rs`)
 -   **Responsibility**: Manages the CLI lifecycle using `clap`.
 -   **Key Features**:
-    -   **Argument Parsing**: Uses `clap` for robust input handling (`--json`, `--markdown`, etc.).
+    -   **Argument Parsing**: Uses `clap` for robust input handling (`--json`, `--markdown`, `--show-summary`, etc.).
     -   **Error Handling**: Employs `anyhow` for user-friendly error messages and context.
     -   **Reporting**: Generates formatted terminal reports summarizing savings by time and distance.
 

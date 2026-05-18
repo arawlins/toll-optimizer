@@ -19,6 +19,7 @@ toll-optimizer statement.csv
 -   `<FILE>`: **(Required)** Path to the CSV file.
 -   `-j, --json`: Outputs the analysis in a structured JSON format. This is the **recommended mode for LLMs** and automated reporting pipelines as it provides precise metadata (savings, optimization targets, and notes) without visual formatting overhead.
 -   `-m, --markdown`: Outputs the analysis in a clean Markdown format with tables, suitable for copying into reports or GitHub issues.
+-   `--show-summary`: Suppresses individual trip details in the output. Only the processing summary and cluster-level analysis (averages, totals, and optimization advice) will be shown. This works for standard, Markdown, and JSON outputs.
 -   `-h, --help`: Displays usage information.
 
 ## Live Pricing and Trip Planning
