@@ -25,7 +25,8 @@ The primary tool for analysis and pricing.
 
 **Analysis Options (Requires `<FILE>`):**
 - `<FILE>`: Path to the 407 ETR CSV statement file.
-  Detailed trip listings are included by default.
+- `--show-summary`: Suppresses individual trip details. Only processing summary and cluster-level analysis are shown. (Works with standard, Markdown, and JSON outputs).
+  Detailed trip listings are included by default unless `--show-summary` is used.
 
 **Pricing & Trip Options:**
 - `--current-price`: Display pricing info for the current timeslot and provide optimization tips.
@@ -38,8 +39,8 @@ The primary tool for analysis and pricing.
 
 ### 1. Monthly Analysis
 To perform a standard monthly review:
-1.  Run the optimizer with the `--json` flag:
-    `toll-optimizer --json "<filename>.csv"`
+1.  Run the optimizer with the `--json` and `--show-summary`flags:
+    `toll-optimizer --json --show-summary "<filename>.csv"`
     NOTE: ALWAYS use the file specified in `<filename>.csv`. If the file cannot be found then DO NOT look for it, just let the user know that the file was not found. NEVER TRUNCATE THE OUTPUT.
 2.  Parse the `summary` object for the following fields:
     - `total_potential_distance_savings` (rounded to 2 decimal places) - the total potential distance savings
@@ -49,6 +50,8 @@ To perform a standard monthly review:
     The report should ALWAYS include the total cost of the bill and the number of trips processed. The savings should ALWAYS be separated into time-based and distance-based savings. NEVER add them together. For details in time-based savings see step 3 and for details in distance-based savings see step 4.
 3.  Parse the `time_based_analysis` to find "Cheaper Prev" or "Cheaper Next" opportunities.
 4.  Parse the `distance_based_analysis` to find route optimization advice (e.g., "Exit on Warden to save $1.38").
+5.  If a user asks about trip details then run without the `--show-summary` flag:
+    `toll-optimizer --json "<filename>.csv"`
 
 ### 2. Live Pricing & Planning
 If a user asks about current rates or planning a trip:
