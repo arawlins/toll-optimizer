@@ -207,3 +207,52 @@ fn test_e2e_fail_invalid_access_point() {
     let (_, stderr) = run_optimizer_fail(&["--entry", "Nowhere", "--exit", "Hwy404"]);
     assert!(stderr.contains("Invalid entry point"));
 }
+
+#[test]
+fn test_e2e_list_timeslots() {
+    let output = run_optimizer(&["--list-timeslots"]);
+
+    assert!(output.contains("407 ETR Pricing Timeslots:"));
+    assert!(!output.contains("2026+"));
+    assert!(!output.contains("2025"));
+    assert!(output.contains("5:00 AM"));
+}
+
+#[test]
+fn test_e2e_list_timeslots_json() {
+    let output = run_optimizer(&["--list-timeslots", "--json"]);
+    let json: serde_json::Value =
+        serde_json::from_str(&output).expect("Output should be valid JSON");
+    assert!(json["weekday"].is_array());
+    assert!(json["weekend_holiday"].is_array());
+    assert!(
+        json["weekday"]
+            .as_array()
+            .unwrap()
+            .contains(&serde_json::json!("5:00 AM"))
+    );
+}
+
+#[test]
+fn test_e2e_list_timeslots_markdown() {
+    let output = run_optimizer(&["--list-timeslots", "--markdown"]);
+    assert!(output.contains("# 407 ETR Pricing Timeslots"));
+    assert!(output.contains("## Weekday"));
+    assert!(output.contains("- 5:00 AM"));
+}
+
+#[test]
+fn test_e2e_list_access_points_json() {
+    let output = run_optimizer(&["--list-access-points", "--json"]);
+    let json: serde_json::Value =
+        serde_json::from_str(&output).expect("Output should be valid JSON");
+    assert!(json.is_array());
+    assert!(json.as_array().unwrap().contains(&serde_json::json!("QEW")));
+}
+
+#[test]
+fn test_e2e_list_access_points_markdown() {
+    let output = run_optimizer(&["--list-access-points", "--markdown"]);
+    assert!(output.contains("# Recognized 407 ETR Access Points"));
+    assert!(output.contains("- QEW"));
+}

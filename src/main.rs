@@ -45,6 +45,10 @@ struct Args {
     #[arg(long)]
     list_access_points: bool,
 
+    /// List all 407 ETR pricing timeslots
+    #[arg(long)]
+    list_timeslots: bool,
+
     /// Entry point for a single trip calculation
     #[arg(long, requires = "exit")]
     entry: Option<String>,
@@ -58,11 +62,60 @@ fn main() -> Result<()> {
     let args = Args::parse();
 
     if args.list_access_points {
-        println!("Recognized 407 ETR Access Points:");
         let mut points = toll_optimizer::ACCESS_POINTS.to_vec();
         points.sort();
+
+        if args.json {
+            println!("{}", serde_json::to_string_pretty(&points)?);
+            return Ok(());
+        }
+
+        if args.markdown {
+            println!("# Recognized 407 ETR Access Points\n");
+            for point in points {
+                println!("- {}", point);
+            }
+            return Ok(());
+        }
+
+        println!("Recognized 407 ETR Access Points:");
         for point in points {
             println!("  - {}", point);
+        }
+        return Ok(());
+    }
+
+    if args.list_timeslots {
+        if args.json {
+            let output = serde_json::json!({
+                "weekday": toll_optimizer::WEEKDAY_TIMESLOTS_2026,
+                "weekend_holiday": toll_optimizer::WEEKEND_TIMESLOTS_2026,
+            });
+            println!("{}", serde_json::to_string_pretty(&output)?);
+            return Ok(());
+        }
+
+        if args.markdown {
+            println!("# 407 ETR Pricing Timeslots\n");
+            println!("## Weekday");
+            for slot in toll_optimizer::WEEKDAY_TIMESLOTS_2026 {
+                println!("- {}", slot);
+            }
+            println!("\n## Weekend/Holiday");
+            for slot in toll_optimizer::WEEKEND_TIMESLOTS_2026 {
+                println!("- {}", slot);
+            }
+            return Ok(());
+        }
+
+        println!("407 ETR Pricing Timeslots:");
+        println!("  Weekday:");
+        for slot in toll_optimizer::WEEKDAY_TIMESLOTS_2026 {
+            println!("    - {}", slot);
+        }
+        println!("  Weekend/Holiday:");
+        for slot in toll_optimizer::WEEKEND_TIMESLOTS_2026 {
+            println!("    - {}", slot);
         }
         return Ok(());
     }

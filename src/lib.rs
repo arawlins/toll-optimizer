@@ -19,7 +19,10 @@ mod vehicle_class;
 // Explicitly re-export only what is required for the CLI and integration tests.
 
 /// Access point names for the 407 ETR.
-pub use constants::ACCESS_POINTS;
+pub use constants::{
+    ACCESS_POINTS, WEEKDAY_TIMESLOTS_2025, WEEKDAY_TIMESLOTS_2026, WEEKEND_TIMESLOTS_2025,
+    WEEKEND_TIMESLOTS_2026,
+};
 
 /// CSV statement parsing logic.
 pub use csv_parser::{ParseResult, parse_trips};
