@@ -51,6 +51,7 @@ toll-optimizer <path-to-csv>
 #### Options:
 - `-j, --json`: Output results in JSON format (for agentic or programmatic use).
 - `-m, --markdown`: Output results in Markdown format (for reports).
+- `--show-summary`: Suppresses individual trip details in the output. Only the processing summary and cluster-level analysis (averages, totals, and optimization advice) will be shown. This works for standard, Markdown, and JSON outputs.
 #### Example:
 ```bash
 toll-optimizer csv/2026-01-28-Statement.csv
@@ -59,7 +60,7 @@ toll-optimizer csv/2026-01-28-Statement.csv
 The tool expects the standard CSV export format from the 407 ETR website. Ensure your file contains headers like `Date`, `Entry Time`, `Entry Point`, `Exit Point`, etc.
 
 ### Check Current Pricing
-Get the current and next timeslot prices:
+Get the current and next timeslot average prices:
 
 ```bash
 toll-optimizer --current-price
@@ -181,9 +182,35 @@ Sample Output:
   weekday, you will be traveling during Peak Period rates.
 ```
 
-#### "Help me find ways to reduce my 407 bill, here is a statement: <path to statement.csv>"
+#### "Help me find ways to reduce my 407 bill, here is a statement: \<path to statement.csv\>"
 Sample Output:
 ```
+ Based on your 407 ETR statement from January 28 to February 27, 2026, here is an analysis of potential savings for your account.
+
+  1. Statement Summary
+  ┌──────────────────────────────────┬─────────┐
+  │ Metric                           │ Value   │
+  ├──────────────────────────────────┼─────────┤
+  │ Total Cost of Bill               │ $420.16 │
+  │ Total Trips Processed            │ 26      │
+  │ Potential Distance-Based Savings │ $19.65  │
+  │ Potential Time-Based Savings     │ $8.94   │
+  └──────────────────────────────────┴─────────┘
+
+  2. Distance-Based Optimization Advice
+  You can reduce your costs by making small adjustments to where you enter and exit the highway:
+   - Westbound (Transponder1): Your frequent entry at McCowan for trips to Hwy 404 is a major expense. Entering at Kennedy or Warden instead would have saved you $10.32 this month.
+   - Eastbound (Transponder1): For your long trips from Hwy 401 to Kennedy, exiting slightly earlier at Warden or Woodbine would have saved $3.33.
+   - Westbound (Transponder1): Entering at Warden instead of Kennedy for your trips toward Hwy 401 would have saved $2.29.
+   - Eastbound (Transponder2): Entering at Markham instead of McCowan for trips to Brock Road (Hwy 7) would have saved $1.54.
+
+  3. Time-Based Optimization Advice
+  Adjusting your departure times by just a few minutes can help you avoid peak rates:
+   - Eastbound (Transponder2): For your trips around 7:08 PM, waiting until after 9:00 PM to enter the highway would have saved you $4.14.
+   - Westbound (Transponder2): For trips around 6:52 PM, waiting just 8 minutes until after 7:00 PM would have saved $2.63.
+   - Eastbound (Transponder1): For your afternoon trips around 3:44 PM, leaving after 6:00 PM would have yielded $2.17 in savings.
+
+  By combining these strategies—particularly switching your westbound entry from McCowan to Kennedy and waiting until after 7:00 PM for your evening trips—you could reduce your monthly bill by nearly $30.
 ```
 
 ## Development

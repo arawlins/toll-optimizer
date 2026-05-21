@@ -256,3 +256,72 @@ fn test_e2e_list_access_points_markdown() {
     assert!(output.contains("# Recognized 407 ETR Access Points"));
     assert!(output.contains("- QEW"));
 }
+
+#[test]
+fn test_e2e_show_summary_text() {
+    let output = run_optimizer(&["tests/csv/2025-08-28 - light vehicles.csv", "--show-summary"]);
+
+    assert!(output.contains("--- Processing Summary ---"));
+    assert!(output.contains("Trips Processed: 62"));
+    assert!(output.contains("--- Time-Based Analysis ---"));
+    assert!(output.contains("--- Distance-Based Analysis ---"));
+
+    // Check that individual trips are NOT present
+    // Individual trips follow the pattern: "      - Date Time (Entry -> Exit: Distancekm) [Type] [$Cost]"
+    assert!(!output.contains("      - 22 Jul 25 5:25 PM"));
+    assert!(!output.contains("      - 31 Jul 25 6:26 PM"));
+}
+
+#[test]
+fn test_e2e_show_summary_json() {
+    let output = run_optimizer(&[
+        "tests/csv/2025-08-28 - light vehicles.csv",
+        "--json",
+        "--show-summary",
+    ]);
+
+    let json: serde_json::Value =
+        serde_json::from_str(&output).expect("Output should be valid JSON");
+
+    assert_eq!(json["summary"]["total_processed"], 62);
+
+    // Verify "trips" key is recursively removed
+    fn check_no_trips(value: &serde_json::Value) {
+        match value {
+            serde_json::Value::Object(obj) => {
+                assert!(!obj.contains_key("trips"));
+                for v in obj.values() {
+                    check_no_trips(v);
+                }
+            }
+            serde_json::Value::Array(arr) => {
+                for v in arr {
+                    check_no_trips(v);
+                }
+            }
+            _ => {}
+        }
+    }
+
+    check_no_trips(&json);
+}
+
+#[test]
+fn test_e2e_show_summary_markdown() {
+    let output = run_optimizer(&[
+        "tests/csv/2025-08-28 - light vehicles.csv",
+        "--markdown",
+        "--show-summary",
+    ]);
+
+    assert!(output.contains("# Toll Optimizer Analysis Report"));
+    assert!(output.contains("## Processing Summary"));
+
+    // Markdown trip tables have specific headers
+    assert!(!output.contains("| Date | Time | Route | Distance | Type | Cost | Optimization |"));
+    assert!(!output.contains("| Date | Time | Route | Distance | Type | Cost | Note |"));
+
+    // Check for some summary data to ensure it's still there
+    assert!(output.contains("## Time-Based Analysis"));
+    assert!(output.contains("## Distance-Based Analysis"));
+}
