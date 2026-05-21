@@ -259,7 +259,10 @@ fn test_e2e_list_access_points_markdown() {
 
 #[test]
 fn test_e2e_show_summary_text() {
-    let output = run_optimizer(&["tests/csv/2025-08-28 - light vehicles.csv", "--show-summary"]);
+    let output = run_optimizer(&[
+        "tests/csv/2025-08-28 - light vehicles.csv",
+        "--show-summary",
+    ]);
 
     assert!(output.contains("--- Processing Summary ---"));
     assert!(output.contains("Trips Processed: 62"));
