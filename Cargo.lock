@@ -551,7 +551,7 @@ dependencies = [
 
 [[package]]
 name = "toll-optimizer"
-version = "1.0.2"
+version = "1.0.3"
 dependencies = [
  "anyhow",
  "chrono",
