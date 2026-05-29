@@ -59,6 +59,24 @@ toll-optimizer csv/2026-01-28-Statement.csv
 #### CSV Format
 The tool expects the standard CSV export format from the 407 ETR website. Ensure your file contains headers like `Date`, `Entry Time`, `Entry Point`, `Exit Point`, etc.
 
+#### Errors
+If you see any unrecognized access points or vehicle classes after the Processing Summary in the output, you can open an [issue](https://github.com/arawlins/toll-optimizer/issues) and I'll fix it. Example output:
+```
+--- Processing Summary ---
+Trips Processed: 6
+Trips Skipped:   3
+Total Bill Cost: $114.51
+Potential Time-Based Savings:     $19.40
+Potential Distance-Based Savings: $7.14
+
+Unrecognized Access Points:
+  - Doober | NOT RECOGNIZED
+  - Goober | NOT RECOGNIZED
+
+Unrecognized Vehicle Classes:
+  - Space Shuttle | NOT RECOGNIZED
+```
+
 ### Check Current Pricing
 Get the current and next timeslot average prices:
 
