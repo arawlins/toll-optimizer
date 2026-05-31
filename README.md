@@ -138,7 +138,38 @@ toll-optimizer --version
 
 ## LLM Integration (Skill)
 
-Toll Optimizer includes a `SKILL.md` file that allows LLMs (like Gemini, ChatGPT, or Claude) to autonomously analyze your statements and provide financial advice.
+Toll Optimizer includes a [SKILL.md](https://github.com/arawlins/toll-optimizer/blob/main/SKILL.md) file that allows LLMs (like Gemini, ChatGPT, or Claude) to autonomously analyze your statements and provide financial advice.
+
+### Adding to PATH
+
+To use the tool with an LLM, the `toll-optimizer` executable must be accessible via your system's `PATH`.
+
+#### macOS / Linux
+
+1. Move the extracted `toll-optimizer` binary to a standard system directory, such as `/usr/local/bin`:
+   ```bash
+   sudo mv toll-optimizer /usr/local/bin/
+   ```
+   *(Alternatively, if you prefer a user-local directory like `~/.local/bin`, make sure that directory is added to your shell's configuration file, e.g., `~/.bashrc` or `~/.zshrc`: `export PATH="$HOME/.local/bin:$PATH"`)*
+
+2. Verify that it works by opening a new terminal and running:
+   ```bash
+   toll-optimizer --version
+   ```
+
+#### Windows
+
+1. Move the `toll-optimizer.exe` to a dedicated folder (e.g., `C:\tools\toll-optimizer` or `C:\Program Files\toll-optimizer`).
+2. Add that folder to your User or System `PATH` environment variable:
+   - Press `Win + R`, type `sysdm.cpl`, and press **Enter**.
+   - Go to the **Advanced** tab and click **Environment Variables...**.
+   - Under **User variables** or **System variables**, select the `Path` variable and click **Edit...**.
+   - Click **New** and paste the path to the folder where you placed the executable (e.g., `C:\tools\toll-optimizer`).
+   - Click **OK** on all windows to save the changes.
+3. Open a new Command Prompt or PowerShell window and verify the installation:
+   ```cmd
+   toll-optimizer.exe --version
+   ```
 
 ### Using with Gemini CLI
 If you use the [Gemini CLI](https://github.com/google/gemini-cli), you can install this tool as a skill:
