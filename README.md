@@ -1,8 +1,11 @@
 # Toll Optimizer CLI
 
-Toll Optimizer is a high-performance Rust-based tool designed to analyze 407 ETR (Electronic Toll Route) statements. It identifies patterns in your travel and suggests optimizations based on **time** (shifting trips to cheaper timeslots) and **distance** (adjusting entry/exit points) to reduce your total toll charges.
+Toll Optimizer is a high-performance Rust-based tool designed to analyze 407 ETR (Electronic Toll Route) statements. It identifies patterns in your travel and suggests optimizations based on **time** (shifting trips to cheaper timeslots) and **distance** (adjusting entry/exit points) to reduce your total toll charges. It can also calculate the cost of a trip between any entry and exit point or provide an average cost for any timeslot. Coupled with an LLM of your choice, you can use it to optimize your commute!
 
 ### This application is not affiliated with 407 ETR in any way. It is intended for personal use only. ###
+
+## Why do you need this?
+The 407 ETR has a dynamic pricing structure that changes based on the time of day, day of the week, which "zone" you're travelling in and which _direction_ you're travelling. This convoluted pricing structure makes it difficult to find ways to save money on your 407 bill, this is where toll-optimizer comes in. 
 
 ## Features
 - **Time-Based Analysis**: Identifies trip clusters and calculates potential savings if you were to leave in a cheaper timeslot.
