@@ -174,32 +174,21 @@ To use the tool with an LLM, the `toll-optimizer` executable must be accessible 
    toll-optimizer.exe --version
    ```
 
-### Using with Gemini CLI
-If you use the [Gemini CLI](https://github.com/google/gemini-cli), you can install this tool as a skill:
+### Installing the Skill
 
-1. Install the skill using gemini cli:
-   ```bash
-   gemini install skill <path to SKILL.md>
-   ```
-2. Ensure the `toll-optimizer` binary is in your `PATH`.
+Toll Optimizer includes a built-in command to automatically install its skill to the configuration directories of popular AI assistants (Antigravity, Claude, Copilot, and others). 
 
-### Using with Claude Code
-If you use [Claude Code](https://claude.com/product/claude-code), you can install this tool as a skill:
+To install the skill, run:
+```bash
+toll-optimizer --install
+```
 
-1. Copy the SKILL.md file into your ~/.claude/skills/ directory:
-   ```
-   cp <path to SKILL.md> ~/.claude/skills/
-   ```
-2. Ensure the `toll-optimizer` binary is in your `PATH`.
+To remove the skill, run:
+```bash
+toll-optimizer --uninstall
+```
 
-### Using with Codex
-If you use [Codex](https://developers.openai.com/codex), you can install this tool as a skill:
-
-1. Copy the SKILL.md file into your ~/.codex/skills/ directory:
-   ```
-   cp <path to SKILL.md> ~/.codex/skills/
-   ```
-2. Ensure the `toll-optimizer` binary is in your `PATH`.
+*Note: Make sure the `toll-optimizer` executable is in your system's `PATH` so your AI assistant can execute it.*
 
 ### Once installed, you can ask your agent questions like:
 #### "Is it cheaper for me to get on the 407 now or wait 30 minutes?"

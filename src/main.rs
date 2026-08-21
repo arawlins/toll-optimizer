@@ -60,10 +60,26 @@ struct Args {
     /// Do not output individual trips, only summaries
     #[arg(long)]
     show_summary: bool,
+
+    /// Install the toll-optimizer skill to AI assistants
+    #[arg(long)]
+    install: bool,
+
+    /// Uninstall the toll-optimizer skill from AI assistants
+    #[arg(long)]
+    uninstall: bool,
 }
 
 fn main() -> Result<()> {
     let args = Args::parse();
+
+    if args.install {
+        return toll_optimizer::install::install();
+    }
+
+    if args.uninstall {
+        return toll_optimizer::install::uninstall();
+    }
 
     if args.list_access_points {
         let mut points = toll_optimizer::ACCESS_POINTS.to_vec();

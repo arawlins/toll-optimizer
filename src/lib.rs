@@ -12,6 +12,7 @@
 
 mod constants;
 mod csv_parser;
+pub mod install;
 mod md_output;
 mod trip_analyzer;
 mod vehicle_class;
