@@ -201,13 +201,19 @@ impl FromStr for VehicleClass {
     type Err = String;
 
     fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
-        match s.to_lowercase().as_str() {
-            "light vehicle" => Ok(VehicleClass::LightVehicle),
-            "heavy single unit" => Ok(VehicleClass::HeavySingleUnit),
-            "heavy multiple unit" => Ok(VehicleClass::HeavyMultipleUnit),
-            "medium vehicle" => Ok(VehicleClass::MediumVehicle),
-            "motorcycle" => Ok(VehicleClass::Motorcycle),
-            _ => Err(format!("invalid vehicle class: {s}")),
+        let trimmed = s.trim();
+        if trimmed.eq_ignore_ascii_case("light vehicle") {
+            Ok(VehicleClass::LightVehicle)
+        } else if trimmed.eq_ignore_ascii_case("heavy single unit") {
+            Ok(VehicleClass::HeavySingleUnit)
+        } else if trimmed.eq_ignore_ascii_case("heavy multiple unit") {
+            Ok(VehicleClass::HeavyMultipleUnit)
+        } else if trimmed.eq_ignore_ascii_case("medium vehicle") {
+            Ok(VehicleClass::MediumVehicle)
+        } else if trimmed.eq_ignore_ascii_case("motorcycle") {
+            Ok(VehicleClass::Motorcycle)
+        } else {
+            Err(format!("invalid vehicle class: {s}"))
         }
     }
 }
@@ -1370,7 +1376,8 @@ pub fn analyze_trips_by_distance<'a>(
                             trip.get_access_point_index(&trip.exit_point),
                             trip.get_timeslot_index(),
                         ) {
-                            let is_hwy_entry = trip.entry_point.to_lowercase().starts_with("hwy")
+                            let is_hwy_entry = (trip.entry_point.len() >= 3
+                                && trip.entry_point[..3].eq_ignore_ascii_case("hwy"))
                                 || trip.entry_point.eq_ignore_ascii_case("qew");
                             let direction = trip.direction.as_ref();
 
@@ -1492,13 +1499,17 @@ pub fn analyze_trips_by_distance<'a>(
                         0.0
                     };
 
-                    let mut advice_map = HashMap::new();
+                    let mut advice_actions = std::collections::BTreeSet::new();
                     let mut entry_counts = HashMap::new();
                     let mut exit_counts = HashMap::new();
 
                     for ts in &cluster_trips {
                         if let Some(note) = &ts.optimization_note {
-                            *advice_map.entry(note.clone()).or_insert(0) += 1;
+                            if let Some(idx) = note.find(" to save $") {
+                                advice_actions.insert(note[..idx].to_string());
+                            } else {
+                                advice_actions.insert(note.clone());
+                            }
                         }
                         *entry_counts.entry(ts.trip.entry_point.clone()).or_insert(0) += 1;
                         *exit_counts.entry(ts.trip.exit_point.clone()).or_insert(0) += 1;
@@ -1514,27 +1525,10 @@ pub fn analyze_trips_by_distance<'a>(
                         .map(|(name, _)| name);
 
                     let mut optimization_advice = None;
-                    if !advice_map.is_empty() {
-                        let mut unique_advice: Vec<String> = advice_map
-                            .keys()
-                            .map(|a| {
-                                if let Some(idx) = a.find(" to save $") {
-                                    &a[..idx]
-                                } else if let Some(idx) = a.find(" (Save") {
-                                    &a[..idx]
-                                } else {
-                                    a
-                                }
-                                .replace(" to save some $$$", "")
-                            })
-                            .collect();
-                        unique_advice.sort();
-                        unique_advice.dedup();
-
-                        if !unique_advice.is_empty() {
-                            optimization_advice =
-                                Some(format!("{} to save money", unique_advice.join(" and ")));
-                        }
+                    if !advice_actions.is_empty() {
+                        let unique_advice: Vec<String> = advice_actions.into_iter().collect();
+                        optimization_advice =
+                            Some(format!("{} to save money", unique_advice.join(" and ")));
                     }
 
                     let centroid_data = CentroidDataByDistance {
