@@ -249,17 +249,11 @@ fn calculate_route_cost(
                 return None;
             }
 
-            for (segment_idx, &distance) in ACCESS_POINT_DISTANCES
-                .iter()
-                .enumerate()
-                .take(end_idx)
-                .skip(start_idx)
-            {
-                let distance = distance as f64;
+            for segment_idx in start_idx..end_idx {
+                let distance = *ACCESS_POINT_DISTANCES.get(segment_idx)? as f64;
                 total_distance += distance;
 
-                let access_point = ACCESS_POINTS[segment_idx];
-                let zone = EB_ZONES.iter().find(|&&(name, _)| name == access_point)?.1 as usize;
+                let zone = EB_ZONES.get(segment_idx)?.1 as usize;
                 let rate =
                     vehicle_class.get_rate(day_type, direction, year, timeslot_idx, zone - 1);
                 total_cost_cents += distance * rate;
@@ -270,17 +264,11 @@ fn calculate_route_cost(
                 return None;
             }
 
-            for (segment_idx, &distance) in ACCESS_POINT_DISTANCES
-                .iter()
-                .enumerate()
-                .take(start_idx)
-                .skip(end_idx)
-            {
-                let distance = distance as f64;
+            for segment_idx in end_idx..start_idx {
+                let distance = *ACCESS_POINT_DISTANCES.get(segment_idx)? as f64;
                 total_distance += distance;
 
-                let access_point = ACCESS_POINTS.get(segment_idx + 1)?;
-                let zone = WB_ZONES.iter().find(|&&(name, _)| name == *access_point)?.1 as usize;
+                let zone = WB_ZONES.get(segment_idx + 1)?.1 as usize;
                 let rate =
                     vehicle_class.get_rate(day_type, direction, year, timeslot_idx, zone - 1);
                 total_cost_cents += distance * rate;
