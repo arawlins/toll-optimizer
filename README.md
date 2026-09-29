@@ -261,5 +261,15 @@ Run tests:
 cargo test
 ```
 
+Run benchmarks:
+```bash
+cargo bench
+```
+
+Run linter:
+```bash
+cargo clippy -- -D warnings
+```
+
 ## License
 MIT
