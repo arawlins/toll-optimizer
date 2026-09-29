@@ -226,3 +226,44 @@ fn test_single_trip_cost_calculation() {
     assert!(result_caps.is_ok());
     assert_eq!(result_caps.unwrap().0, cost);
 }
+
+#[test]
+fn test_identical_leading_commute_times() {
+    let csv_lines = vec![
+        "\"Transponder/Plate Number\",\"Vehicle Class\",\"Date of Trip\",\"Entry Time\",\"Entry Point\",\"Exit Point\",\"Distance (km)\",\"Toll Charge ($)\",\"Trip Toll Charge ($)\",\"Camera Charge ($)\"".to_string(),
+        "\"TEST_PLATE\",\"Light vehicle\",\"28 Aug 25\",\"8:00 AM\",\"QEW\",\"Trafalgar\",\"10.0\",\"5.00\",\"0.00\",\"0.00\"".to_string(),
+        "\"TEST_PLATE\",\"Light vehicle\",\"29 Aug 25\",\"8:00 AM\",\"QEW\",\"Trafalgar\",\"10.0\",\"5.00\",\"0.00\",\"0.00\"".to_string(),
+        "\"TEST_PLATE\",\"Light vehicle\",\"30 Aug 25\",\"8:00 AM\",\"QEW\",\"Trafalgar\",\"10.0\",\"5.00\",\"0.00\",\"0.00\"".to_string(),
+        "\"TEST_PLATE\",\"Light vehicle\",\"31 Aug 25\",\"5:00 PM\",\"QEW\",\"Trafalgar\",\"10.0\",\"5.00\",\"0.00\",\"0.00\"".to_string(),
+    ];
+
+    let parsed = parse_trips(csv_lines.join("\n").as_bytes());
+    let analysis = analyze_trips_by_time(&parsed.trips);
+
+    assert_eq!(analysis.len(), 1);
+    let summary = &analysis[0];
+    // Both 8:00 AM and 5:00 PM clusters should be discovered
+    assert_eq!(summary.centroids.len(), 2);
+    let times: Vec<_> = summary.centroids.iter().map(|c| c.centroid_time.as_str()).collect();
+    assert!(times.contains(&"8:00 AM"));
+    assert!(times.contains(&"5:00 PM"));
+}
+
+#[test]
+fn test_two_disparate_trips_retained() {
+    let csv_lines = vec![
+        "\"Transponder/Plate Number\",\"Vehicle Class\",\"Date of Trip\",\"Entry Time\",\"Entry Point\",\"Exit Point\",\"Distance (km)\",\"Toll Charge ($)\",\"Trip Toll Charge ($)\",\"Camera Charge ($)\"".to_string(),
+        "\"TEST_PLATE\",\"Light vehicle\",\"28 Aug 25\",\"8:00 AM\",\"QEW\",\"Trafalgar\",\"10.0\",\"5.00\",\"0.00\",\"0.00\"".to_string(),
+        "\"TEST_PLATE\",\"Light vehicle\",\"28 Aug 25\",\"5:00 PM\",\"QEW\",\"Trafalgar\",\"10.0\",\"5.00\",\"0.00\",\"0.00\"".to_string(),
+    ];
+
+    let parsed = parse_trips(csv_lines.join("\n").as_bytes());
+    let analysis = analyze_trips_by_time(&parsed.trips);
+
+    assert_eq!(analysis.len(), 1);
+    let summary = &analysis[0];
+    // Both disparate trips should be retained in clusters
+    let total_trips: usize = summary.centroids.iter().map(|c| c.trips.len()).sum();
+    assert_eq!(total_trips, 2, "Both morning and evening trips should be retained in clusters");
+}
+

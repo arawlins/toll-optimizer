@@ -764,11 +764,19 @@ fn k_means_1d(data: &[u32], k: usize) -> (Vec<u32>, f64) {
         return (Vec::new(), 0.0);
     }
 
-    // Initialize centroids (simple method: pick random or evenly spaced points)
-    // Here we'll just pick the first k distinct points or evenly spaced if not enough distinct
-    let mut centroids: Vec<f64> = data.iter().take(k).map(|&x| x as f64).collect();
-    while centroids.len() < k {
-        centroids.push(data[0] as f64); // Fallback
+    let mut unique_sorted = data.to_vec();
+    unique_sorted.sort_unstable();
+    unique_sorted.dedup();
+
+    let actual_k = k.min(unique_sorted.len());
+    let mut centroids: Vec<f64> = Vec::with_capacity(actual_k);
+    if actual_k <= 1 {
+        centroids.push(unique_sorted[0] as f64);
+    } else {
+        for i in 0..actual_k {
+            let idx = (i * (unique_sorted.len() - 1)) / (actual_k - 1);
+            centroids.push(unique_sorted[idx] as f64);
+        }
     }
 
     let mut assignments = vec![0; data.len()];
@@ -805,14 +813,9 @@ fn k_means_1d(data: &[u32], k: usize) -> (Vec<u32>, f64) {
             break;
         }
 
-        for (c_idx, centroid) in centroids.iter_mut().enumerate().take(k) {
+        for (c_idx, centroid) in centroids.iter_mut().enumerate() {
             let mut sum = 0.0;
             let mut count = 0;
-            // We need to handle the circular mean carefully.
-            // A simple approximation for now: if points are far apart, this might be tricky.
-            // But for toll data, clusters are likely tight.
-            // Let's use a simple linear mean for now, assuming clusters don't span midnight widely.
-            // If they do, we'd need vector averaging.
             for (i, &point) in data.iter().enumerate() {
                 if assignments[i] == c_idx {
                     // Adjust point to be close to current centroid to handle wrap-around for averaging
@@ -851,9 +854,19 @@ fn k_means_1d_linear(data: &[f64], k: usize) -> (Vec<f64>, f64) {
         return (Vec::new(), 0.0);
     }
 
-    let mut centroids: Vec<f64> = data.iter().take(k).cloned().collect();
-    while centroids.len() < k {
-        centroids.push(data[0]);
+    let mut sorted = data.to_vec();
+    sorted.sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
+    sorted.dedup_by(|a, b| (*a - *b).abs() < 0.001);
+
+    let actual_k = k.min(sorted.len());
+    let mut centroids: Vec<f64> = Vec::with_capacity(actual_k);
+    if actual_k <= 1 {
+        centroids.push(sorted[0]);
+    } else {
+        for i in 0..actual_k {
+            let idx = (i * (sorted.len() - 1)) / (actual_k - 1);
+            centroids.push(sorted[idx]);
+        }
     }
 
     let mut assignments = vec![0; data.len()];
@@ -885,7 +898,7 @@ fn k_means_1d_linear(data: &[f64], k: usize) -> (Vec<f64>, f64) {
             break;
         }
 
-        for (c_idx, centroid) in centroids.iter_mut().enumerate().take(k) {
+        for (c_idx, centroid) in centroids.iter_mut().enumerate() {
             let mut sum = 0.0;
             let mut count = 0;
             for (i, &point) in data.iter().enumerate() {
@@ -907,27 +920,31 @@ fn find_best_k(wcss_values: &[f64]) -> usize {
     if wcss_values.len() < 2 {
         return 1;
     }
-    // Simple elbow method: find the point with the maximum curvature or largest drop?
-    // Let's look for the "elbow" where the reduction in WCSS slows down significantly.
-    // A simple heuristic: if reduction is less than X% of previous reduction?
-    // Or just pick k where WCSS is "low enough".
+    if wcss_values.len() == 2 {
+        if wcss_values[0] > 900.0 && wcss_values[1] < wcss_values[0] * 0.5 {
+            return 2;
+        } else {
+            return 1;
+        }
+    }
 
-    // Let's try a simple angle-based method or just max distance from line connecting first and last.
     let n = wcss_values.len();
     let first = (1.0, wcss_values[0]);
     let last = (n as f64, wcss_values[n - 1]);
+
+    let denominator = ((last.1 - first.1).powi(2) + (last.0 - first.0).powi(2)).sqrt();
+    if denominator <= 0.0 {
+        return 1;
+    }
 
     let mut max_dist = -1.0;
     let mut best_k = 1;
 
     for (i, &wcss) in wcss_values.iter().enumerate().take(n) {
         let k = (i + 1) as f64;
-        // Distance from point (k, wcss) to line defined by first and last
-        // Line eq: (y2-y1)x - (x2-x1)y + x2y1 - y2x1 = 0
         let numerator = ((last.1 - first.1) * k - (last.0 - first.0) * wcss + last.0 * first.1
             - last.1 * first.0)
             .abs();
-        let denominator = ((last.1 - first.1).powi(2) + (last.0 - first.0).powi(2)).sqrt();
         let dist = numerator / denominator;
 
         if dist > max_dist {
