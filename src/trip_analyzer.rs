@@ -636,29 +636,9 @@ pub fn is_weekend(day: u32, month: u32, year: u32) -> bool {
     date.is_weekend()
 }
 
-#[derive(serde::Deserialize)]
-struct Holiday {
-    year: u32,
-    month: u32,
-    day: u32,
-}
-
-fn get_holidays() -> &'static std::collections::HashSet<(u32, u32, u32)> {
-    static HOLIDAYS: std::sync::OnceLock<std::collections::HashSet<(u32, u32, u32)>> =
-        std::sync::OnceLock::new();
-    HOLIDAYS.get_or_init(|| {
-        let json_str = include_str!("holidays.json");
-        let parsed: Vec<Holiday> = serde_json::from_str(json_str).expect("Valid holidays.json");
-        parsed
-            .into_iter()
-            .map(|h| (h.year, h.month, h.day))
-            .collect()
-    })
-}
-
 /// Returns whether a date is listed in the bundled holiday calendar.
 pub fn is_holiday(day: u32, month: u32, year: u32) -> bool {
-    get_holidays().contains(&(year, month, day))
+    STATUTORY_HOLIDAYS.binary_search(&(year, month, day)).is_ok()
 }
 
 /// Classifies a statement date as weekday, weekend, or holiday.
