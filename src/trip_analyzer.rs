@@ -7,7 +7,6 @@ use crate::constants::*;
 use crate::vehicle_class::{
     heavy_multiple_unit, heavy_single_unit, light_vehicles, medium_vehicles, motorcycles,
 };
-use simple_datetime_rs::Date;
 use std::collections::HashMap;
 
 use anyhow::{Result, anyhow};
@@ -632,8 +631,9 @@ pub fn parse_date(date: &str) -> Option<(u32, u32, u32)> {
 
 /// Returns whether a date falls on a weekend.
 pub fn is_weekend(day: u32, month: u32, year: u32) -> bool {
-    let date = Date::new(year as u64, month as u64, day as u64);
-    date.is_weekend()
+    NaiveDate::from_ymd_opt(year as i32, month, day)
+        .map(|d| matches!(d.weekday(), chrono::Weekday::Sat | chrono::Weekday::Sun))
+        .unwrap_or(false)
 }
 
 /// Returns whether a date is listed in the bundled holiday calendar.
