@@ -20,18 +20,28 @@ pub const OLD_ACCESS_POINTS: [&str; 9] = [
 pub const WEEKDAY_TIMESLOTS_2026: [&str; 8] = [
     "5:00 AM", "7:00 AM", "9:30 AM", "10:30 AM", "2:30 PM", "3:30 PM", "6:00 PM", "9:00 PM",
 ];
+/// Minute offsets after midnight for 2026 weekday timeslots.
+pub const WEEKDAY_TIMESLOT_MINUTES_2026: [u32; 8] = [300, 420, 570, 630, 870, 930, 1080, 1260];
+
 /// Weekday pricing timeslot start times for 2025 statements.
 pub const WEEKDAY_TIMESLOTS_2025: [&str; 9] = [
     "12:00 AM", "6:00 AM", "7:00 AM", "9:30 AM", "10:30 AM", "2:30 PM", "3:30 PM", "6:00 PM",
     "7:00 PM",
 ];
+/// Minute offsets after midnight for 2025 weekday timeslots.
+pub const WEEKDAY_TIMESLOT_MINUTES_2025: [u32; 9] =
+    [0, 360, 420, 570, 630, 870, 930, 1080, 1140];
 
 /// Weekend and holiday pricing timeslot start times for 2026 and later.
 pub const WEEKEND_TIMESLOTS_2026: [&str; 4] = ["8:30 AM", "10:00 AM", "7:00 PM", "9:00 PM"];
+/// Minute offsets after midnight for 2026 weekend/holiday timeslots.
+pub const WEEKEND_TIMESLOT_MINUTES_2026: [u32; 4] = [510, 600, 1140, 1260];
 
 /// Weekend and holiday pricing timeslot start times for 2025 statements.
 pub const WEEKEND_TIMESLOTS_2025: [&str; 5] =
     ["12:00 AM", "8:30 AM", "10:00 AM", "7:00 PM", "9:00 PM"];
+/// Minute offsets after midnight for 2025 weekend/holiday timeslots.
+pub const WEEKEND_TIMESLOT_MINUTES_2025: [u32; 5] = [0, 510, 600, 1140, 1260];
 
 /// Input aliases normalized to canonical `ACCESS_POINTS` names.
 pub const ACCESS_POINT_SYNONYMS: [(&str, &str); 3] = [

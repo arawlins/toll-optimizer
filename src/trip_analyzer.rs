@@ -231,6 +231,27 @@ fn get_access_point_index(name: &str) -> Option<usize> {
         .position(|&ap| ap.eq_ignore_ascii_case(name))
 }
 
+/// Finds the timeslot index for a given minute offset within a day.
+///
+/// If `minutes` is before the first timeslot, it wraps around to the last timeslot.
+#[inline]
+pub fn find_timeslot_index(minutes: u32, slot_minutes: &[u32]) -> usize {
+    if slot_minutes.is_empty() {
+        return 0;
+    }
+    for (i, &slot_time) in slot_minutes.iter().enumerate() {
+        if minutes < slot_time {
+            return if i == 0 {
+                slot_minutes.len() - 1
+            } else {
+                i - 1
+            };
+        }
+    }
+    slot_minutes.len() - 1
+}
+
+
 fn calculate_route_cost(
     start_idx: usize,
     end_idx: usize,
@@ -389,42 +410,24 @@ impl TripRecord {
         Some(count)
     }
 
+    /// Returns the pricing timeslot index for a specific minute offset.
+    pub fn get_timeslot_index_for_minutes(&self, entry_minutes: u32) -> Option<usize> {
+        let (_, _, year) = parse_date(&self.date_of_trip)?;
+        let slot_minutes = match (year, self.day_type.as_ref()?) {
+            (y, DayType::Weekday) if y <= 2025 => &WEEKDAY_TIMESLOT_MINUTES_2025[..],
+            (_, DayType::Weekday) => &WEEKDAY_TIMESLOT_MINUTES_2026[..],
+            (y, DayType::Weekend) | (y, DayType::Holiday) if y <= 2025 => {
+                &WEEKEND_TIMESLOT_MINUTES_2025[..]
+            }
+            (_, DayType::Weekend) | (_, DayType::Holiday) => &WEEKEND_TIMESLOT_MINUTES_2026[..],
+        };
+        Some(find_timeslot_index(entry_minutes, slot_minutes))
+    }
+
     /// Returns the pricing timeslot index for a specific `H:MM AM/PM` time.
     pub fn get_timeslot_index_for_time(&self, time_str: &str) -> Option<usize> {
         let entry_minutes = parse_time_to_minutes(time_str)?;
-        let (_, _, year) = parse_date(&self.date_of_trip)?;
-
-        let slots = match (year, self.day_type.as_ref()?) {
-            (y, DayType::Weekday) if y <= 2025 => &WEEKDAY_TIMESLOTS_2025[..],
-            (_, DayType::Weekday) => &WEEKDAY_TIMESLOTS_2026[..],
-            (y, DayType::Weekend) | (y, DayType::Holiday) if y <= 2025 => {
-                &WEEKEND_TIMESLOTS_2025[..]
-            }
-            (_, DayType::Weekend) | (_, DayType::Holiday) => &WEEKEND_TIMESLOTS_2026[..],
-        };
-
-        let slot_minutes: Vec<u32> = slots
-            .iter()
-            .filter_map(|&t| parse_time_to_minutes(t))
-            .collect();
-
-        if slot_minutes.is_empty() {
-            return None;
-        }
-
-        // Find the index i such that slots[i] <= entry_minutes
-        // If entry_minutes is before the first slot, it belongs to the last slot (wrap-around)
-        let mut index = slot_minutes.len() - 1;
-        for (i, &slot_time) in slot_minutes.iter().enumerate() {
-            if entry_minutes < slot_time {
-                if i == 0 {
-                    return Some(slot_minutes.len() - 1);
-                }
-                return Some(i - 1);
-            }
-            index = i;
-        }
-        Some(index)
+        self.get_timeslot_index_for_minutes(entry_minutes)
     }
 
     /// Returns the pricing timeslot index for this trip's entry time.
@@ -494,34 +497,19 @@ impl TripRecord {
     }
 
     /// Returns the 2026 timeslot index for a specific `H:MM AM/PM` time.
+    /// Returns the 2026 timeslot index for a specific minute offset.
+    pub fn get_timeslot_index_for_minutes_2026(&self, entry_minutes: u32) -> Option<usize> {
+        let slot_minutes = match self.day_type.as_ref()? {
+            DayType::Weekday => &WEEKDAY_TIMESLOT_MINUTES_2026[..],
+            DayType::Weekend | DayType::Holiday => &WEEKEND_TIMESLOT_MINUTES_2026[..],
+        };
+        Some(find_timeslot_index(entry_minutes, slot_minutes))
+    }
+
+    /// Returns the 2026 timeslot index for a specific `H:MM AM/PM` time.
     pub fn get_timeslot_index_for_time_2026(&self, time_str: &str) -> Option<usize> {
         let entry_minutes = parse_time_to_minutes(time_str)?;
-        // Always use 2026 constants
-        let slots = match self.day_type.as_ref()? {
-            DayType::Weekday => &WEEKDAY_TIMESLOTS_2026[..],
-            DayType::Weekend | DayType::Holiday => &WEEKEND_TIMESLOTS_2026[..],
-        };
-
-        let slot_minutes: Vec<u32> = slots
-            .iter()
-            .filter_map(|&t| parse_time_to_minutes(t))
-            .collect();
-
-        if slot_minutes.is_empty() {
-            return None;
-        }
-
-        let mut index = slot_minutes.len() - 1;
-        for (i, &slot_time) in slot_minutes.iter().enumerate() {
-            if entry_minutes < slot_time {
-                if i == 0 {
-                    return Some(slot_minutes.len() - 1);
-                }
-                return Some(i - 1);
-            }
-            index = i;
-        }
-        Some(index)
+        self.get_timeslot_index_for_minutes_2026(entry_minutes)
     }
 
     /// Calculates 2026 total estimated cost and distance for this trip.
@@ -1088,7 +1076,7 @@ pub fn analyze_trips_by_time<'a>(
                                 prev_target_opt,
                                 next_target_opt,
                             ) = if let Some(timeslot_idx) =
-                                trip.get_timeslot_index_for_time(&centroid_time_str)
+                                trip.get_timeslot_index_for_minutes(centroid)
                             {
                                 let mut prev_c = None;
                                 let mut next_c = None;
@@ -1674,32 +1662,18 @@ pub fn get_pricing(
         )
     })?;
 
-    let slots = match day_type {
-        DayType::Weekday => &WEEKDAY_TIMESLOTS_2026[..],
-        DayType::Weekend | DayType::Holiday => &WEEKEND_TIMESLOTS_2026[..],
+    let (slots, slot_minutes) = match day_type {
+        DayType::Weekday => (
+            &WEEKDAY_TIMESLOTS_2026[..],
+            &WEEKDAY_TIMESLOT_MINUTES_2026[..],
+        ),
+        DayType::Weekend | DayType::Holiday => (
+            &WEEKEND_TIMESLOTS_2026[..],
+            &WEEKEND_TIMESLOT_MINUTES_2026[..],
+        ),
     };
 
-    let slot_minutes: Vec<u32> = slots
-        .iter()
-        .filter_map(|&t| parse_time_to_minutes(t))
-        .collect();
-
-    if slot_minutes.is_empty() {
-        return Err(anyhow!("No timeslots defined"));
-    }
-
-    let mut current_idx = slot_minutes.len() - 1;
-    for (i, &slot_time) in slot_minutes.iter().enumerate() {
-        if minutes < slot_time {
-            if i == 0 {
-                current_idx = slot_minutes.len() - 1;
-            } else {
-                current_idx = i - 1;
-            }
-            break;
-        }
-        current_idx = i;
-    }
+    let current_idx = find_timeslot_index(minutes, slot_minutes);
 
     let next_idx = (current_idx + 1) % slot_minutes.len();
 
@@ -1791,45 +1765,24 @@ pub fn calculate_single_trip_cost(
 
     let year = date.year() as u32;
 
-    // Find timeslot index
-    let slots = match &day_type {
+    let slot_minutes = match &day_type {
         DayType::Weekday => {
             if year <= 2025 {
-                &WEEKDAY_TIMESLOTS_2025[..]
+                &WEEKDAY_TIMESLOT_MINUTES_2025[..]
             } else {
-                &WEEKDAY_TIMESLOTS_2026[..]
+                &WEEKDAY_TIMESLOT_MINUTES_2026[..]
             }
         }
         DayType::Weekend | DayType::Holiday => {
             if year <= 2025 {
-                &WEEKEND_TIMESLOTS_2025[..]
+                &WEEKEND_TIMESLOT_MINUTES_2025[..]
             } else {
-                &WEEKEND_TIMESLOTS_2026[..]
+                &WEEKEND_TIMESLOT_MINUTES_2026[..]
             }
         }
     };
 
-    let slot_minutes: Vec<u32> = slots
-        .iter()
-        .filter_map(|&t| parse_time_to_minutes(t))
-        .collect();
-
-    if slot_minutes.is_empty() {
-        return Err(anyhow!("No timeslots defined"));
-    }
-
-    let mut timeslot_idx = slot_minutes.len() - 1;
-    for (i, &slot_time) in slot_minutes.iter().enumerate() {
-        if minutes < slot_time {
-            if i == 0 {
-                timeslot_idx = slot_minutes.len() - 1;
-            } else {
-                timeslot_idx = i - 1;
-            }
-            break;
-        }
-        timeslot_idx = i;
-    }
+    let timeslot_idx = find_timeslot_index(minutes, slot_minutes);
 
     let route_cost = calculate_route_cost(
         start_idx,
