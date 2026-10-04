@@ -29,8 +29,7 @@ pub const WEEKDAY_TIMESLOTS_2025: [&str; 9] = [
     "7:00 PM",
 ];
 /// Minute offsets after midnight for 2025 weekday timeslots.
-pub const WEEKDAY_TIMESLOT_MINUTES_2025: [u32; 9] =
-    [0, 360, 420, 570, 630, 870, 930, 1080, 1140];
+pub const WEEKDAY_TIMESLOT_MINUTES_2025: [u32; 9] = [0, 360, 420, 570, 630, 870, 930, 1080, 1140];
 
 /// Weekend and holiday pricing timeslot start times for 2026 and later.
 pub const WEEKEND_TIMESLOTS_2026: [&str; 4] = ["8:30 AM", "10:00 AM", "7:00 PM", "9:00 PM"];
@@ -279,4 +278,3 @@ pub const STATUTORY_HOLIDAYS: [(u32, u32, u32); 45] = [
     (2028, 12, 25),
     (2028, 12, 26),
 ];
-

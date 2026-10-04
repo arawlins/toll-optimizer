@@ -244,7 +244,11 @@ fn test_identical_leading_commute_times() {
     let summary = &analysis[0];
     // Both 8:00 AM and 5:00 PM clusters should be discovered
     assert_eq!(summary.centroids.len(), 2);
-    let times: Vec<_> = summary.centroids.iter().map(|c| c.centroid_time.as_str()).collect();
+    let times: Vec<_> = summary
+        .centroids
+        .iter()
+        .map(|c| c.centroid_time.as_str())
+        .collect();
     assert!(times.contains(&"8:00 AM"));
     assert!(times.contains(&"5:00 PM"));
 }
@@ -264,6 +268,46 @@ fn test_two_disparate_trips_retained() {
     let summary = &analysis[0];
     // Both disparate trips should be retained in clusters
     let total_trips: usize = summary.centroids.iter().map(|c| c.trips.len()).sum();
-    assert_eq!(total_trips, 2, "Both morning and evening trips should be retained in clusters");
+    assert_eq!(
+        total_trips, 2,
+        "Both morning and evening trips should be retained in clusters"
+    );
 }
 
+#[test]
+fn test_get_pricing_year_difference() {
+    let p_2025 = toll_optimizer::get_pricing(
+        "2025-08-28",
+        "10:00 AM",
+        toll_optimizer::VehicleClass::LightVehicle,
+    )
+    .unwrap();
+    let p_2026 = toll_optimizer::get_pricing(
+        "2026-08-28",
+        "10:00 AM",
+        toll_optimizer::VehicleClass::LightVehicle,
+    )
+    .unwrap();
+
+    assert!(
+        p_2026.current.average_eb > p_2025.current.average_eb,
+        "2026 EB average rate should be higher than 2025"
+    );
+    assert!(
+        p_2026.current.average_wb > p_2025.current.average_wb,
+        "2026 WB average rate should be higher than 2025"
+    );
+}
+
+#[test]
+fn test_get_pricing_midnight_rollover_year_boundary() {
+    let pricing = toll_optimizer::get_pricing(
+        "2025-12-31",
+        "11:30 PM",
+        toll_optimizer::VehicleClass::LightVehicle,
+    )
+    .unwrap();
+
+    assert_eq!(pricing.current.timeslot, "7:00 PM");
+    assert_eq!(pricing.next.timeslot, "8:30 AM");
+}

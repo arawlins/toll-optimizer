@@ -36,8 +36,9 @@ pub use md_output::{
 
 /// Analysis and pricing core.
 pub use trip_analyzer::{
-    CentroidData, CentroidDataByDistance, DayType, Direction, PricingResponse, TimeslotPrices,
-    TransponderSummaryByDistance, TransponderSummaryByTime, TripRecord, TripSummary, VehicleClass,
-    analyze_trips_by_distance, analyze_trips_by_time, calculate_single_trip_cost,
-    format_minutes_to_time, get_pricing, parse_time_to_minutes,
+    CentroidData, CentroidDataByDistance, DayType, Direction, NEWEST_RATE_TABLE_YEAR,
+    PricingResponse, TimeslotPrices, TransponderSummaryByDistance, TransponderSummaryByTime,
+    TripRecord, TripSummary, VehicleClass, analyze_trips_by_distance, analyze_trips_by_time,
+    calculate_single_trip_cost, format_minutes_to_time, get_pricing, parse_time_to_minutes,
+    warn_if_rates_stale,
 };

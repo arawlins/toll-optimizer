@@ -33,6 +33,24 @@ fn run_optimizer_fail(args: &[&str]) -> (String, String) {
     )
 }
 
+fn run_optimizer_with_stderr(args: &[&str]) -> (String, String) {
+    let output = Command::new(env!("CARGO_BIN_EXE_toll-optimizer"))
+        .args(args)
+        .output()
+        .expect("Failed to execute command");
+
+    assert!(
+        output.status.success(),
+        "Command failed with status: {:?}\nStderr: {}",
+        output.status,
+        String::from_utf8_lossy(&output.stderr)
+    );
+    (
+        String::from_utf8_lossy(&output.stdout).to_string(),
+        String::from_utf8_lossy(&output.stderr).to_string(),
+    )
+}
+
 #[test]
 fn test_e2e_light_vehicles() {
     let output = run_optimizer(&["tests/csv/2025-08-28 - light vehicles.csv"]);
@@ -327,4 +345,12 @@ fn test_e2e_show_summary_markdown() {
     // Check for some summary data to ensure it's still there
     assert!(output.contains("## Time-Based Analysis"));
     assert!(output.contains("## Distance-Based Analysis"));
+}
+
+#[test]
+fn test_e2e_stale_rate_warning() {
+    let (stdout, stderr) = run_optimizer_with_stderr(&["--current-price", "--date", "2027-05-12"]);
+    assert!(stdout.contains("--- Pricing Analysis for 2027-05-12"));
+    assert!(stderr.contains("Warning: embedded 407 ETR rate tables only cover up to 2026."));
+    assert!(stderr.contains("Pricing for 2027 reuses 2026 rates and may be outdated"));
 }

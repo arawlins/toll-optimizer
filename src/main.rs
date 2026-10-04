@@ -247,7 +247,7 @@ fn main() -> Result<()> {
             return Ok(());
         }
 
-        println!("--- Live Pricing Analysis for {} at {} ---", date, time);
+        println!("--- Pricing Analysis for {} at {} ---", date, time);
         println!("Day Type: {}", pricing.day_type);
         println!("Current Timeslot: {}", pricing.current.timeslot);
         println!("  Average EB: {:.2}¢/km", pricing.current.average_eb);
