@@ -19,17 +19,51 @@ bar is simple: keep it tested, keep it documented, keep it offline.
 You need a recent stable Rust toolchain (`rustup` recommended).
 
 ```bash
-cargo build                  # debug build
-cargo test                   # full suite: unit + integration + e2e
-cargo bench                  # benchmarks
-cargo clippy -- -D warnings  # linting (treat all warnings as errors)
-cargo fmt --check            # formatting check
+cargo build   # debug build
+cargo test    # full suite: unit + integration + e2e
+cargo bench   # benchmarks
 ```
 
-## Pull request guidelines
+## Quality gates (CI enforces all of these)
 
-- **Keep it offline**: `toll-optimizer` never makes network calls or collects telemetry.
-- **Keep it tested**: Add unit or integration tests for any bug fixes or new features.
-- **Keep it clean**: Ensure `cargo clippy -- -D warnings` and `cargo fmt` pass cleanly before submitting.
-- **Keep it documented**: Update rustdoc comments and user docs if CLI behavior or options change.
-- **Dependencies**: Avoid adding new external dependencies without opening an issue to discuss first.
+```bash
+cargo fmt --check
+cargo clippy -- -D warnings
+cargo test
+cargo doc --no-deps
+```
+
+Run all four before opening a PR. CI runs on every push to `main` and every
+pull request.
+
+## Code standards
+
+- Rustdoc on all public items, with usage examples where helpful.
+- `Result` for fallible operations; no `unwrap()`/`expect()` in library code.
+- No new dependencies without explaining why in the PR description.
+- Keep the binary offline: no network calls, no telemetry, no data collection.
+
+## Tests
+
+- New behavior needs tests — unit tests in `src/` or integration tests in `tests/`.
+- Test CSVs must use synthetic data only. Never commit a real statement;
+  see `tests/csv/` for the anonymized fixtures.
+
+## Pull requests
+
+1. Fork, branch from `main`, keep the change focused.
+2. Update `README.md` / `docs/` if behavior or flags changed.
+3. Make sure the four quality gates pass.
+4. Describe what changed and why in the PR body.
+
+## Releases (maintainers)
+
+Releases are cut by pushing a `v*` tag (e.g. `v1.0.6`). GitHub Actions builds
+the Linux, macOS (Intel + Apple Silicon), and Windows binaries and attaches
+`SHA256SUMS.txt` automatically.
+
+## Reporting issues
+
+Include the command you ran, the full output, your OS, and
+`toll-optimizer --version`. For CSV parsing problems, attach a redacted snippet
+— remove names, plate numbers, and account numbers first.
