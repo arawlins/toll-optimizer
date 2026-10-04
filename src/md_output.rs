@@ -152,9 +152,21 @@ pub fn write_markdown<W: Write>(
             writeln!(writer, "#### Trips near {}\n", centroid.centroid_time)?;
             writeln!(writer, "| Metric | Value |")?;
             writeln!(writer, "| --- | --- |")?;
-            writeln!(writer, "| Average Entry Time | {} |", centroid.average_entry_time)?;
-            writeln!(writer, "| Total Distance | {:.3} km |", centroid.total_distance)?;
-            writeln!(writer, "| Total Toll Charge | ${:.2} |", centroid.total_toll_charge)?;
+            writeln!(
+                writer,
+                "| Average Entry Time | {} |",
+                centroid.average_entry_time
+            )?;
+            writeln!(
+                writer,
+                "| Total Distance | {:.3} km |",
+                centroid.total_distance
+            )?;
+            writeln!(
+                writer,
+                "| Total Toll Charge | ${:.2} |",
+                centroid.total_toll_charge
+            )?;
 
             if centroid.total_toll_charge_previous_timeslot < centroid.total_toll_charge - 0.005 {
                 let savings =
@@ -183,7 +195,10 @@ pub fn write_markdown<W: Write>(
             writeln!(writer)?;
 
             if !show_summary && !centroid.trips.is_empty() {
-                writeln!(writer, "| Date | Time | Route | Distance | Type | Cost | Optimization |")?;
+                writeln!(
+                    writer,
+                    "| Date | Time | Route | Distance | Type | Cost | Optimization |"
+                )?;
                 writeln!(writer, "| --- | --- | --- | --- | --- | --- | --- |")?;
                 for trip_summary in &centroid.trips {
                     let trip = trip_summary.trip;
@@ -247,7 +262,11 @@ pub fn write_markdown<W: Write>(
 
             writeln!(writer, "| Metric | Value |")?;
             writeln!(writer, "| --- | --- |")?;
-            writeln!(writer, "| Total Toll Charge | ${:.2} |", centroid.total_toll_charge)?;
+            writeln!(
+                writer,
+                "| Total Toll Charge | ${:.2} |",
+                centroid.total_toll_charge
+            )?;
             if centroid.total_optimized_savings > 0.0 {
                 writeln!(
                     writer,
@@ -258,7 +277,10 @@ pub fn write_markdown<W: Write>(
             writeln!(writer)?;
 
             if !show_summary && !centroid.trips.is_empty() {
-                writeln!(writer, "| Date | Time | Route | Distance | Type | Cost | Note |")?;
+                writeln!(
+                    writer,
+                    "| Date | Time | Route | Distance | Type | Cost | Note |"
+                )?;
                 writeln!(writer, "| --- | --- | --- | --- | --- | --- | --- |")?;
                 for trip_summary in &centroid.trips {
                     let trip = trip_summary.trip;
@@ -351,7 +373,10 @@ pub fn write_pricing_markdown<W: Write>(
             next_avg - current_avg
         )?;
     } else {
-        writeln!(writer, "> Rates are expected to remain stable in the next timeslot.")?;
+        writeln!(
+            writer,
+            "> Rates are expected to remain stable in the next timeslot."
+        )?;
     }
     writeln!(writer)?;
 
@@ -395,7 +420,11 @@ pub fn write_single_trip_markdown<W: Write>(
     writeln!(writer, "# Toll Optimizer Single Trip Report\n")?;
     writeln!(writer, "| Metric | Value |")?;
     writeln!(writer, "| --- | --- |")?;
-    writeln!(writer, "| **Route** | {} -> {} |", report.entry, report.exit)?;
+    writeln!(
+        writer,
+        "| **Route** | {} -> {} |",
+        report.entry, report.exit
+    )?;
     writeln!(writer, "| **Date** | {} |", report.date)?;
     writeln!(writer, "| **Time** | {} |", report.time)?;
     writeln!(writer, "| **Vehicle Class** | {} |", report.class)?;

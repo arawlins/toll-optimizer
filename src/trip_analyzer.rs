@@ -257,7 +257,6 @@ pub fn find_timeslot_index(minutes: u32, slot_minutes: &[u32]) -> usize {
     slot_minutes.len() - 1
 }
 
-
 fn calculate_route_cost(
     start_idx: usize,
     end_idx: usize,
@@ -646,7 +645,9 @@ pub fn is_weekend(day: u32, month: u32, year: u32) -> bool {
 
 /// Returns whether a date is listed in the bundled holiday calendar.
 pub fn is_holiday(day: u32, month: u32, year: u32) -> bool {
-    STATUTORY_HOLIDAYS.binary_search(&(year, month, day)).is_ok()
+    STATUTORY_HOLIDAYS
+        .binary_search(&(year, month, day))
+        .is_ok()
 }
 
 /// Classifies a statement date as weekday, weekend, or holiday.
@@ -1630,9 +1631,7 @@ static STALE_RATE_WARNING_EMITTED: AtomicBool = AtomicBool::new(false);
 /// Safe to call per trip: the flag keeps it to a single line per process,
 /// and stderr never interferes with `--json` output on stdout.
 pub fn warn_if_rates_stale(year: u32) {
-    if year > NEWEST_RATE_TABLE_YEAR
-        && !STALE_RATE_WARNING_EMITTED.swap(true, Ordering::SeqCst)
-    {
+    if year > NEWEST_RATE_TABLE_YEAR && !STALE_RATE_WARNING_EMITTED.swap(true, Ordering::SeqCst) {
         eprintln!(
             "Warning: embedded 407 ETR rate tables only cover up to {}. \
              Pricing for {} reuses {} rates and may be outdated — check for a newer release.",

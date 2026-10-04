@@ -244,7 +244,11 @@ fn test_identical_leading_commute_times() {
     let summary = &analysis[0];
     // Both 8:00 AM and 5:00 PM clusters should be discovered
     assert_eq!(summary.centroids.len(), 2);
-    let times: Vec<_> = summary.centroids.iter().map(|c| c.centroid_time.as_str()).collect();
+    let times: Vec<_> = summary
+        .centroids
+        .iter()
+        .map(|c| c.centroid_time.as_str())
+        .collect();
     assert!(times.contains(&"8:00 AM"));
     assert!(times.contains(&"5:00 PM"));
 }
@@ -264,7 +268,10 @@ fn test_two_disparate_trips_retained() {
     let summary = &analysis[0];
     // Both disparate trips should be retained in clusters
     let total_trips: usize = summary.centroids.iter().map(|c| c.trips.len()).sum();
-    assert_eq!(total_trips, 2, "Both morning and evening trips should be retained in clusters");
+    assert_eq!(
+        total_trips, 2,
+        "Both morning and evening trips should be retained in clusters"
+    );
 }
 
 #[test]
@@ -304,4 +311,3 @@ fn test_get_pricing_midnight_rollover_year_boundary() {
     assert_eq!(pricing.current.timeslot, "7:00 PM");
     assert_eq!(pricing.next.timeslot, "8:30 AM");
 }
-
