@@ -8,6 +8,7 @@ use crate::vehicle_class::{
     heavy_multiple_unit, heavy_single_unit, light_vehicles, medium_vehicles, motorcycles,
 };
 use std::collections::HashMap;
+use std::sync::atomic::{AtomicBool, Ordering};
 
 use anyhow::{Result, anyhow};
 use chrono::{Datelike, Duration, NaiveDate};
@@ -453,6 +454,7 @@ impl TripRecord {
         let direction = self.direction.as_ref()?;
         let day_type = self.day_type.as_ref()?;
         let (_, _, year) = parse_date(&self.date_of_trip)?;
+        warn_if_rates_stale(year);
 
         let route_cost = calculate_route_cost(
             start_idx,
@@ -1613,6 +1615,32 @@ pub fn parse_time_flexible(time_str: &str) -> Option<u32> {
     None
 }
 
+/// Newest year covered by the embedded 407 ETR rate tables.
+///
+/// Bump this constant whenever 407 ETR publishes new annual rates and the
+/// tables in `src/vehicle_class/` and `src/constants.rs` are updated to match.
+pub const NEWEST_RATE_TABLE_YEAR: u32 = 2026;
+
+/// Tracks whether the stale-rate warning has already been printed.
+static STALE_RATE_WARNING_EMITTED: AtomicBool = AtomicBool::new(false);
+
+/// Prints a one-time stderr warning when pricing falls back to the newest
+/// embedded rate tables for a date they do not cover.
+///
+/// Safe to call per trip: the flag keeps it to a single line per process,
+/// and stderr never interferes with `--json` output on stdout.
+pub fn warn_if_rates_stale(year: u32) {
+    if year > NEWEST_RATE_TABLE_YEAR
+        && !STALE_RATE_WARNING_EMITTED.swap(true, Ordering::SeqCst)
+    {
+        eprintln!(
+            "Warning: embedded 407 ETR rate tables only cover up to {}. \
+             Pricing for {} reuses {} rates and may be outdated — check for a newer release.",
+            NEWEST_RATE_TABLE_YEAR, year, NEWEST_RATE_TABLE_YEAR
+        );
+    }
+}
+
 /// Classifies a `chrono::NaiveDate` into the pricing day bucket.
 pub fn classify_day_type(date: NaiveDate) -> DayType {
     let day = date.day();
@@ -1628,7 +1656,7 @@ pub fn classify_day_type(date: NaiveDate) -> DayType {
     }
 }
 
-/// Returns current and next 2026 average pricing for a date, time, and vehicle.
+/// Returns current and next average pricing for a date, time, and vehicle.
 ///
 /// `date_str` must be `YYYY-MM-DD`. `time_str` accepts `H:MM AM/PM` or
 /// 24-hour `HH:MM`.
@@ -1646,6 +1674,7 @@ pub fn get_pricing(
     })?;
 
     let day_type = classify_day_type(date);
+    warn_if_rates_stale(date.year() as u32);
     let minutes = parse_time_flexible(time_str).ok_or_else(|| {
         anyhow!(
             "Invalid time format '{}'. Expected HH:MM AM/PM or HH:MM",
@@ -1653,14 +1682,23 @@ pub fn get_pricing(
         )
     })?;
 
-    let (slots, slot_minutes) = match day_type {
-        DayType::Weekday => (
+    let is_2026 = date.year() >= 2026;
+    let (slots, slot_minutes) = match (is_2026, &day_type) {
+        (true, DayType::Weekday) => (
             &WEEKDAY_TIMESLOTS_2026[..],
             &WEEKDAY_TIMESLOT_MINUTES_2026[..],
         ),
-        DayType::Weekend | DayType::Holiday => (
+        (true, DayType::Weekend | DayType::Holiday) => (
             &WEEKEND_TIMESLOTS_2026[..],
             &WEEKEND_TIMESLOT_MINUTES_2026[..],
+        ),
+        (false, DayType::Weekday) => (
+            &WEEKDAY_TIMESLOTS_2025[..],
+            &WEEKDAY_TIMESLOT_MINUTES_2025[..],
+        ),
+        (false, DayType::Weekend | DayType::Holiday) => (
+            &WEEKEND_TIMESLOTS_2025[..],
+            &WEEKEND_TIMESLOT_MINUTES_2025[..],
         ),
     };
 
@@ -1668,16 +1706,19 @@ pub fn get_pricing(
 
     let next_idx = (current_idx + 1) % slot_minutes.len();
 
-    let (next_slots, next_day_type) = if next_idx == 0 {
+    let (next_slots, next_day_type, next_is_2026) = if next_idx == 0 {
         let next_date = date + Duration::days(1);
         let ndt = classify_day_type(next_date);
-        let ns = match ndt {
-            DayType::Weekday => &WEEKDAY_TIMESLOTS_2026[..],
-            DayType::Weekend | DayType::Holiday => &WEEKEND_TIMESLOTS_2026[..],
+        let n_is_2026 = next_date.year() >= 2026;
+        let ns = match (n_is_2026, &ndt) {
+            (true, DayType::Weekday) => &WEEKDAY_TIMESLOTS_2026[..],
+            (true, DayType::Weekend | DayType::Holiday) => &WEEKEND_TIMESLOTS_2026[..],
+            (false, DayType::Weekday) => &WEEKDAY_TIMESLOTS_2025[..],
+            (false, DayType::Weekend | DayType::Holiday) => &WEEKEND_TIMESLOTS_2025[..],
         };
-        (ns, ndt)
+        (ns, ndt, n_is_2026)
     } else {
-        (slots, day_type.clone())
+        (slots, day_type.clone(), is_2026)
     };
 
     Ok(PricingResponse {
@@ -1686,13 +1727,13 @@ pub fn get_pricing(
             average_eb: vehicle_class.get_average_rate(
                 &day_type,
                 &Direction::Eastbound,
-                true,
+                is_2026,
                 current_idx,
             ),
             average_wb: vehicle_class.get_average_rate(
                 &day_type,
                 &Direction::Westbound,
-                true,
+                is_2026,
                 current_idx,
             ),
         },
@@ -1701,13 +1742,13 @@ pub fn get_pricing(
             average_eb: vehicle_class.get_average_rate(
                 &next_day_type,
                 &Direction::Eastbound,
-                true,
+                next_is_2026,
                 next_idx,
             ),
             average_wb: vehicle_class.get_average_rate(
                 &next_day_type,
                 &Direction::Westbound,
-                true,
+                next_is_2026,
                 next_idx,
             ),
         },
@@ -1755,6 +1796,7 @@ pub fn calculate_single_trip_cost(
     };
 
     let year = date.year() as u32;
+    warn_if_rates_stale(year);
 
     let slot_minutes = match &day_type {
         DayType::Weekday => {

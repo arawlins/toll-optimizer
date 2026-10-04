@@ -87,6 +87,12 @@ jobs:
         run: |
           mkdir release_assets
           find artifacts -type f \( -name "*.tar.gz" -o -name "*.zip" \) -exec cp {} release_assets/ \;
+
+      - name: Generate checksums
+        run: |
+          cd release_assets
+          sha256sum -- *.tar.gz *.zip > SHA256SUMS.txt
+          cd -
           
       - name: Create Release
         uses: softprops/action-gh-release@v2

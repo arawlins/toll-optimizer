@@ -3,6 +3,7 @@
 Toll Optimizer is a high-performance Rust-based tool designed to analyze 407 ETR (Electronic Toll Route) statements. It identifies patterns in your travel and suggests optimizations based on **time** (shifting trips to cheaper timeslots) and **distance** (adjusting entry/exit points) to reduce your total toll charges. It can also calculate the cost of a trip between any entry and exit point or provide an average cost for any timeslot. Coupled with an LLM of your choice, you can use it to optimize your commute!
 
 ### This application is not affiliated with 407 ETR in any way. It is intended for personal use only. ###
+Estimates are based on published 407 ETR rate tables and are not financial advice.
 
 ## Why do you need this?
 The 407 ETR has a dynamic pricing structure that changes based on the time of day, day of the week, which "zone" you're travelling in and which _direction_ you're travelling. This convoluted pricing structure makes it difficult to find ways to save money on your 407 bill, this is where toll-optimizer comes in. 
@@ -10,7 +11,7 @@ The 407 ETR has a dynamic pricing structure that changes based on the time of da
 ## Features
 - **Time-Based Analysis**: Identifies trip clusters and calculates potential savings if you were to leave in a cheaper timeslot.
 - **Distance-Based Analysis**: Suggests alternate entry or exit points that could lower your toll for the same route.
-- **Live Pricing**: Real-time 407 ETR rate lookup and optimization tips for the current and upcoming timeslots.
+- **Offline Pricing**: Built-in 407 ETR rate tables give current and upcoming timeslot pricing with no network access — your statements never leave your computer.
 - **JSON Output**: Fully structured machine-readable output optimized for LLMs and data pipelines.
 - **Markdown Output**: Professional report format with tables, ideal for sharing and documentation.
 - **LLM Ready**: Includes a native "Skill" definition for seamless use with AI agents.
@@ -37,6 +38,14 @@ xattr -d com.apple.quarantine /path/to/toll-optimizer
 
 Replace `/path/to/toll-optimizer` with the actual path to the downloaded file (e.g., `~/Downloads/toll-optimizer`).
 
+#### Verifying downloads
+
+Each release ships a `SHA256SUMS.txt` alongside the binaries. Verify before running:
+
+- **Linux**: `sha256sum -c SHA256SUMS.txt`
+- **macOS**: `shasum -a 256 -c SHA256SUMS.txt`
+- **Windows (PowerShell)**: compare `(Get-FileHash <file>).Hash` against the matching line in `SHA256SUMS.txt`.
+
 ### 2. Build from Source
 If you have Rust installed, you can build and install the tool directly:
 ```bash
@@ -49,7 +58,7 @@ cargo install --path .
 Analyze a 407 ETR CSV statement file:
 
 ```bash
-toll-optimizer <path-to-csv>
+toll-optimizer path/to/your-statement.csv
 ```
 #### Options:
 - `-j, --json`: Output results in JSON format (for agentic or programmatic use).
